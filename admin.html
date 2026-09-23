@@ -45,8 +45,18 @@ textarea{min-height:90px;resize:vertical;line-height:1.55}
 .tag.ok{background:#e2f4e8;color:#1d7a46}
 .tag.flag{background:#fdf0d5;color:#8a4b00}
 .tag.off{background:#f3e3e3;color:#8a2b2b}
-.review{display:grid;grid-template-columns:280px minmax(0,1fr) minmax(0,1.2fr);gap:18px;align-items:start}
-@media (max-width:1100px){.review{grid-template-columns:1fr}}
+.review{display:grid;grid-template-columns:230px minmax(0,1fr) minmax(0,1.15fr);gap:18px;align-items:start}
+@media (max-width:1250px){.review{grid-template-columns:200px minmax(0,1fr)}.review>.pv-panel{grid-column:1/-1}}
+@media (max-width:800px){.review{grid-template-columns:1fr}}
+.pv-panel{position:sticky;top:12px}
+main.wide{max-width:1760px}
+.pv-tabs{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.pv-tabs button{font:inherit;font-size:14px;font-weight:700;border:1px solid #c7d2df;background:#fff;border-radius:20px;padding:6px 14px;cursor:pointer}
+.pv-tabs button[aria-pressed="true"]{background:var(--navy);color:#fff;border-color:var(--navy)}
+.pv-frame{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff;height:78vh;position:relative}
+.pv-frame iframe{border:0;transform-origin:0 0;position:absolute;top:0;left:0;background:#fff}
+.pv-frame.phone{display:flex;justify-content:center;background:#e9eef4}
+.pv-frame.phone iframe{position:static;border-left:1px solid var(--line);border-right:1px solid var(--line)}
 .rlist{list-style:none;margin:0;padding:0}
 .rlist button{width:100%;text-align:left;border:0;border-left:4px solid transparent;background:#fff;padding:12px 14px;font:inherit;cursor:pointer;display:flex;flex-direction:column;gap:3px;border-bottom:1px solid #eef1f5}
 .rlist button[aria-current="true"]{background:var(--sky);border-left-color:var(--blue)}
@@ -77,7 +87,7 @@ textarea{min-height:90px;resize:vertical;line-height:1.55}
 <a href="/" target="_blank" rel="noopener">View the website ↗</a>
 </div></header>
 
-<main class="wrap" style="padding-block:28px;display:flex;flex-direction:column;gap:20px">
+<main class="wrap" id="main" style="padding-block:28px;display:flex;flex-direction:column;gap:20px">
 
 <section id="v-login" class="panel stack" style="max-width:420px">
 <h1 style="font-size:28px">Sign in</h1>
@@ -136,8 +146,13 @@ textarea{min-height:90px;resize:vertical;line-height:1.55}
 <div id="published" class="okbox stack hidden"></div>
 <div class="review">
 <div class="panel" style="padding:0;overflow:hidden"><ul class="rlist" id="rlist"></ul></div>
-<div class="panel stack"><div class="row" style="justify-content:space-between"><strong>As printed</strong><span class="muted" id="pp"></span></div><div class="printed" id="printed"></div></div>
 <div class="panel stack" id="editor"></div>
+<div class="panel stack pv-panel">
+<div class="pv-tabs" role="group" aria-label="What to show"><button type="button" data-pv="web" aria-pressed="true">On the website</button><button type="button" data-pv="phone" aria-pressed="false">On a phone</button><button type="button" data-pv="print" aria-pressed="false">As printed</button><span class="muted" id="pv-state" style="margin-left:auto;font-size:13px"></span></div>
+<div class="pv-frame" id="pv-frame"><iframe id="pv" title="Website preview"></iframe></div>
+<div class="stack hidden" id="printed-wrap"><div class="row" style="justify-content:space-between"><strong>As printed</strong><span class="muted" id="pp"></span></div><div class="printed" id="printed"></div></div>
+<p class="muted" style="font-size:13px;margin:0">The preview uses the website's own layout and updates as you type. Nothing goes live until you save.</p>
+</div>
 </div>
 <div class="row" style="justify-content:space-between"><button class="smallbtn" id="back-home" type="button">← All issues</button><button class="smallbtn" id="del-issue" type="button" style="color:#a3262a">Delete this issue</button></div>
 </section>

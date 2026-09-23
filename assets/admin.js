@@ -8,7 +8,7 @@
   let code = '';
   try { code = localStorage.getItem('rcm-editor-code') || ''; } catch (e) {}
 
-  function show(v) { for (const id of ['v-login', 'v-home', 'v-run', 'v-review']) $(id).classList.toggle('hidden', id !== v); window.scrollTo(0, 0); }
+  function show(v) { for (const id of ['v-login', 'v-home', 'v-run', 'v-review']) $(id).classList.toggle('hidden', id !== v); $('main').classList.toggle('wide', v === 'v-review'); window.scrollTo(0, 0); }
 
   async function call(action, payload) {
     const r = await fetch(FN, { method: 'POST', headers: { 'content-type': 'application/json', 'x-editor-code': code, apikey: PUB }, body: JSON.stringify(Object.assign({ action }, payload || {})) });
@@ -287,8 +287,7 @@
     const bodyText = (a.body || []).map((b) => (b.t === 'h' ? '## ' : b.t === 'q' ? '> ' : '') + b.text).join('\n\n');
     $('editor').innerHTML = `
 ${isLive() ? `<div class="okbox" style="padding:12px 14px">This issue is live. Changes you save here show on the website within a minute. <a href="/balita/${R.issue.issue_no}/${esc(a.slug)}" target="_blank" rel="noopener">View this article on the website ↗</a></div>` : ''}
-${a.flag ? `<div class="note stack" role="note" style="gap:8px"><div><strong>The AI asks you to check:</strong> ${esc(plainFlag(a))}</div><div class="muted" style="color:#5c3a00">To fix it, change the headline, text or photo captions below. Compare with the printed page on the left.</div><div class="row"><button class="btn btn-blue" type="button" id="f-done" style="padding:8px 14px">Done, it's correct now</button></div></div>` : ''}
-<div class="row" style="justify-content:flex-end"><button class="smallbtn" type="button" id="e-prev">Preview how it will look</button></div>
+${a.flag ? `<div class="note stack" role="note" style="gap:8px"><div><strong>The AI asks you to check:</strong> ${esc(plainFlag(a))}</div><div class="muted" style="color:#5c3a00">To fix it, change the headline, text or photo captions below. Compare with the “As printed” tab beside the preview.</div><div class="row"><button class="btn btn-blue" type="button" id="f-done" style="padding:8px 14px">Done, it's correct now</button></div></div>` : ''}
 <label class="f" for="e-title">Headline<input id="e-title" type="text" value="${esc(a.title)}"></label>
 <label class="f" for="e-dek">Summary shown when shared<textarea id="e-dek" style="min-height:64px">${esc(a.dek || '')}</textarea></label>
 <div class="row"><label class="f" for="e-byline" style="flex:1">Byline<input id="e-byline" type="text" value="${esc(a.byline || '')}"></label><label class="f" for="e-kicker" style="flex:1">Section label<input id="e-kicker" type="text" value="${esc(a.kicker || '')}"></label></div>
@@ -299,6 +298,7 @@ ${a.flag ? `<div class="note stack" role="note" style="gap:8px"><div><strong>The
 <div class="row"><button class="smallbtn" type="button" id="e-incl">${a.included ? 'Leave out of website' : 'Put back on website'}</button><button class="smallbtn" type="button" id="e-lead">${a.lead ? '★ Featured on homepage' : 'Feature on homepage'}</button></div>
 <div class="row"><button class="btn btn-line" style="color:var(--blue)" type="button" id="e-save">Save changes</button><button class="btn btn-blue" type="button" id="e-ok">Looks right ✓</button></div>
 </div><p id="e-msg" class="muted" aria-live="polite"></p>`;
+    schedulePreview(true);
   }
   function readEditor(a) {
     const blocks = $('e-body').value.split(/\n\s*\n/).map((s) => s.trim()).filter(Boolean).map((s) => s.startsWith('## ') ? { t: 'h', text: s.slice(3).trim() } : s.startsWith('> ') ? { t: 'q', text: s.slice(2).trim() } : { t: 'p', text: s });
@@ -323,32 +323,45 @@ ${a.flag ? `<div class="note stack" role="note" style="gap:8px"><div><strong>The
     if (l) { const k = +l.getAttribute('data-lead'); const cur = readEditor(a); cur.photos.unshift(cur.photos.splice(k, 1)[0]); Object.assign(a, cur); renderReview(); return; }
     if (e.target.id === 'e-save') save();
     if (e.target.id === 'f-done') { save({ flag: null, checked: true }); return; }
-    if (e.target.id === 'e-prev') { showPreview(a); return; }
-    if (e.target.id === 'p-back') { if (a._draft) { Object.assign(a, a._draft); delete a._draft; } renderReview(); return; }
     if (e.target.id === 'e-ok') save({ checked: true, flag: null }).then(() => { const next = R.articles.findIndex((x, i) => i > R.sel && !x.checked && x.included); if (next >= 0) { R.sel = next; renderReview(); } });
     if (e.target.id === 'e-incl') save({ included: !a.included });
     if (e.target.id === 'e-lead') save({ lead: true });
   });
-  // Shows the article the way the website lays it out, using the text and captions currently in the form.
-  function showPreview(a) {
-    const cur = Object.assign({}, a, readEditor(a));
-    const photos = (cur.photos || []).filter((p) => p.include !== false);
-    const fig = (p) => `<figure class="art-fig"><img src="${imgUrl(p.path, 1000)}" alt="" style="${p.width ? 'max-width:' + p.width + 'px;' : ''}height:auto">${p.caption ? `<figcaption>${esc(p.caption)}</figcaption>` : ''}</figure>`;
-    const rest = photos.slice(1), blocks = cur.body || [];
-    const every = rest.length ? Math.max(2, Math.floor(blocks.length / (rest.length + 1))) : 0;
-    let pi = 0, html = '';
-    blocks.forEach((b, i) => {
-      html += b.t === 'h' ? `<h2>${esc(b.text)}</h2>` : b.t === 'q' ? `<blockquote>${esc(b.text)}</blockquote>` : `<p>${esc(b.text)}</p>`;
-      if (every && (i + 1) % every === 0 && pi < rest.length && i < blocks.length - 1) html += fig(rest[pi++]);
-    });
-    html += rest.slice(pi).map(fig).join('');
-    a._draft = cur;
-    $('editor').innerHTML = `<div class="row" style="justify-content:space-between"><strong>Preview</strong><button class="btn btn-blue" type="button" id="p-back" style="padding:8px 14px">Back to editing</button></div>
-<div style="border:1px solid var(--line);border-radius:8px;max-height:78vh;overflow:auto;background:#fff"><article class="article" style="padding:20px">
-<span class="eyebrow">${esc(cur.kicker || 'Balita')}</span><h1>${esc(cur.title)}</h1>${cur.dek ? `<p class="dek">${esc(cur.dek)}</p>` : ''}${cur.byline ? `<span class="byline">${esc(cur.byline)}</span>` : ''}
-${photos[0] ? fig(photos[0]) : ''}<div class="body">${html}</div></article></div>
-<p class="muted">This is not saved yet. Go back to editing and click Save changes or Looks right.</p>`;
+  // ---------- live preview: the website's own page, rendered from what is in the form ----------
+  let pvMode = 'web', pvTimer = null, pvSeq = 0;
+  function fitPreview() {
+    const box = $('pv-frame'), f = $('pv'); if (!box || !f) return;
+    if (pvMode === 'phone') { box.classList.add('phone'); f.style.width = '390px'; f.style.height = '100%'; f.style.transform = ''; return; }
+    box.classList.remove('phone');
+    const W = Math.max(box.clientWidth, 1000), k = box.clientWidth / W;
+    f.style.width = W + 'px'; f.style.height = (box.clientHeight / k) + 'px'; f.style.transform = `scale(${k})`;
   }
+  function schedulePreview(now) { clearTimeout(pvTimer); $('pv-state').textContent = 'Updating…'; pvTimer = setTimeout(renderPreview, now ? 0 : 700); }
+  async function renderPreview() {
+    const a = R.articles[R.sel]; if (!a || !$('e-body')) return;
+    const seq = ++pvSeq;
+    const article = Object.assign({}, a, readEditor(a));
+    try {
+      const r = await fetch('/api/page?r=preview', { method: 'POST', headers: { 'content-type': 'application/json', 'x-editor-code': code }, body: JSON.stringify({ issue: R.issue, article, others: R.articles.filter((x) => x.id !== a.id).map((x) => ({ id: x.id, slug: x.slug, title: x.title, photos: (x.photos || []).slice(0, 1), included: x.included })) }) });
+      const html = await r.text();
+      if (seq !== pvSeq) return;
+      if (!r.ok) throw new Error(html.slice(0, 120));
+      const f = $('pv'), y = f.contentWindow ? f.contentWindow.scrollY : 0;
+      f.onload = () => { try { f.contentWindow.scrollTo(0, y); } catch (e) {} };
+      f.srcdoc = html; fitPreview();
+      $('pv-state').textContent = 'Up to date';
+    } catch (err) { if (seq === pvSeq) $('pv-state').textContent = 'Preview not available: ' + err.message; }
+  }
+  document.querySelector('.pv-tabs').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-pv]'); if (!b) return;
+    pvMode = b.getAttribute('data-pv');
+    document.querySelectorAll('[data-pv]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+    const print = pvMode === 'print';
+    $('pv-frame').classList.toggle('hidden', print); $('printed-wrap').classList.toggle('hidden', !print);
+    if (!print) fitPreview();
+  });
+  window.addEventListener('resize', fitPreview);
+  $('editor').addEventListener('input', () => schedulePreview());
   async function publish(at) {
     try {
       const { issue } = await call('publish', { issue_id: R.issue.id, publish_at: at });

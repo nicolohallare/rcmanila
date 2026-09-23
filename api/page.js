@@ -363,6 +363,11 @@ async function articlePage(origin, no, slug) {
   const arts = await articlesOf(issue.id);
   const a = arts.find((x) => x.slug === slug);
   if (!a) return null;
+  return renderArticle(origin, issue, a, arts);
+}
+
+// One renderer for the live article page and the editor's preview, so the preview is exactly what goes live.
+function renderArticle(origin, issue, a, arts) {
   const url = `${origin}/balita/${issue.issue_no}/${a.slug}`;
   const photos = (a.photos || []).filter((p) => p.include !== false);
   const lead = photos[0];
@@ -521,10 +526,41 @@ function donatePage(origin) {
   return layout({ title: 'Donate · Rotary Club of Manila', description: 'Support the service projects of the Rotary Club of Manila using QR Ph from any bank or e-wallet app.', url: origin + '/donate', body });
 }
 
+async function readJson(req) {
+  if (req.body && typeof req.body === 'object') return req.body;
+  if (typeof req.body === 'string') return JSON.parse(req.body);
+  const chunks = []; for await (const c of req) chunks.push(c);
+  return JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}');
+}
+
+// Editor preview: renders an unsaved article with the live page's own code. Only for the editor passcode.
+async function previewPage(req, origin) {
+  const code = String(req.headers['x-editor-code'] || '');
+  const ok = await fetch(FN, { method: 'POST', headers: { 'content-type': 'application/json', 'x-editor-code': code, apikey: PUB }, body: '{"action":"login"}' });
+  if (!ok.ok) return { status: 401, html: 'Not allowed' };
+  const b = await readJson(req);
+  if (!b || !b.issue || !b.article) return { status: 400, html: 'Missing article' };
+  const others = (b.others || []).filter((o) => o && o.included !== false);
+  let html = renderArticle(origin, b.issue, Object.assign({ slug: 'preview' }, b.article), [b.article, ...others]);
+  // Links are shown but do nothing inside the preview.
+  html = html.replace('<head>', '<head><base target="_blank"><meta name="robots" content="noindex"><style>a,button{pointer-events:none}</style>');
+  return { status: 200, html };
+}
+
 module.exports = async (req, res) => {
   const u = new URL(req.url, `https://${req.headers.host}`);
   const origin = `https://${req.headers['x-forwarded-host'] || req.headers.host}`;
   const r = u.searchParams.get('r') || 'home';
+  if (r === 'preview') {
+    if (req.method !== 'POST') { res.statusCode = 405; return res.end('Use POST'); }
+    try {
+      const out = await previewPage(req, origin);
+      res.statusCode = out.status;
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-store');
+      return res.end(out.html);
+    } catch (e) { res.statusCode = 500; return res.end('Preview failed: ' + esc(e.message)); }
+  }
   let html = null;
   try {
     if (r === 'home') html = await home(origin);
