@@ -357,3 +357,8 @@ p{margin:0}
 @media (max-width:520px){.h-facts b{font-size:26px}.h-years{grid-template-columns:repeat(2,minmax(0,1fr));gap:22px 14px}.h-year b{font-size:26px}.h-year p{font-size:14.5px}}
 .ph.fit img{object-fit:scale-down}
 .ph.fit img.bgblur{object-fit:cover}
+
+.tb-r{display:flex;gap:18px}
+.wk-poster{flex-shrink:0;width:132px;aspect-ratio:2/3;overflow:hidden;border-radius:4px;box-shadow:0 10px 24px -10px rgba(11,31,58,.45);background:var(--sky);align-self:flex-start}
+.wk-poster img{width:100%;height:100%;object-fit:cover;object-position:top center}
+@media (max-width:700px){.wk-poster{display:none}}

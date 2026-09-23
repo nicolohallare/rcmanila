@@ -9,8 +9,8 @@ async function q(path) {
   return r.json();
 }
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const img = (path, w) => path ? `${SB}/storage/v1/render/image/public/rcm/${path.split('/').map(encodeURIComponent).join('/')}?width=${w}&resize=contain&quality=78` : '';
-const raw = (path) => path ? `${SB}/storage/v1/object/public/rcm/${path.split('/').map(encodeURIComponent).join('/')}` : '';
+const img = (path, w) => path && path[0] === '/' ? path : path ? `${SB}/storage/v1/render/image/public/rcm/${path.split('/').map(encodeURIComponent).join('/')}?width=${w}&resize=contain&quality=78` : '';
+const raw = (path) => path && path[0] === '/' ? path : path ? `${SB}/storage/v1/object/public/rcm/${path.split('/').map(encodeURIComponent).join('/')}` : '';
 const fmtDate = (d) => d ? new Date(d + 'T12:00:00+08:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Manila' }) : '';
 const fmtDay = (d) => d ? new Date(d + 'T12:00:00+08:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Manila' }) : '';
 const FN = `${SB}/functions/v1/rcm-admin`;
@@ -91,7 +91,7 @@ ${url ? `<meta property="og:url" content="${esc(url)}">` : ''}
 <link rel="stylesheet" href="/assets/site.css">
 </head>
 <body class="pub">
-<div class="topbar"><div class="wrap"><span class="tb-l">The first Rotary club in Asia · Established 1919</span><a href="/admin">Editor login</a></div></div>
+<div class="topbar"><div class="wrap"><span class="tb-l">The first Rotary club in Asia · Established 1919</span><span class="tb-r"><a href="/secretariat">Secretariat login</a><a href="/admin">Editor login</a></span></div></div>
 <header class="site-head"><div class="wrap">
 <a class="logo" href="/" aria-label="Rotary Club of Manila home"><img src="/assets/logo.png" alt="Rotary Club of Manila" width="255" height="108"></a>
 <nav class="nav" aria-label="Main">
@@ -203,7 +203,7 @@ ${mt.speaker ? `<p class="wk-speaker">${esc(mt.speaker)}${mt.speaker_title ? `<s
 <p class="wk-meta">${esc(mt.time_text || '12:15 PM')}${mt.venue ? ` · ${esc(mt.venue)}` : ''}</p>
 ${mt.notes ? `<p class="wk-note">${esc(mt.notes)}</p>` : ''}
 <div class="wk-actions"><a class="btn btn-blue" href="/meetings/${mt.meeting_date}#rsvp">Sign up to attend</a><a class="link-arrow" href="/meetings/${mt.meeting_date}">Details</a>${mtCount ? `<span class="wk-count">${mtCount} signed up</span>` : ''}</div>
-</div></article>` : `<article class="wk">${dBlock(nextThu)}<div class="wk-body">
+</div>${mt.poster_path ? `<a class="wk-poster" href="${raw(mt.poster_path)}" target="_blank" rel="noopener" aria-label="Meeting poster, full size"><img src="${img(mt.poster_path, 400)}" alt="Poster for this week's meeting"></a>` : ''}</article>` : `<article class="wk">${dBlock(nextThu)}<div class="wk-body">
 <span class="wk-label">Weekly membership meeting</span><h3>Every Thursday at 12:15 PM</h3>
 <p class="wk-meta">Registration and lunch from 11:00 AM. This week’s speaker and venue will be posted by the Secretariat.</p>
 <div class="wk-actions"><a class="btn btn-blue" href="/meeting">Meeting details</a></div></div></article>`;
