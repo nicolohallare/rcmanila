@@ -42,7 +42,7 @@
       $('issues').innerHTML = issues.length ? issues.map((i) => {
         const s = STATUS[i.status] || [i.status, 'wait'];
         const when = i.status === 'scheduled' && i.publish_at ? ' · goes live ' + new Date(i.publish_at).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Manila' }) : '';
-        return `<li>${i.cover_path ? `<img src="${imgUrl(i.cover_path, 140)}" alt="">` : '<img alt="">'}<div style="flex:1"><b>Issue ${i.issue_no}</b><br><span class="muted">${esc(i.issue_date || '')}${esc(when)}</span></div><span class="tag ${s[1]}">${s[0]}</span><button class="smallbtn" data-open="${i.id}" type="button">Open</button>${i.status === 'published' || i.status === 'scheduled' ? `<a class="smallbtn" href="/balita/${i.issue_no}" target="_blank" rel="noopener">View</a>` : ''}</li>`;
+        return `<li>${i.cover_path ? `<img src="${imgUrl(i.cover_path, 140)}&v=${Date.parse(i.updated_at || 0)}" alt="" style="object-position:right top">` : '<img alt="">'}<div style="flex:1"><b>Issue ${i.issue_no}</b><br><span class="muted">${esc(i.issue_date || '')}${esc(when)}</span></div><span class="tag ${s[1]}">${s[0]}</span><button class="smallbtn" data-open="${i.id}" type="button">${i.status === 'published' ? 'Edit' : 'Check and publish'}</button>${i.status === 'published' || i.status === 'scheduled' ? `<a class="smallbtn" href="/balita/${i.issue_no}" target="_blank" rel="noopener">View</a>` : ''}</li>`;
       }).join('') : '<li class="muted">No issues yet. Upload the first one above.</li>';
     } catch (err) {
       if (err.auth) return show('v-login');
@@ -203,11 +203,12 @@
       const keptFrom = new Set((kept || []).map((k) => k.page_from));
       arts.forEach((a, i) => { if (keptFrom.has(a.from)) { a.skip = true; const li = $('a' + i); li.querySelector('.tag').className = 'tag ok'; li.querySelector('.tag').textContent = 'Already on the site'; } });
       const files = [];
+      const v = Date.now().toString(36); // new file names on every upload, so no one sees an old copy
       pages.forEach((p) => {
-        files.push({ name: `pages/page-${String(p.n).padStart(3, '0')}.jpg`, blob: p.thumbBlob, page: p.n, kind: 'page' });
-        p.photos.forEach((ph) => files.push({ name: `photos/${ph.id}.jpg`, blob: ph.blob, photo: ph, kind: 'photo' }));
+        files.push({ name: `pages/page-${String(p.n).padStart(3, '0')}-${v}.jpg`, blob: p.thumbBlob, page: p.n, kind: 'page' });
+        p.photos.forEach((ph) => files.push({ name: `photos/${ph.id}-${v}.jpg`, blob: ph.blob, photo: ph, kind: 'photo' }));
       });
-      files.push({ name: 'cover.jpg', blob: await BalitaExtract.coverFrom(pages[0]), kind: 'cover' });
+      files.push({ name: `cover-${v}.jpg`, blob: await BalitaExtract.coverFrom(pages[0]), kind: 'cover' });
       step(3, 'run', `Saving 0 of ${files.length} files…`);
       await uploadAll(issueNo, files, (n) => { step(3, 'run', `Saving ${n} of ${files.length} files…`); setBar(0.3 + n / files.length * 0.25); });
       step(3, 'ok', `Saved ${files.length} pages and photos`);
@@ -261,6 +262,17 @@
       else $('published').classList.add('hidden');
     } catch (err) { if (err.auth) return show('v-login'); $('editor').innerHTML = `<p class="err">${esc(err.message)}</p>`; }
   }
+  // Turn internal photo ids (p004-1) in the AI's note into "Photo 2", matching the numbers on the photo tiles.
+  function plainFlag(a) {
+    const ids = (a.photos || []).map((p) => p.id);
+    return String(a.flag || '').replace(/\(?\b(?:p(\d{3})-(\d+))(?:\s*(?:through|to|–|-)\s*p\d{3}-\d+)?\)?/g, (m, pg) => {
+      const range = /\s/.test(m.replace(/[()]/g, '').trim());
+      const k = ids.indexOf(m.replace(/[()]/g, '').split(/\s/)[0]);
+      const x = range ? 'the photos on PDF page ' + Number(pg) : k >= 0 ? 'Photo ' + (k + 1) : 'a photo on PDF page ' + Number(pg);
+      return m.startsWith('(') ? '(' + x + ')' : x;
+    });
+  }
+  function isLive() { return R.issue && R.issue.status === 'published'; }
   function statusOf(a) { if (!a.included) return ['Left out', 'off']; if (a.checked) return ['Checked', 'ok']; if (a.flag) return ['Needs a look', 'flag']; return ['To check', 'wait']; }
   function renderReview() {
     const { issue, articles } = R;
@@ -274,12 +286,14 @@
     $('printed').innerHTML = pages.map((p) => `<img src="${imgUrl(p, 900)}" alt="Printed page" loading="lazy">`).join('') || '<p class="muted">No page images.</p>';
     const bodyText = (a.body || []).map((b) => (b.t === 'h' ? '## ' : b.t === 'q' ? '> ' : '') + b.text).join('\n\n');
     $('editor').innerHTML = `
-${a.flag ? `<div class="note" role="note"><strong>Please check:</strong> ${esc(a.flag)}</div>` : ''}
+${isLive() ? `<div class="okbox" style="padding:12px 14px">This issue is live. Changes you save here show on the website within a minute. <a href="/balita/${R.issue.issue_no}/${esc(a.slug)}" target="_blank" rel="noopener">View this article on the website ↗</a></div>` : ''}
+${a.flag ? `<div class="note stack" role="note" style="gap:8px"><div><strong>The AI asks you to check:</strong> ${esc(plainFlag(a))}</div><div class="muted" style="color:#5c3a00">To fix it, change the headline, text or photo captions below. Compare with the printed page on the left.</div><div class="row"><button class="btn btn-blue" type="button" id="f-done" style="padding:8px 14px">Done, it's correct now</button></div></div>` : ''}
+<div class="row" style="justify-content:flex-end"><button class="smallbtn" type="button" id="e-prev">Preview how it will look</button></div>
 <label class="f" for="e-title">Headline<input id="e-title" type="text" value="${esc(a.title)}"></label>
 <label class="f" for="e-dek">Summary shown when shared<textarea id="e-dek" style="min-height:64px">${esc(a.dek || '')}</textarea></label>
 <div class="row"><label class="f" for="e-byline" style="flex:1">Byline<input id="e-byline" type="text" value="${esc(a.byline || '')}"></label><label class="f" for="e-kicker" style="flex:1">Section label<input id="e-kicker" type="text" value="${esc(a.kicker || '')}"></label></div>
 <div class="stack" style="gap:8px"><strong style="font-size:14px;color:var(--ink-2)">Photos — the first one included leads the article</strong>
-<div class="pgrid">${(a.photos || []).map((p, k) => `<div class="pcell ${p.include === false ? 'off' : ''}"><img src="${imgUrl(p.path, 320)}" alt=""><textarea data-cap="${k}" aria-label="Caption">${esc(p.caption || '')}</textarea><div class="row"><button class="smallbtn" type="button" data-tog="${k}">${p.include === false ? 'Include' : 'Leave out'}</button>${k > 0 ? `<button class="smallbtn" type="button" data-lead="${k}">Make first</button>` : ''}</div></div>`).join('') || '<p class="muted">No photos for this article.</p>'}</div></div>
+<div class="pgrid">${(a.photos || []).map((p, k) => `<div class="pcell ${p.include === false ? 'off' : ''}"><strong style="font-size:13px">Photo ${k + 1}${p.include === false ? ' · left out' : k === 0 || (a.photos || []).slice(0, k).every((x) => x.include === false) ? ' · top of article' : ''}</strong><img src="${imgUrl(p.path, 320)}" alt=""><textarea data-cap="${k}" aria-label="Caption for photo ${k + 1}" placeholder="Caption (optional)">${esc(p.caption || '')}</textarea><div class="row"><button class="smallbtn" type="button" data-tog="${k}">${p.include === false ? 'Include' : 'Leave out'}</button>${k > 0 ? `<button class="smallbtn" type="button" data-lead="${k}">Make first</button>` : ''}</div></div>`).join('') || '<p class="muted">No photos for this article.</p>'}</div></div>
 <label class="f" for="e-body">Text <span class="muted" style="font-weight:400">(blank line between paragraphs; start a line with ## for a subheading)</span><textarea id="e-body" style="min-height:320px">${esc(bodyText)}</textarea></label>
 <div class="row" style="justify-content:space-between">
 <div class="row"><button class="smallbtn" type="button" id="e-incl">${a.included ? 'Leave out of website' : 'Put back on website'}</button><button class="smallbtn" type="button" id="e-lead">${a.lead ? '★ Featured on homepage' : 'Feature on homepage'}</button></div>
@@ -298,7 +312,7 @@ ${a.flag ? `<div class="note" role="note"><strong>Please check:</strong> ${esc(a
     try {
       const { article } = await call('save-article', { id: a.id, fields });
       if (fields.lead) R.articles.forEach((x) => { x.lead = false; });
-      R.articles[R.sel] = article; renderReview(); $('e-msg').textContent = 'Saved.';
+      R.articles[R.sel] = article; renderReview(); $('e-msg').textContent = isLive() ? 'Saved. The website will show it within a minute.' : 'Saved.';
     } catch (err) { $('e-msg').textContent = err.message; }
   }
   $('rlist').addEventListener('click', (e) => { const b = e.target.closest('[data-i]'); if (!b) return; R.sel = Number(b.getAttribute('data-i')); renderReview(); });
@@ -308,10 +322,33 @@ ${a.flag ? `<div class="note" role="note"><strong>Please check:</strong> ${esc(a
     if (t) { const k = +t.getAttribute('data-tog'); const cur = readEditor(a); cur.photos[k].include = cur.photos[k].include === false; Object.assign(a, cur); renderReview(); return; }
     if (l) { const k = +l.getAttribute('data-lead'); const cur = readEditor(a); cur.photos.unshift(cur.photos.splice(k, 1)[0]); Object.assign(a, cur); renderReview(); return; }
     if (e.target.id === 'e-save') save();
-    if (e.target.id === 'e-ok') save({ checked: true }).then(() => { const next = R.articles.findIndex((x, i) => i > R.sel && !x.checked && x.included); if (next >= 0) { R.sel = next; renderReview(); } });
+    if (e.target.id === 'f-done') { save({ flag: null, checked: true }); return; }
+    if (e.target.id === 'e-prev') { showPreview(a); return; }
+    if (e.target.id === 'p-back') { if (a._draft) { Object.assign(a, a._draft); delete a._draft; } renderReview(); return; }
+    if (e.target.id === 'e-ok') save({ checked: true, flag: null }).then(() => { const next = R.articles.findIndex((x, i) => i > R.sel && !x.checked && x.included); if (next >= 0) { R.sel = next; renderReview(); } });
     if (e.target.id === 'e-incl') save({ included: !a.included });
     if (e.target.id === 'e-lead') save({ lead: true });
   });
+  // Shows the article the way the website lays it out, using the text and captions currently in the form.
+  function showPreview(a) {
+    const cur = Object.assign({}, a, readEditor(a));
+    const photos = (cur.photos || []).filter((p) => p.include !== false);
+    const fig = (p) => `<figure class="art-fig"><img src="${imgUrl(p.path, 1000)}" alt="" style="${p.width ? 'max-width:' + p.width + 'px;' : ''}height:auto">${p.caption ? `<figcaption>${esc(p.caption)}</figcaption>` : ''}</figure>`;
+    const rest = photos.slice(1), blocks = cur.body || [];
+    const every = rest.length ? Math.max(2, Math.floor(blocks.length / (rest.length + 1))) : 0;
+    let pi = 0, html = '';
+    blocks.forEach((b, i) => {
+      html += b.t === 'h' ? `<h2>${esc(b.text)}</h2>` : b.t === 'q' ? `<blockquote>${esc(b.text)}</blockquote>` : `<p>${esc(b.text)}</p>`;
+      if (every && (i + 1) % every === 0 && pi < rest.length && i < blocks.length - 1) html += fig(rest[pi++]);
+    });
+    html += rest.slice(pi).map(fig).join('');
+    a._draft = cur;
+    $('editor').innerHTML = `<div class="row" style="justify-content:space-between"><strong>Preview</strong><button class="btn btn-blue" type="button" id="p-back" style="padding:8px 14px">Back to editing</button></div>
+<div style="border:1px solid var(--line);border-radius:8px;max-height:78vh;overflow:auto;background:#fff"><article class="article" style="padding:20px">
+<span class="eyebrow">${esc(cur.kicker || 'Balita')}</span><h1>${esc(cur.title)}</h1>${cur.dek ? `<p class="dek">${esc(cur.dek)}</p>` : ''}${cur.byline ? `<span class="byline">${esc(cur.byline)}</span>` : ''}
+${photos[0] ? fig(photos[0]) : ''}<div class="body">${html}</div></article></div>
+<p class="muted">This is not saved yet. Go back to editing and click Save changes or Looks right.</p>`;
+  }
   async function publish(at) {
     try {
       const { issue } = await call('publish', { issue_id: R.issue.id, publish_at: at });

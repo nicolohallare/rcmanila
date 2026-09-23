@@ -10,6 +10,8 @@ async function q(path) {
 }
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const img = (path, w) => path && path[0] === '/' ? path : path ? `${SB}/storage/v1/render/image/public/rcm/${path.split('/').map(encodeURIComponent).join('/')}?width=${w}&resize=contain&quality=78` : '';
+// Covers carry the issue's last-update time, so a re-uploaded issue never shows an old cached cover.
+const coverSrc = (i, w) => coverSrc(i, w) + (i.updated_at ? '&v=' + Date.parse(i.updated_at) : '');
 const raw = (path) => path && path[0] === '/' ? path : path ? `${SB}/storage/v1/object/public/rcm/${path.split('/').map(encodeURIComponent).join('/')}` : '';
 const fmtDate = (d) => d ? new Date(d + 'T12:00:00+08:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Manila' }) : '';
 const fmtDay = (d) => d ? new Date(d + 'T12:00:00+08:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Manila' }) : '';
@@ -209,7 +211,7 @@ ${mt.notes ? `<p class="wk-note">${esc(mt.notes)}</p>` : ''}
 <div class="wk-actions"><a class="btn btn-blue" href="/meeting">Meeting details</a></div></div></article>`;
 
   const balitaCard = issue ? `<article class="wk">
-<a class="wk-cover" href="/balita/${issue.issue_no}" aria-label="Balita issue ${issue.issue_no}">${issue.cover_path ? `<img src="${img(issue.cover_path, 360)}" alt="Cover of Balita issue ${issue.issue_no}">` : ''}</a>
+<a class="wk-cover" href="/balita/${issue.issue_no}" aria-label="Balita issue ${issue.issue_no}">${issue.cover_path ? `<img src="${coverSrc(issue, 360)}" alt="Cover of Balita issue ${issue.issue_no}">` : ''}</a>
 <div class="wk-body"><span class="wk-label">Latest Balita</span><h3>Issue No. ${issue.issue_no}</h3>
 <p class="wk-meta">${esc(fmtDate(issue.issue_date))}</p>
 ${lead ? `<a class="wk-lead" href="/balita/${issue.issue_no}/${lead.slug}">${esc(lead.title)}</a>` : ''}
@@ -277,7 +279,7 @@ ${balitaCard}
 </div></section>
 
 ${issue ? `<section class="h-sec alt" id="balita"><div class="wrap h-balita">
-<a class="h-balita-cover" href="/balita/${issue.issue_no}">${issue.cover_path ? `<img src="${img(issue.cover_path, 480)}" alt="Cover of Balita issue ${issue.issue_no}" loading="lazy">` : ''}</a>
+<a class="h-balita-cover" href="/balita/${issue.issue_no}">${issue.cover_path ? `<img src="${coverSrc(issue, 480)}" alt="Cover of Balita issue ${issue.issue_no}" loading="lazy">` : ''}</a>
 <div class="h-balita-main"><span class="kicker">Published every Thursday</span><h2>Balita</h2>
 <p class="h-balita-meta">Issue No. ${issue.issue_no} · ${esc(fmtDate(issue.issue_date))}</p>
 <ul class="h-stories">${stories.map((a) => `<li><a href="/balita/${issue.issue_no}/${a.slug}"><small>${esc(a.kicker || 'Balita')}</small><strong>${esc(a.title)}</strong></a></li>`).join('')}</ul>
@@ -310,7 +312,7 @@ async function archive(origin) {
   const body = `<section class="wrap section">
 <div><span class="eyebrow">The official publication of the Rotary Club of Manila</span><h1 style="font-size:48px">Balita</h1></div>
 ${issues.length ? `<div class="grid3">${issues.map((i) => `<a class="story" href="/balita/${i.issue_no}">
-${i.cover_path ? `<div class="ph" style="aspect-ratio:9/16;max-width:220px"><img src="${img(i.cover_path, 400)}" alt="Cover of issue ${i.issue_no}" loading="lazy"></div>` : ''}
+${i.cover_path ? `<div class="ph" style="aspect-ratio:4/9;max-width:180px"><img style="object-position:right top" src="${coverSrc(i, 400)}" alt="Cover of issue ${i.issue_no}" loading="lazy"></div>` : ''}
 <h3>Issue No. ${i.issue_no}</h3><p>${esc(fmtDate(i.issue_date))}</p>${i.summary ? `<p>${esc(i.summary)}</p>` : ''}</a>`).join('')}</div>` : '<div class="empty">No issues published yet.</div>'}
 </section>`;
   return layout({ title: 'Balita · Rotary Club of Manila', description: 'Every issue of the Balita, the weekly publication of the Rotary Club of Manila.', url: origin + '/balita', body, nav: 'balita' });
@@ -326,7 +328,7 @@ async function issuePage(origin, no) {
   const pages = Array.isArray(issue.pages) ? issue.pages : [];
   const body = `
 <section class="issue-head"><div class="wrap">
-${issue.cover_path ? `<img class="cover" src="${img(issue.cover_path, 520)}" alt="Cover of Balita issue ${issue.issue_no}">` : '<div></div>'}
+${issue.cover_path ? `<img class="cover" src="${coverSrc(issue, 520)}" alt="Cover of Balita issue ${issue.issue_no}">` : '<div></div>'}
 <div style="display:flex;flex-direction:column;gap:14px">
 <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Home</a> / <a href="/balita">Balita</a></nav>
 <span class="eyebrow" style="color:var(--gold)">The official publication of the Rotary Club of Manila</span>
@@ -351,7 +353,7 @@ ${shareBar(url, title, false)}
 function show(x){var isA=x===a;a.setAttribute('aria-selected',isA);l.setAttribute('aria-selected',!isA);va.hidden=!isA;vl.hidden=isA;}
 a.onclick=function(){show(a)};l.onclick=function(){show(l)};if(location.hash==='#layout')show(l);})();
 </script>`;
-  return layout({ title, description: issue.summary || `The ${fmtDate(issue.issue_date)} issue of the Rotary Club of Manila's weekly publication.`, image: issue.cover_path ? img(issue.cover_path, 1200) : '', url, body, nav: 'balita' });
+  return layout({ title, description: issue.summary || `The ${fmtDate(issue.issue_date)} issue of the Rotary Club of Manila's weekly publication.`, image: issue.cover_path ? coverSrc(issue, 1200) : '', url, body, nav: 'balita' });
 }
 
 async function articlePage(origin, no, slug) {
@@ -389,11 +391,11 @@ ${a.byline ? `<span class="byline">${esc(a.byline)}</span>` : ''}
 ${lead ? figure(lead, lead.caption || a.title, 1400, false) : ''}
 <div class="share-row">${shareBar(url, a.title, true)}</div>
 <div class="body">${html}</div>
-<div class="from-issue">${issue.cover_path ? `<img src="${img(issue.cover_path, 160)}" alt="">` : ''}<div><strong>From Balita Issue ${issue.issue_no}</strong>
+<div class="from-issue">${issue.cover_path ? `<img src="${coverSrc(issue, 160)}" alt="">` : ''}<div><strong>From Balita Issue ${issue.issue_no}</strong>
 <a href="/balita/${issue.issue_no}#layout">See this story as printed${a.printed_pages ? ', ' + esc(a.printed_pages) : ''}</a><a href="/balita/${issue.issue_no}">Read the whole issue</a></div></div>
 ${others.length ? `<h2 style="font-size:24px;margin-top:12px">More from this issue</h2><div style="display:flex;flex-direction:column;gap:14px">${others.map((o) => { const p = leadPhoto(o); return `<a class="mini" style="background:var(--tint)" href="/balita/${issue.issue_no}/${o.slug}">${p ? `<img src="${img(p.path, 200)}" alt="">` : ''}${esc(o.title)}</a>`; }).join('')}</div>` : ''}
 </article>`;
-  return layout({ title: `${a.title} · Balita ${issue.issue_no}`, description: a.dek || `From the Balita, issue ${issue.issue_no}.`, image: lead ? img(lead.path, 1200) : (issue.cover_path ? img(issue.cover_path, 1200) : ''), url, body, nav: 'balita' });
+  return layout({ title: `${a.title} · Balita ${issue.issue_no}`, description: a.dek || `From the Balita, issue ${issue.issue_no}.`, image: lead ? img(lead.path, 1200) : (issue.cover_path ? coverSrc(issue, 1200) : ''), url, body, nav: 'balita' });
 }
 
 async function meetingPage(origin, dateParam) {

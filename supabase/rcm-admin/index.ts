@@ -111,14 +111,16 @@ const CLEAN_TASK = `Return exactly this JSON shape:
  "body":[{"t":"p"|"h"|"q","text":"..."}],
  "photos":[{"id":"photo id","caption":"the caption printed for this photo, or empty string"}],
  "lead_photo":"photo id or null",
- "flag":null or "one short sentence telling the editor what to double-check (e.g. a name spelled two ways, text that looks cut off, a caption you could not place)"}
-"h" = a printed subheading, "q" = a printed pull quote. Photos: include only real photographs that belong to this article, in reading order; leave out logos, headline art, cover images, advertisements and graphics that are mostly text. Match each printed caption to the photo it describes using what you can see in the images; use an empty caption rather than guessing. lead_photo is the best wide photo for the top of the web page.`;
+ "flag":null or "a short note to the editor in plain words (at most two sentences) about something they should fix before publishing"}
+"h" = a printed subheading, "q" = a printed pull quote. Photos: include only real photographs that belong to this article, in reading order; leave out logos, headline art, cover images, advertisements and graphics that are mostly text. Match each printed caption to the photo it describes using what you can see in the images; use an empty caption rather than guessing. lead_photo is the best wide photo for the top of the web page.
+Flag only real problems the editor must act on: text that is cut off or out of order, or a name, date or title that looks wrong. The editor is not technical: write the way a colleague would ("The photo of a man in a tuxedo on printed page 6 has no caption. Is this the author?"). Never mention photo ids, JSON or the PDF. Do not flag empty captions on group or crowd photos, typos you cannot confirm, or anything that is fine as printed. When in doubt, use null.`;
 
 const CONT_TASK = `This is a continuation of an article whose beginning was already processed. Return exactly this JSON shape:
 {"body":[{"t":"p"|"h"|"q","text":"..."}],
  "photos":[{"id":"photo id","caption":"the caption printed for this photo, or empty string"}],
- "flag":null or "one short sentence telling the editor what to double-check"}
-If the first paragraph continues a sentence cut off at the end of the previous part, start with the continuing words as they appear. Same rules for photos as before: only real photographs that belong to this article, in reading order.`;
+ "flag":null or "a short note to the editor in plain words (at most two sentences) about something they should fix before publishing"}
+If the first paragraph continues a sentence cut off at the end of the previous part, start with the continuing words as they appear. Same rules for photos as before: only real photographs that belong to this article, in reading order.
+Flag only real problems the editor must act on: text that is cut off or out of order, or a name, date or title that looks wrong. The editor is not technical: write the way a colleague would ("The photo of a man in a tuxedo on printed page 6 has no caption. Is this the author?"). Never mention photo ids, JSON or the PDF. Do not flag empty captions on group or crowd photos, typos you cannot confirm, or anything that is fine as printed. When in doubt, use null.`;
 
 function mapPhotos(list: { id: string; caption: string }[], photos: { id: string; path: string; width: number; height: number }[]) {
   const byId = new Map(photos.map((p) => [p.id, p]));
