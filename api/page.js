@@ -13,6 +13,9 @@ const img = (path, w) => path ? `${SB}/storage/v1/render/image/public/rcm/${path
 const raw = (path) => path ? `${SB}/storage/v1/object/public/rcm/${path.split('/').map(encodeURIComponent).join('/')}` : '';
 const fmtDate = (d) => d ? new Date(d + 'T12:00:00+08:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Manila' }) : '';
 const fmtDay = (d) => d ? new Date(d + 'T12:00:00+08:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Manila' }) : '';
+const MAIL = 'rcmanila@rcmanila.org';
+const mailto = (subject) => `mailto:${MAIL}?subject=${encodeURIComponent(subject)}`;
+const TEL = 'tel:+63285271885';
 const leadPhoto = (a) => (a.photos || []).find((p) => p.include !== false);
 
 function layout({ title, description, image, url, body, nav = '' }) {
@@ -40,7 +43,7 @@ ${url ? `<meta property="og:url" content="${esc(url)}">` : ''}
 <header class="site-head"><div class="wrap">
 <a class="logo" href="/" aria-label="Rotary Club of Manila home"><img src="/assets/logo.png" alt="Rotary Club of Manila" width="255" height="108"></a>
 <nav class="nav" aria-label="Main">
-<a href="/#about">Our Club</a><a href="/#impact">Our Impact</a><a href="/#meeting">Meetings &amp; Events</a>
+<a href="/#club">Our Club</a><a href="/#impact">Our Impact</a><a href="/#meeting">Meetings &amp; Events</a>
 <a href="/balita" class="${nav === 'balita' ? 'on' : ''}">Balita</a><a href="/#join">Membership</a><a href="/#contact">Contact</a>
 </nav>
 <a class="btn btn-gold" href="/#meeting">Attend a meeting</a>
@@ -48,9 +51,10 @@ ${url ? `<meta property="og:url" content="${esc(url)}">` : ''}
 <main>${body}</main>
 <footer class="foot" id="contact"><div class="wrap">
 <div style="display:flex;flex-direction:column;gap:12px;max-width:320px"><span class="chip"><img src="/assets/logo.png" alt="Rotary Club of Manila"></span><span>Asia's first Rotary club. Service above self since 1919.</span></div>
-<div><strong style="color:#fff">Secretariat</strong><br>Contact details to follow</div>
-<div><strong style="color:#fff">Balita</strong><br><a href="/balita">All issues</a></div>
-<div>Rotary District 3810<br>© ${new Date().getFullYear()} Rotary Club of Manila</div>
+<address style="font-style:normal"><strong style="color:#fff">Secretariat</strong><br>RCM Office, 543 Arquiza St. cor. Grey St.<br>Ermita, Manila<br><a href="${TEL}">(02) 8527-1885</a><br><a href="mailto:${MAIL}">${MAIL}</a></address>
+<div><strong style="color:#fff">Follow us</strong><br><a href="https://www.facebook.com/RotaryClubofManila" target="_blank" rel="noopener">Facebook</a><br><a href="https://www.linkedin.com/company/rotary-club-of-manila/" target="_blank" rel="noopener">LinkedIn</a><br><a href="/balita">Balita archive</a></div>
+<div><strong style="color:#fff">Related</strong><br><a href="https://rcmanilafoundation.com/" target="_blank" rel="noopener">RCManila Foundation, Inc.</a><br><a href="https://www.rotary.org/" target="_blank" rel="noopener">Rotary International</a><br>Rotary District 3810</div>
+<div style="align-self:flex-end">© ${new Date().getFullYear()} Rotary Club of Manila</div>
 </div></footer>
 <script>
 document.addEventListener('click', async (e) => {
@@ -122,10 +126,10 @@ ${lead ? `<figcaption><a href="/balita/${issue.issue_no}/${lead.slug}" style="co
 <span class="eyebrow">Weekly meeting</span>
 <div style="display:flex;gap:16px;align-items:center">
 <div class="date-chip"><span>${nextThu.toLocaleDateString('en-GB', { month: 'short' }).toUpperCase()}</span><b>${nextThu.getDate()}</b><small>Thursday</small></div>
-<div><strong>Every Thursday, lunch meeting</strong><br>Time and venue from the Secretariat</div>
+<div><strong>12:15 PM · Registration and lunch from 11:00 AM</strong><br>Pasay Rooms A &amp; B, Makati Shangri-La Manila</div>
 </div>
-<p>Members and guests are welcome at our weekly Thursday meeting.</p>
-<a class="more" href="#contact">Ask the Secretariat about attending →</a>
+<p>Members and guests are welcome every Thursday. Venues can change, so please confirm with the Secretariat before you come.</p>
+<a class="more" href="${mailto('Attending a Thursday meeting')}">Tell the Secretariat you're coming →</a>
 </div></article>
 ${lead ? `<article class="card">${leadPh ? `<img src="${img(leadPh.path, 800)}" alt="" style="aspect-ratio:16/9;object-fit:cover;width:100%">` : ''}<div class="in">
 <span class="eyebrow">Featured story</span><h3>${esc(lead.title)}</h3>${lead.dek ? `<p>${esc(lead.dek)}</p>` : ''}
@@ -136,10 +140,18 @@ ${issue.cover_path ? `<img src="${img(issue.cover_path, 300)}" alt="Cover of Bal
 <a class="btn btn-blue" href="/balita/${issue.issue_no}" style="margin-top:auto">Read online</a></div></div></article>` : ''}
 </div></div>
 
+<section class="wrap section" id="club" style="max-width:1000px">
+<div><span class="eyebrow">Our Club</span><h2 style="font-size:34px">Where Rotary in Asia began</h2></div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:28px;font-size:18px;color:var(--ink-2)">
+<p style="margin:0">In January 1919, Leon Lambert and a small group of business leaders met at the Manila Hotel to form a Rotary club. On 1 June 1919 Rotary International granted Charter No. 478, making the Rotary Club of Manila the first Rotary club in the Philippines and in Asia.</p>
+<p style="margin:0">More than a century later, the Club brings together business, professional and civic leaders every Thursday for fellowship and service, as part of Rotary District 3810. The Club is led in Rotary Year 2026–2027 by President Reginald T. Yu.</p>
+</div>
+</section>
+
 <section class="impact" id="impact"><div class="wrap">
 <h2>Our impact at a glance</h2>
 <div class="impact-grid">
-<div><b>107</b><strong>Years of service</strong><span>Founded in 1919 at the Manila Hotel</span></div>
+<div><b>107</b><strong>Years of service</strong><span>Chartered 1 June 1919 · Charter No. 478</span></div>
 <div><b>500</b><strong>Families served</strong><span>Through community service in RY 2025–2026</span></div>
 <div><b>1,588</b><strong>Children reached</strong><span>Through community service in RY 2025–2026</span></div>
 <div><b>$30K</b><strong>To The Rotary Foundation</strong><span>About US$30,000 in RY 2025–2026</span></div>
@@ -147,7 +159,7 @@ ${issue.cover_path ? `<img src="${img(issue.cover_path, 300)}" alt="Cover of Bal
 <p class="impact-note">Figures from the Club's RY 2025–2026 report.</p>
 </div></section>
 
-${issue ? `<section class="wrap section" id="about">
+${issue ? `<section class="wrap section" id="stories">
 <div class="section-head"><div><span class="eyebrow">From the latest Balita</span><h2>Stories of service</h2></div><a class="btn btn-line" style="color:var(--navy)" href="/balita/${issue.issue_no}">See all of issue ${issue.issue_no}</a></div>
 <div class="grid3">${(withPhotos.length >= 3 ? withPhotos : arts).slice(0, 6).map((a) => storyCard(issue, a)).join('')}</div>
 </section>
@@ -164,12 +176,12 @@ ${issue.cover_path ? `<img class="cover" src="${img(issue.cover_path, 520)}" alt
 <span class="eyebrow" style="color:var(--gold)">Membership</span>
 <h2>Leadership becomes more meaningful in the service of others.</h2>
 <p>Join a community of leaders working for a stronger Manila and a brighter Philippines. Come to a Thursday meeting as our guest.</p>
-<div style="display:flex;gap:12px;flex-wrap:wrap"><a class="btn btn-gold" href="#meeting">Attend as a guest</a><a class="btn btn-line" style="color:#fff" href="#contact">Membership inquiry</a></div>
+<div style="display:flex;gap:12px;flex-wrap:wrap"><a class="btn btn-gold" href="#meeting">Attend as a guest</a><a class="btn btn-line" style="color:#fff" href="${mailto('Membership inquiry')}">Membership inquiry</a></div>
 </div></section>
 <div class="wrap actions">
 <a href="#meeting"><b>Attend</b><span>Thursday lunch meetings</span></a><a href="#join"><b>Join</b><span>Become a member</span></a>
-<a href="#contact"><b>Volunteer</b><span>Help on a project</span></a><a href="#contact"><b>Partner</b><span>Work with the Club</span></a>
-<a class="donate" href="#contact"><b>Donate</b><span>Support our projects</span></a>
+<a href="${mailto('Volunteering for a project')}"><b>Volunteer</b><span>Help on a project</span></a><a href="${mailto('Partnering with the Rotary Club of Manila')}"><b>Partner</b><span>Work with the Club</span></a>
+<a class="donate" href="${mailto('Donation inquiry')}"><b>Donate</b><span>Support our projects</span></a>
 </div>`;
   return layout({
     title: 'Rotary Club of Manila',
