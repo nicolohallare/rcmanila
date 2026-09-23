@@ -128,6 +128,24 @@ function mapPhotos(list: { id: string; caption: string }[], photos: { id: string
   });
 }
 
+// Remove every stored file of an issue (pages, photos, cover) so a fresh upload starts clean.
+async function clearIssueFiles(issueNo: number) {
+  const base = `issues/${issueNo}`;
+  const paths: string[] = [];
+  for (const sub of ["", "/pages", "/photos"]) {
+    let offset = 0;
+    for (;;) {
+      const { data } = await db.storage.from(BUCKET).list(base + sub, { limit: 1000, offset });
+      if (!data || !data.length) break;
+      for (const f of data) if (f.id) paths.push(`${base}${sub}/${f.name}`);
+      if (data.length < 1000) break;
+      offset += 1000;
+    }
+  }
+  for (let i = 0; i < paths.length; i += 500) await db.storage.from(BUCKET).remove(paths.slice(i, i + 500));
+  return paths.length;
+}
+
 async function uniqueSlug(issueId: string, base: string) {
   const { data } = await db.from("rcm_articles").select("slug").eq("issue_id", issueId);
   const taken = new Set((data || []).map((r: { slug: string }) => r.slug));
@@ -267,11 +285,21 @@ Deno.serve(async (req) => {
         const { data: arts } = await db.from("rcm_articles").select("id,title,page_from,page_to,checked").eq("issue_id", existing.id);
         return json({ issue: existing, kept: arts || [] });
       }
+      await clearIssueFiles(issue_no);
       const row = { issue_no, issue_date: body.issue_date || null, status: "processing", page_count: body.page_count || null, updated_at: new Date().toISOString() };
       const { data, error } = await db.from("rcm_issues").upsert(row, { onConflict: "issue_no" }).select("id,issue_no,status").single();
       if (error) throw error;
       await db.from("rcm_articles").delete().eq("issue_id", data.id);
       return json({ issue: data, kept: [] });
+    }
+
+    if (action === "delete-issue") {
+      const { data: iss } = await db.from("rcm_issues").select("id,issue_no").eq("id", body.issue_id).single();
+      if (!iss) return json({ error: "Issue not found." }, 404);
+      const removed = await clearIssueFiles(iss.issue_no);
+      const { error } = await db.from("rcm_issues").delete().eq("id", iss.id);
+      if (error) throw error;
+      return json({ ok: true, removed });
     }
 
     if (action === "check-issue") {

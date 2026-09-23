@@ -336,6 +336,11 @@ ${a.flag ? `<div class="note" role="note"><strong>Please check:</strong> ${esc(a
     $('unpub').onclick = async () => { try { const { issue } = await call('unpublish', { issue_id: i.id }); R.issue = issue; $('published').classList.add('hidden'); } catch (e) { alertBox(e.message); } };
   }
   $('back-home').onclick = openHome;
+  $('del-issue').onclick = async () => {
+    if (!R.issue) return;
+    if (!window.confirm(`Delete Balita issue ${R.issue.issue_no} from the website? Its articles, pages and photos will be removed. You can upload the PDF again afterwards.`)) return;
+    try { await call('delete-issue', { issue_id: R.issue.id }); openHome(); } catch (e) { alertBox(e.message); }
+  };
 
   if (code) call('login').then(openHome).catch(() => show('v-login')); else show('v-login');
 })();

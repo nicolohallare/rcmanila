@@ -141,7 +141,7 @@
       }
       canvas.width = canvas.height = 0;
 
-      const rec = { n, width: W, height: H, spread: W > H * 1.15, text, thumbBlob, thumbUrl: URL.createObjectURL(thumbBlob), photos };
+      const rec = { n, width: W, height: H, spread: W > H * 0.7, text, thumbBlob, thumbUrl: URL.createObjectURL(thumbBlob), photos };
       pages.push(rec);
       page.cleanup();
       if (onProgress) onProgress({ stage: 'page', n, total, page: rec });
@@ -150,7 +150,8 @@
     return pages;
   }
 
-  // Cover image: the right half of page 1 when it is a spread, else the whole page.
+  // Cover image: Balita PDF pages are two-page spreads (back cover ad on the left, front cover on the right),
+  // so the cover is the right half of page 1. A single portrait page is used whole.
   async function coverFrom(pageRec) {
     const img = await createImageBitmap(pageRec.thumbBlob);
     const half = pageRec.spread;
