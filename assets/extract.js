@@ -110,10 +110,10 @@
       // Render once at a scale that gives photos up to ~1600px, then crop.
       let scale = 1.6;
       for (const c of cands) {
-        const want = Math.min(c.nw || 1600, 1600) / c.w;
+        const want = Math.min(c.nw || 2000, 2000) / c.w;
         scale = Math.max(scale, want);
       }
-      scale = Math.min(scale, 4.5);
+      scale = Math.min(scale, 6, 7000 / W);
       const vp = page.getViewport({ scale });
       const canvas = document.createElement('canvas');
       canvas.width = Math.floor(vp.width); canvas.height = Math.floor(vp.height);
@@ -127,7 +127,7 @@
       for (const c of cands) {
         // PDF y grows upward; canvas y grows downward.
         const sx = c.x0 * scale, sw = c.w * scale, sy = (H - c.y1) * scale, sh = c.h * scale;
-        const big = scaledCopy(canvas, sx, sy, sw, sh, 1600);
+        const big = scaledCopy(canvas, sx, sy, sw, sh, 2000);
         const small = scaledCopy(canvas, sx, sy, sw, sh, 320);
         k++;
         photos.push({

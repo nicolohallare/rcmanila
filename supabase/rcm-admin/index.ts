@@ -84,6 +84,7 @@ async function claude(content: unknown, system: string, maxTokens: number) {
     });
     if (r.ok) {
       const j = await r.json();
+      if (j.stop_reason === "max_tokens") throw new Error("The AI's answer was cut off because this part was too long.");
       return (j.content || []).filter((b: { type: string }) => b.type === "text").map((b: { text: string }) => b.text).join("");
     }
     last = `${r.status} ${await r.text()}`;
@@ -112,6 +113,20 @@ const CLEAN_TASK = `Return exactly this JSON shape:
  "lead_photo":"photo id or null",
  "flag":null or "one short sentence telling the editor what to double-check (e.g. a name spelled two ways, text that looks cut off, a caption you could not place)"}
 "h" = a printed subheading, "q" = a printed pull quote. Photos: include only real photographs that belong to this article, in reading order; leave out logos, headline art, cover images, advertisements and graphics that are mostly text. Match each printed caption to the photo it describes using what you can see in the images; use an empty caption rather than guessing. lead_photo is the best wide photo for the top of the web page.`;
+
+const CONT_TASK = `This is a continuation of an article whose beginning was already processed. Return exactly this JSON shape:
+{"body":[{"t":"p"|"h"|"q","text":"..."}],
+ "photos":[{"id":"photo id","caption":"the caption printed for this photo, or empty string"}],
+ "flag":null or "one short sentence telling the editor what to double-check"}
+If the first paragraph continues a sentence cut off at the end of the previous part, start with the continuing words as they appear. Same rules for photos as before: only real photographs that belong to this article, in reading order.`;
+
+function mapPhotos(list: { id: string; caption: string }[], photos: { id: string; path: string; width: number; height: number }[]) {
+  const byId = new Map(photos.map((p) => [p.id, p]));
+  return (list || []).filter((p) => byId.has(p.id)).map((p) => {
+    const src = byId.get(p.id)!;
+    return { id: p.id, path: src.path, caption: p.caption || "", width: src.width, height: src.height, include: true };
+  });
+}
 
 async function uniqueSlug(issueId: string, base: string) {
   const { data } = await db.from("rcm_articles").select("slug").eq("issue_id", issueId);
@@ -247,11 +262,23 @@ Deno.serve(async (req) => {
     if (action === "start") {
       const issue_no = Number(body.issue_no);
       if (!issue_no) return json({ error: "Enter the issue number." }, 400);
+      const { data: existing } = await db.from("rcm_issues").select("id,issue_no,status").eq("issue_no", issue_no).maybeSingle();
+      if (existing && body.keep) {
+        const { data: arts } = await db.from("rcm_articles").select("id,title,page_from,page_to,checked").eq("issue_id", existing.id);
+        return json({ issue: existing, kept: arts || [] });
+      }
       const row = { issue_no, issue_date: body.issue_date || null, status: "processing", page_count: body.page_count || null, updated_at: new Date().toISOString() };
-      const { data, error } = await db.from("rcm_issues").upsert(row, { onConflict: "issue_no" }).select("id,issue_no").single();
+      const { data, error } = await db.from("rcm_issues").upsert(row, { onConflict: "issue_no" }).select("id,issue_no,status").single();
       if (error) throw error;
       await db.from("rcm_articles").delete().eq("issue_id", data.id);
-      return json({ issue: data });
+      return json({ issue: data, kept: [] });
+    }
+
+    if (action === "check-issue") {
+      const { data: existing } = await db.from("rcm_issues").select("id,issue_no,status").eq("issue_no", Number(body.issue_no)).maybeSingle();
+      if (!existing) return json({ exists: false });
+      const { count } = await db.from("rcm_articles").select("id", { count: "exact", head: true }).eq("issue_id", existing.id);
+      return json({ exists: true, status: existing.status, articles: count || 0 });
     }
 
     if (action === "sign") {
@@ -277,18 +304,21 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (action === "clean") {
-      const { issue_id, article, pages, photos, sort } = body as {
-        issue_id: string; sort: number;
-        article: { title: string; kicker: string; byline: string | null; from: number; to: number; printed: string | null; lead: boolean };
+    if (action === "clean-part") {
+      const { article, pages, photos, part, parts } = body as {
+        article: { title: string; kicker: string; byline: string | null; from: number; to: number; printed: string | null };
         pages: { n: number; text: string }[];
         photos: { id: string; page: number; path: string; width: number; height: number; preview: string }[];
+        part: number; parts: number;
       };
       return streamed(async () => {
+        const first = !part;
+        const intro = first
+          ? `${CLEAN_TASK}\n\nArticle: "${article.title}" (kicker: ${article.kicker}; byline: ${article.byline || "none"}; PDF pages ${article.from}–${article.to}).` + (parts > 1 ? ` This is part 1 of ${parts}; only include the text on these pages.` : "")
+          : `${CONT_TASK}\n\nArticle: "${article.title}", part ${part + 1} of ${parts}.`;
         const content: unknown[] = [{
           type: "text",
-          text: `${CLEAN_TASK}\n\nArticle: "${article.title}" (kicker: ${article.kicker}; byline: ${article.byline || "none"}; PDF pages ${article.from}–${article.to}).\n\nRaw text:\n\n` +
-            pages.map((p) => `=== PDF page ${p.n} ===\n${(p.text || "").slice(0, 9000)}`).join("\n\n") +
+          text: `${intro}\n\nRaw text:\n\n` + pages.map((p) => `=== PDF page ${p.n} ===\n${(p.text || "").slice(0, 12000)}`).join("\n\n") +
             (photos.length ? `\n\nThe ${photos.length} images placed on these pages follow, each labelled with its id.` : "\n\nThere are no photos on these pages."),
         }];
         for (const ph of photos.slice(0, 40)) {
@@ -296,34 +326,44 @@ Deno.serve(async (req) => {
           const b64 = (ph.preview || "").split(",")[1];
           if (b64) content.push({ type: "image", source: { type: "base64", media_type: "image/jpeg", data: b64 } });
         }
-        const reply = await claude(content, CLEAN_SYSTEM, 16000);
-        const a = extractJson(reply);
-        const byId = new Map(photos.map((p) => [p.id, p]));
-        const chosen = (a.photos || []).filter((p: { id: string }) => byId.has(p.id)).map((p: { id: string; caption: string }) => {
-          const src = byId.get(p.id)!;
-          return { id: p.id, path: src.path, caption: p.caption || "", width: src.width, height: src.height, include: true };
-        });
-        if (a.lead_photo && byId.has(a.lead_photo)) {
-          const i = chosen.findIndex((p: { id: string }) => p.id === a.lead_photo);
-          if (i > 0) chosen.unshift(chosen.splice(i, 1)[0]);
-        }
-        const title = a.title || article.title;
-        const row = {
-          issue_id, sort: sort ?? 0, slug: await uniqueSlug(issue_id, slugify(title)),
-          kicker: a.kicker || article.kicker, title, dek: a.dek || null, byline: a.byline || article.byline || null,
+        const a = extractJson(await claude(content, CLEAN_SYSTEM, 16000));
+        return {
+          title: a.title, dek: a.dek, byline: a.byline, kicker: a.kicker, lead_photo: a.lead_photo, flag: a.flag || null,
           body: Array.isArray(a.body) ? a.body.filter((b: { text?: string }) => b && b.text) : [],
-          photos: chosen, page_from: article.from, page_to: article.to, printed_pages: article.printed || null,
-          flag: a.flag || null, lead: !!article.lead,
+          photos: mapPhotos(a.photos, photos),
         };
-        const { data, error } = await db.from("rcm_articles").insert(row).select("*").single();
-        if (error) throw error;
-        return data;
       });
+    }
+
+    if (action === "save-draft") {
+      const { issue_id, sort, article, parts } = body as {
+        issue_id: string; sort: number;
+        article: { title: string; kicker: string; byline: string | null; from: number; to: number; printed: string | null; lead: boolean };
+        parts: { title?: string; dek?: string; byline?: string; kicker?: string; lead_photo?: string; flag?: string | null; body: unknown[]; photos: { id: string }[] }[];
+      };
+      const head = parts[0] || { body: [], photos: [] };
+      const photos = parts.flatMap((p) => p.photos || []);
+      if (head.lead_photo) { const i = photos.findIndex((p) => p.id === head.lead_photo); if (i > 0) photos.unshift(photos.splice(i, 1)[0]); }
+      const flags = parts.map((p) => p.flag).filter(Boolean);
+      const title = head.title || article.title;
+      let lead = !!article.lead;
+      if (lead) { const { count } = await db.from("rcm_articles").select("id", { count: "exact", head: true }).eq("issue_id", issue_id).eq("lead", true); if (count) lead = false; }
+      const row = {
+        issue_id, sort: sort ?? 0, slug: await uniqueSlug(issue_id, slugify(title)),
+        kicker: head.kicker || article.kicker, title, dek: head.dek || null, byline: head.byline || article.byline || null,
+        body: parts.flatMap((p) => p.body || []), photos, page_from: article.from, page_to: article.to, printed_pages: article.printed || null,
+        flag: flags.length ? flags.join(" ") : null, lead,
+      };
+      const { data, error } = await db.from("rcm_articles").insert(row).select("*").single();
+      if (error) throw error;
+      return json(data);
     }
 
     if (action === "finish") {
       const f = body.fields || {};
-      const upd: Record<string, unknown> = { status: "draft", updated_at: new Date().toISOString() };
+      const { data: cur } = await db.from("rcm_issues").select("status").eq("id", body.issue_id).single();
+      const upd: Record<string, unknown> = { updated_at: new Date().toISOString() };
+      if (!cur || cur.status === "processing") upd.status = "draft";
       for (const k of ["issue_date", "meeting", "guest", "summary", "cover_path", "pages", "page_count"]) if (k in f) upd[k] = f[k];
       const { data, error } = await db.from("rcm_issues").update(upd).eq("id", body.issue_id).select("*").single();
       if (error) throw error;

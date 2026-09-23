@@ -9,7 +9,7 @@ async function q(path) {
   return r.json();
 }
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const img = (path, w) => path ? `${SB}/storage/v1/render/image/public/rcm/${path.split('/').map(encodeURIComponent).join('/')}?width=${w}&quality=78` : '';
+const img = (path, w) => path ? `${SB}/storage/v1/render/image/public/rcm/${path.split('/').map(encodeURIComponent).join('/')}?width=${w}&resize=contain&quality=78` : '';
 const raw = (path) => path ? `${SB}/storage/v1/object/public/rcm/${path.split('/').map(encodeURIComponent).join('/')}` : '';
 const fmtDate = (d) => d ? new Date(d + 'T12:00:00+08:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Manila' }) : '';
 const fmtDay = (d) => d ? new Date(d + 'T12:00:00+08:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Manila' }) : '';
@@ -19,6 +19,20 @@ const MAIL = 'rcmanila@rcmanila.org';
 const mailto = (subject) => `mailto:${MAIL}?subject=${encodeURIComponent(subject)}`;
 const TEL = 'tel:+63285271885';
 const leadPhoto = (a) => (a.photos || []).find((p) => p.include !== false);
+// Show a photo no wider than its real pixel size, so small photos stay sharp instead of being blown up.
+const figure = (p, alt, w = 1400, lazy = true) => {
+  const real = p.width || w;
+  const req = Math.min(w, real);
+  const cap = p.width ? `max-width:${Math.round(p.width * Math.min(1, p.height ? 640 / p.height : 1, 1))}px;` : '';
+  return `<figure class="art-fig"><img src="${img(p.path, req)}"${p.width ? ` srcset="${img(p.path, Math.min(req, 900))} ${Math.min(req, 900)}w, ${img(p.path, req)} ${req}w" sizes="(max-width:760px) 100vw, 720px"` : ''} alt="${esc(alt)}"${p.width && p.height ? ` width="${p.width}" height="${p.height}"` : ''} style="${cap}height:auto"${lazy ? ' loading="lazy"' : ''}>${p.caption ? `<figcaption style="${cap}">${esc(p.caption)}</figcaption>` : ''}</figure>`;
+};
+const isTall = (p) => p && p.width && p.height && p.height > p.width * 1.05;
+// A photo in a fixed frame: wide photos fill it; tall photos (portraits) show whole, over a soft blurred copy, so heads are never cut off.
+const photoBox = (p, w0, cls = 'ph', w = Math.min(w0, p.width || w0)) => isTall(p)
+  ? `<div class="${cls} fit"><img class="bgblur" src="${img(p.path, 160)}" alt="" aria-hidden="true" loading="lazy"><img src="${img(p.path, w)}" alt="" loading="lazy"></div>`
+  : `<div class="${cls}"><img src="${img(p.path, w)}" alt="" loading="lazy"></div>`;
+// Prefer a wide photo from the article for wide slots.
+const widePhoto = (a) => (a.photos || []).filter((p) => p.include !== false).sort((x, y) => (isTall(x) - isTall(y)))[0];
 const manilaToday = () => new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10);
 const paras = (t) => String(t || '').split(/\n\s*\n/).map((blk) => {
   const lines = blk.split('\n').map((l) => l.trim()).filter(Boolean);
@@ -72,11 +86,11 @@ ${url ? `<meta property="og:url" content="${esc(url)}">` : ''}
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/assets/logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/site.css">
 </head>
-<body>
-<div class="topbar"><div class="wrap"><span>Asia's first Rotary club · Serving since 1919</span><a href="/admin">Editor login</a></div></div>
+<body class="pub">
+<div class="topbar"><div class="wrap"><span>The First Rotary Club in Asia · Established 1919</span><a href="/admin">Editor login</a></div></div>
 <header class="site-head"><div class="wrap">
 <a class="logo" href="/" aria-label="Rotary Club of Manila home"><img src="/assets/logo.png" alt="Rotary Club of Manila" width="255" height="108"></a>
 <nav class="nav" aria-label="Main">
@@ -124,8 +138,7 @@ function shareBar(url, title, light) {
 function storyCard(issue, a) {
   const ph = leadPhoto(a);
   const href = `/balita/${issue.issue_no}/${a.slug}`;
-  const visual = ph
-    ? `<div class="ph"><img src="${img(ph.path, 640)}" alt="" loading="lazy"></div>`
+  const visual = ph ? photoBox(ph, 640) 
     : `<div class="ph quote">${esc(a.kicker || 'Balita')}</div>`;
   return `<a class="story" href="${href}">${visual}<span class="eyebrow">${esc(a.kicker || 'Balita')}${a.printed_pages ? ' · ' + esc(a.printed_pages) : ''}</span><h3>${esc(a.title)}</h3>${a.dek ? `<p>${esc(a.dek)}</p>` : ''}</a>`;
 }
@@ -137,14 +150,38 @@ async function articlesOf(issueId) {
   return q(`rcm_articles?select=*&issue_id=eq.${issueId}&order=sort.asc`);
 }
 
+// Homepage content that does not change week to week comes from the 107th anniversary souvenir program
+// (RY 2025–2026 retrospective and the Club history). Photos live in /assets/home.
+const H = (name) => `/assets/home/${name}.jpg`;
+const FLAGSHIP = [
+  { img: 'aral', tag: 'Education · Flagship', title: 'A.R.A.L. study-now, pay-later scholarships',
+    text: 'Through the Leon Lambert Fellows Fund, the Club set aside P1 million so 15 scholars can train at DUALTECH Training Center, a German-style dual learning school. Graduates repay once employed, so the next students can train too.',
+    facts: ['P1 million fund', '15 scholars', 'DUALTECH Training Center'] },
+  { img: 'river', tag: 'Water & health · Flagship', title: 'Project R.I.V.E.R. at Hospicio de San Jose',
+    text: 'A P1 million high-capacity water pump to drain floodwater at Hospicio de San Jose on the Pasig River, protecting elderly, abandoned and medically fragile residents from recurring floods.',
+    facts: ['P1 million pump system', 'Flood control and sanitation'] },
+  { img: 'leap', tag: 'Peace · Flagship', title: 'LEAP Awards for peacemakers',
+    text: 'Leaders Excelling in ADR and Peacemaking honors people who resolve disputes, from barangay justice to arbitration, with the Department of Justice Office for Alternative Dispute Resolution and the Philippine Institute of Arbitrators.',
+    facts: ['Five award categories', 'With DOJ-OADR and PIArb'] },
+];
+const SIGNATURE = [
+  { img: 'tower', title: 'TOWER Awards', text: 'The Outstanding Workers of the Republic, honoring the skill and perseverance of Filipino blue-collar workers. Held this year with the Philippine Ecozones Association.' },
+  { img: 'ambassador', title: 'Outstanding Ambassador Award', text: 'With the Carlos P. Romulo Foundation. Given to U.S. Ambassador MaryKay Carlson (2025) and Spanish Ambassador Miguel Utray Delgado (2026).' },
+  { img: 'journalism', title: 'Journalism Awards', text: 'Honoring a free, ethical and responsible press. The latest awards were held on 11 June 2026.' },
+];
+const COMMUNITY = [
+  { img: 'medical', title: 'Health outreach', text: 'A P450,000 contribution funded 36 major surgeries valued at P3.6 million.' },
+  { img: 'relief', title: 'OPLAN CARE relief', text: 'Typhoon and earthquake relief for 1,200 families in nine locations.' },
+  { img: 'reading', title: 'Rotary Quill reading hub', text: 'A reading hub at Mariano Marcos Elementary School in Sta. Ana for more than 600 learners.' },
+  { img: 'trees', title: 'Tree planting with the Dumagat', text: 'Reforestation in Sitio Ysiro, Antipolo, with Rotaract, benefiting about 1,450 members of the Dumagat community.' },
+];
+
 async function home(origin) {
-  const issues = await liveIssues(1);
+  const issues = await liveIssues(1).catch(() => []);
   const issue = issues[0];
-  const arts = issue ? await articlesOf(issue.id) : [];
+  const arts = issue ? await articlesOf(issue.id).catch(() => []) : [];
   const lead = arts.find((a) => a.lead) || arts.find((a) => leadPhoto(a)) || arts[0];
-  const leadPh = lead && leadPhoto(lead);
   const withPhotos = arts.filter((a) => leadPhoto(a));
-  const heroSrc = leadPh ? img(leadPh.path, 1400) : '';
   const nextThu = (() => { const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' })); const add = (4 - d.getDay() + 7) % 7; d.setDate(d.getDate() + add); return d; })();
   const mt = await nextMeeting().catch(() => null);
   const mtCount = mt ? await signupCount(mt.id) : 0;
@@ -163,67 +200,103 @@ ${mt.notes ? `<p class="meet-note">${esc(mt.notes.length > 150 ? mt.notes.slice(
 <p>This week's speaker and venue will be posted here by the Secretariat. Members and guests are welcome.</p>
 <a class="more" href="/meeting">Meeting details →</a>
 </div></article>`;
+  const f0 = FLAGSHIP[1];
+  const DECADES = [
+    ['1919–1929', 'Foundations and First Convictions'], ['1930–1939', 'Discipline in an Unsettled World'],
+    ['1940–1949', 'Silence, War, and Survival'], ['1950–1959', 'From Relief to System'],
+    ['1960–1969', 'Expansion and Confidence'], ['1970–1979', 'Service Under Pressure'],
+    ['1980–1989', 'Renewal and Relevance'], ['1990–1999', 'Global Partnerships, Local Depth'],
+    ['2000–2009', 'Scale, Technology and Transition'], ['2010–2019', 'Centennial as Continuum'],
+    ['2020–2025', 'Resilience in a Fragmented World'],
+  ];
   const body = `
 <section class="hero"><div class="wrap">
 <div class="hero-text">
-<span class="eyebrow">People · Partnerships · Lasting change</span>
-<h1>The first Rotary club in Asia. Still leading through service.</h1>
-<p>Since 1919, leaders in Manila have come together every week to serve communities across the Philippines and beyond.</p>
-<div class="hero-cta"><a class="btn btn-gold" href="/meeting">Attend a meeting</a><a class="btn btn-line" style="color:#fff" href="#impact">See our impact</a><a class="btn btn-line" style="color:#fff" href="#join">Explore membership</a></div>
+<span class="eyebrow">Rotary Club of Manila · Since 1919</span>
+<h1>Asia's first Rotary club. <em>Still leading through service.</em></h1>
+<p>For more than a century, business, professional and civic leaders in Manila have come together to serve communities across the Philippines and beyond.</p>
+<div class="hero-cta"><a class="btn btn-gold" href="/meeting">Attend a meeting</a><a class="btn btn-line" href="#impact">See our impact</a><a class="btn btn-line" href="#join">Explore membership</a></div>
 </div>
-<figure class="hero-photo" style="margin:0">${heroSrc ? `<img src="${heroSrc}" alt="${esc(leadPh.caption || lead.title)}">` : ''}
-${lead ? `<figcaption><a href="/balita/${issue.issue_no}/${lead.slug}" style="color:#fff">${esc(leadPh && leadPh.caption ? leadPh.caption : lead.title)}</a></figcaption>` : ''}</figure>
+<figure class="frame"><img src="${H('hero-kalinga')}" alt="Volunteers in pink shirts with Manila Rotarians at the Kalinga Kay Maria women's health caravan" style="object-position:center 40%">
+<figcaption>Kalinga Kay Maria women's health caravan, Rotary Year 2025–2026</figcaption></figure>
 </div></section>
 
 <div class="band-tint" id="meeting"><div class="wrap cards3">
 ${meetingCard}
-${lead ? `<article class="card">${leadPh ? `<img src="${img(leadPh.path, 800)}" alt="" style="aspect-ratio:16/9;object-fit:cover;width:100%">` : ''}<div class="in">
-<span class="eyebrow">Featured story</span><h3>${esc(lead.title)}</h3>${lead.dek ? `<p>${esc(lead.dek)}</p>` : ''}
-<a class="more" href="/balita/${issue.issue_no}/${lead.slug}">Read the story →</a></div></article>` : ''}
+<article class="card"><div class="card-ph"><img src="${H(f0.img)}" alt="" loading="lazy"></div><div class="in">
+<span class="eyebrow">Featured project</span><h3>${esc(f0.title)}</h3><p>${esc(f0.text)}</p>
+<a class="more" href="#projects">See our projects →</a></div></article>
 ${issue ? `<article class="card"><div class="in" style="flex-direction:row;gap:18px">
-${issue.cover_path ? `<img src="${img(issue.cover_path, 300)}" alt="Cover of Balita issue ${issue.issue_no}" style="width:118px;border-radius:4px;box-shadow:0 8px 20px rgba(7,44,82,.25);align-self:flex-start">` : ''}
-<div style="display:flex;flex-direction:column;gap:8px"><span class="eyebrow">Latest Balita</span><h3>Issue No. ${issue.issue_no}</h3><span style="color:var(--muted)">${esc(fmtDate(issue.issue_date))}</span>
-<a class="btn btn-blue" href="/balita/${issue.issue_no}" style="margin-top:auto">Read online</a></div></div></article>` : ''}
+${issue.cover_path ? `<img src="${img(issue.cover_path, 300)}" alt="Cover of Balita issue ${issue.issue_no}" style="width:112px;height:auto;align-self:flex-start;border:1px solid var(--line);padding:4px;background:#fff">` : ''}
+<div style="display:flex;flex-direction:column;gap:8px"><span class="eyebrow">Latest Balita</span><h3>Issue No. ${issue.issue_no}</h3><span style="color:var(--muted);font-style:italic">${esc(fmtDate(issue.issue_date))}</span>
+${lead ? `<a href="/balita/${issue.issue_no}/${lead.slug}" style="font-family:var(--display);font-weight:600;font-size:19px;line-height:1.25">${esc(lead.title)}</a>` : ''}
+<a class="btn btn-navy" href="/balita/${issue.issue_no}" style="margin-top:auto">Read online</a></div></div></article>` : `<article class="card"><div class="in"><span class="eyebrow">Balita</span><h3>The weekly newsletter</h3><p>The latest issue will appear here once it is published.</p><a class="more" href="/balita">All issues →</a></div></article>`}
 </div></div>
 
-<section class="wrap section" id="club" style="max-width:1000px">
-<div><span class="eyebrow">Our Club</span><h2 style="font-size:34px">Where Rotary in Asia began</h2></div>
-<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:28px;font-size:18px;color:var(--ink-2)">
-<p style="margin:0">In January 1919, Leon Lambert and a small group of business leaders met at the Manila Hotel to form a Rotary club. On 1 June 1919 Rotary International granted Charter No. 478, making the Rotary Club of Manila the first Rotary club in the Philippines and in Asia.</p>
-<p style="margin:0">More than a century later, the Club brings together business, professional and civic leaders every Thursday for fellowship and service, as part of Rotary District 3810. The Club is led in Rotary Year 2026–2027 by President Reginald T. Yu.</p>
+<section class="impact" id="impact"><div class="wrap"><div class="panel">
+<span class="eyebrow">Reflections on Rotary Year 2025–2026</span>
+<h2>Our impact at a glance</h2>
+<div class="orn" style="color:var(--gold-soft)"><span></span></div>
+<div class="impact-grid">
+<div><b>1,588</b><strong>Children reached</strong><span>Malnutrition, women's health, medical and gift-giving programs in seven locations</span></div>
+<div><b>1,200</b><strong>Families given relief</strong><span>OPLAN CARE typhoon and earthquake relief in nine locations</span></div>
+<div><b>36</b><strong>Major surgeries</strong><span>Valued at P3.6 million, from a P450,000 contribution</span></div>
+<div><b>$30K</b><strong>To The Rotary Foundation</strong><span>About US$30,000; recognized by District 3810 as a top contributor</span></div>
 </div>
+<p class="impact-note">From the RY 2025–2026 report of Immediate Past President Raoul C. Creencia, 107th anniversary souvenir program.</p>
+</div></div></section>
+
+<section class="wrap section" id="projects">
+<div class="center-head"><span class="eyebrow">Flagship projects and programs</span><h2>Service that <em>endures</em></h2><div class="orn"><span></span></div></div>
+<div class="features">
+${FLAGSHIP.map((p, i) => `<article class="feature"><figure class="feature-media"><img src="${H(p.img)}" alt="" loading="lazy"></figure>
+<div class="feature-body"><span class="eyebrow">${esc(p.tag)}</span><h3>${esc(p.title)}</h3><p class="dropcap">${esc(p.text)}</p><ul class="facts-inline">${p.facts.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
+${i === 1 ? '<blockquote class="pullquote">Project RIVER is more than a flood control measure; it is a response to the fundamental determinants of dignity — ensuring that care and safety are preserved even in times of crisis.<cite>RY 2025–2026 report</cite></blockquote>' : ''}</div></article>`).join('')}
+</div>
+<div style="text-align:center"><a class="btn btn-gold" href="/donate">Support a project</a></div>
 </section>
 
-<section class="impact" id="impact"><div class="wrap">
-<h2>Our impact at a glance</h2>
-<div class="impact-grid">
-<div><b>107</b><strong>Years of service</strong><span>Chartered 1 June 1919 · Charter No. 478</span></div>
-<div><b>500</b><strong>Families served</strong><span>Through community service in RY 2025–2026</span></div>
-<div><b>1,588</b><strong>Children reached</strong><span>Through community service in RY 2025–2026</span></div>
-<div><b>$30K</b><strong>To The Rotary Foundation</strong><span>About US$30,000 in RY 2025–2026</span></div>
-</div>
-<p class="impact-note">Figures from the Club's RY 2025–2026 report.</p>
+<section class="band-parch"><div class="wrap section">
+<div class="center-head"><span class="eyebrow">The signature award-giving projects</span><h2>Honoring excellence <em>in the Philippines</em></h2><div class="orn"><span></span></div></div>
+<div class="awards">${SIGNATURE.map((p, i) => `<article class="award"><img src="${H(p.img)}" alt="" loading="lazy"><h3><span>${i + 1}.</span>${esc(p.title)}</h3><p>${esc(p.text)}</p></article>`).join('')}</div>
+<div class="center-head" style="margin-top:28px"><span class="eyebrow">In the community</span><h2 style="font-size:36px">Across Metro Manila <em>and beyond</em></h2></div>
+<div class="grid4">${COMMUNITY.map((p) => `<article class="proj"><div class="ph"><img src="${H(p.img)}" alt="" loading="lazy"></div><h3>${esc(p.title)}</h3><p>${esc(p.text)}</p></article>`).join('')}</div>
 </div></section>
 
-${issue ? `<section class="wrap section" id="stories">
-<div class="section-head"><div><span class="eyebrow">From the latest Balita</span><h2>Stories of service</h2></div><a class="btn btn-line" style="color:var(--navy)" href="/balita/${issue.issue_no}">See all of issue ${issue.issue_no}</a></div>
-<div class="grid3">${(withPhotos.length >= 3 ? withPhotos : arts).slice(0, 6).map((a) => storyCard(issue, a)).join('')}</div>
-</section>
+<section class="history" id="club"><img class="bg" src="${H('heritage-manila-bay')}" alt="" aria-hidden="true" loading="lazy"><div class="wrap">
+<div><span class="chip-red">History</span></div>
+<div class="history-grid">
+<div style="display:flex;flex-direction:column;gap:20px">
+<h2>The Work That Endures</h2>
+<p class="lede">In January 1919, Leon Lambert and a small group of business leaders met at the Manila Hotel to form a Rotary club. On 1 June 1919, Rotary International granted Charter No. 478, making the Rotary Club of Manila the first in the Philippines and in Asia.</p>
+<p class="lede" style="font-size:19px;color:#d8ccb2">Through wars and peace, reconstruction and renewal, the Club has met, served and endured — led in Rotary Year 2026–2027 by President Reginald T. Yu.</p>
+<figure><img src="${H('manila-hotel-1919')}" alt="Black-and-white photo of the Manila Hotel lobby with palms and rattan chairs" loading="lazy"><figcaption>A gathering place of an era — the colonial lobby of the Manila Hotel, circa 1919.</figcaption></figure>
+</div>
+<div><span class="eyebrow" style="display:block;margin-bottom:12px">A century of service, decade by decade</span>
+<ol class="decades">${DECADES.map(([y, t]) => `<li><b>${y}</b><span>${esc(t)}</span></li>`).join('')}</ol></div>
+</div></div></section>
 
-<section class="balita-band"><div class="wrap">
+${issue ? `<section class="balita-band"><div class="wrap">
 ${issue.cover_path ? `<img class="cover" src="${img(issue.cover_path, 520)}" alt="Cover of Balita issue ${issue.issue_no}">` : '<div></div>'}
 <div><span class="eyebrow">Published every Thursday</span><h2>Balita</h2>
-<p style="font-size:19px;color:#243446;max-width:36em;margin:10px 0 0">The official publication of the Rotary Club of Manila. Read each issue as it was laid out, or story by story on your phone, and share any article with a link.</p>
+<p style="font-size:20px;color:var(--ink-2);max-width:36em;margin:10px 0 0">The official news organ of the Rotary Club of Manila. Read each issue as it was laid out, or story by story on your phone, and share any article with a link.</p>
 <div class="mini-list">${withPhotos.slice(0, 4).map((a) => `<a class="mini" href="/balita/${issue.issue_no}/${a.slug}"><img src="${img(leadPhoto(a).path, 200)}" alt="">${esc(a.title)}</a>`).join('')}</div>
 <div style="display:flex;gap:12px;flex-wrap:wrap"><a class="btn btn-navy" href="/balita/${issue.issue_no}">Read issue ${issue.issue_no}</a><a class="btn btn-line" style="color:var(--navy)" href="/balita">Browse the archive</a></div>
-</div></div></section>` : `<div class="empty">The first Balita issue will appear here once it is published.</div>`}
+</div></div></section>` : ''}
 
-<section class="join" id="join"><div class="wrap" style="display:flex;flex-direction:column;gap:16px">
-<span class="eyebrow" style="color:var(--gold)">Membership</span>
+<section class="join" id="join"><img class="bg" src="${H('people-of-action')}" alt="" aria-hidden="true" loading="lazy"><div class="wrap">
+<span class="eyebrow">Membership</span>
 <h2>Leadership becomes more meaningful in the service of others.</h2>
 <p>Join a community of leaders working for a stronger Manila and a brighter Philippines. Come to a Thursday meeting as our guest.</p>
-<div style="display:flex;gap:12px;flex-wrap:wrap"><a class="btn btn-gold" href="/meeting">Attend as a guest</a><a class="btn btn-line" style="color:#fff" href="${mailto('Membership inquiry')}">Membership inquiry</a></div>
+<div style="display:flex;gap:12px;flex-wrap:wrap"><a class="btn btn-gold" href="/meeting">Attend as a guest</a><a class="btn btn-line" href="${mailto('Membership inquiry')}">Membership inquiry</a></div>
 </div></section>
+
+<section class="wrap closing">
+<img src="/assets/logo.png" alt="" width="120" style="width:120px;opacity:.9">
+<h2>The Work <em>Continues</em></h2>
+<div class="orn"><span></span></div>
+<p class="motto">One Club · One Purpose · One Nation · One Rotary</p>
+</section>
 <div class="wrap actions">
 <a href="/meeting"><b>Attend</b><span>Thursday lunch meetings</span></a><a href="#join"><b>Join</b><span>Become a member</span></a>
 <a href="${mailto('Volunteering for a project')}"><b>Volunteer</b><span>Help on a project</span></a><a href="${mailto('Partnering with the Rotary Club of Manila')}"><b>Partner</b><span>Work with the Club</span></a>
@@ -231,8 +304,8 @@ ${issue.cover_path ? `<img class="cover" src="${img(issue.cover_path, 520)}" alt
 </div>`;
   return layout({
     title: 'Rotary Club of Manila',
-    description: "Asia's first Rotary club, serving since 1919. Read the latest Balita and join us every Thursday.",
-    image: heroSrc ? img(leadPh.path, 1200) : '', url: origin + '/', body,
+    description: "Asia's first Rotary club, serving since 1919. See our projects, read the Balita and join us every Thursday.",
+    image: origin + H('hero-kalinga'), url: origin + '/', body,
   });
 }
 
@@ -305,11 +378,11 @@ async function articlePage(origin, no, slug) {
     else html += `<p>${esc(b.text)}</p>`;
     if (every && (i + 1) % every === 0 && pi < rest.length && i < blocks.length - 1) {
       const p = rest[pi++];
-      html += `<figure><img src="${img(p.path, 1200)}" alt="${esc(p.caption)}" loading="lazy">${p.caption ? `<figcaption>${esc(p.caption)}</figcaption>` : ''}</figure>`;
+      html += figure(p, p.caption || '');
     }
   });
   const leftover = rest.slice(pi);
-  if (leftover.length) html += leftover.map((p) => `<figure><img src="${img(p.path, 1200)}" alt="${esc(p.caption)}" loading="lazy">${p.caption ? `<figcaption>${esc(p.caption)}</figcaption>` : ''}</figure>`).join('');
+  if (leftover.length) html += leftover.map((p) => figure(p, p.caption || '')).join('');
   const others = arts.filter((x) => x.id !== a.id).slice(0, 3);
   const body = `<article class="article">
 <a href="/balita/${issue.issue_no}" style="font-weight:600;font-size:15px">← Balita · Issue ${issue.issue_no} · ${esc(fmtDate(issue.issue_date))}</a>
@@ -317,7 +390,7 @@ async function articlePage(origin, no, slug) {
 <h1>${esc(a.title)}</h1>
 ${a.dek ? `<p class="dek">${esc(a.dek)}</p>` : ''}
 ${a.byline ? `<span class="byline">${esc(a.byline)}</span>` : ''}
-${lead ? `<figure><img src="${img(lead.path, 1400)}" alt="${esc(lead.caption || a.title)}">${lead.caption ? `<figcaption>${esc(lead.caption)}</figcaption>` : ''}</figure>` : ''}
+${lead ? figure(lead, lead.caption || a.title, 1400, false) : ''}
 <div class="share-row">${shareBar(url, a.title, true)}</div>
 <div class="body">${html}</div>
 <div class="from-issue">${issue.cover_path ? `<img src="${img(issue.cover_path, 160)}" alt="">` : ''}<div><strong>From Balita Issue ${issue.issue_no}</strong>

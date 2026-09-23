@@ -4,7 +4,7 @@
   const PUB = 'sb_publishable_zebFaErs-sjDwYWQUMfq3g_VuF2DTI6';
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const imgUrl = (path, w) => `${SB}/storage/v1/render/image/public/rcm/${path.split('/').map(encodeURIComponent).join('/')}?width=${w}&quality=75`;
+  const imgUrl = (path, w) => `${SB}/storage/v1/render/image/public/rcm/${path.split('/').map(encodeURIComponent).join('/')}?width=${w}&resize=contain&quality=75`;
   let code = '';
   try { code = localStorage.getItem('rcm-editor-code') || ''; } catch (e) {}
 
@@ -102,6 +102,59 @@
     return files;
   }
 
+  // Long articles are drafted in parts so the AI never runs out of room.
+  function splitParts(ps) {
+    const parts = []; let cur = []; let len = 0; let nph = 0;
+    for (const p of ps) {
+      const tl = (p.text || '').length, pc = p.photos.length;
+      if (cur.length && (len + tl > 14000 || nph + pc > 36 || cur.length >= 6)) { parts.push(cur); cur = []; len = 0; nph = 0; }
+      cur.push(p); len += tl; nph += pc;
+    }
+    if (cur.length) parts.push(cur);
+    return parts;
+  }
+  let runCtx = null;
+  async function draftArticle(a, i) {
+    const { issue, pages, pathOf } = runCtx;
+    const li = $('a' + i);
+    const tag = li.querySelector('.tag');
+    const note = li.querySelector('.anote') || li.querySelector('div').appendChild(Object.assign(document.createElement('div'), { className: 'anote' }));
+    const old = li.querySelector('.retry'); if (old) old.remove();
+    note.textContent = ''; note.className = 'anote';
+    tag.className = 'tag run'; tag.textContent = 'Drafting…';
+    const ps = pages.filter((p) => p.n >= a.from && p.n <= a.to);
+    const groups = splitParts(ps);
+    try {
+      const parts = [];
+      for (let k = 0; k < groups.length; k++) {
+        if (groups.length > 1) tag.textContent = `Drafting part ${k + 1} of ${groups.length}…`;
+        const g = groups[k];
+        const photos = g.flatMap((p) => p.photos.map((ph) => ({ id: ph.id, page: ph.page, path: pathOf.get(ph.id), width: ph.width, height: ph.height, preview: ph.preview })));
+        let res, err;
+        for (let attempt = 0; attempt < 2 && !res; attempt++) {
+          try { res = await call('clean-part', { article: a, part: k, parts: groups.length, pages: g.map((p) => ({ n: p.n, text: p.text })), photos }); }
+          catch (e) { err = e; }
+        }
+        if (!res) throw err;
+        parts.push(res);
+      }
+      const saved = await call('save-draft', { issue_id: issue.id, sort: i, article: a, parts });
+      const ph = (saved.photos || [])[0];
+      if (ph) li.querySelector('img').src = imgUrl(ph.path, 140);
+      li.querySelector('b').textContent = saved.title;
+      tag.className = 'tag ' + (saved.flag ? 'flag' : 'ok'); tag.textContent = saved.flag ? 'Needs a look' : 'Drafted';
+      return saved;
+    } catch (err) {
+      if (err.auth) throw err;
+      tag.className = 'tag off'; tag.textContent = 'Could not draft';
+      note.className = 'anote err'; note.textContent = 'Reason: ' + err.message;
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'smallbtn retry'; b.textContent = 'Try again';
+      b.onclick = async () => { b.disabled = true; const r = await draftArticle(a, i); if (r) { const left = document.querySelectorAll('#alist .tag.off').length; step(4, left ? 'err' : 'ok', left ? `${left} article(s) still need drafting` : 'All articles drafted'); } };
+      li.appendChild(b);
+      return null;
+    }
+  }
+
   let current = null;
   async function run(file) {
     show('v-run');
@@ -140,8 +193,15 @@
       $('alist').innerHTML = arts.map((a, i) => `<li id="a${i}"><img alt=""><div style="flex:1"><b>${esc(a.title)}</b><br><span class="muted">${esc(a.kicker || '')}${a.printed ? ' · ' + esc(a.printed) : ''}</span></div><span class="tag wait">Waiting</span></li>`).join('');
 
       $('run-title').textContent = 'Saving pages and photos…';
-      const { issue } = await call('start', { issue_no: issueNo, issue_date: $('in-date').value || null, page_count: pages.length });
+      let keep = false;
+      const chk = await call('check-issue', { issue_no: issueNo });
+      if (chk.exists && chk.articles) {
+        keep = window.confirm(`Issue ${issueNo} is already on the website with ${chk.articles} articles.\n\nOK = keep those articles (and your checks) and only add the ones that are missing.\nCancel = replace the whole issue with this upload.`);
+      }
+      const { issue, kept } = await call('start', { issue_no: issueNo, issue_date: $('in-date').value || null, page_count: pages.length, keep });
       current = issue;
+      const keptFrom = new Set((kept || []).map((k) => k.page_from));
+      arts.forEach((a, i) => { if (keptFrom.has(a.from)) { a.skip = true; const li = $('a' + i); li.querySelector('.tag').className = 'tag ok'; li.querySelector('.tag').textContent = 'Already on the site'; } });
       const files = [];
       pages.forEach((p) => {
         files.push({ name: `pages/page-${String(p.n).padStart(3, '0')}.jpg`, blob: p.thumbBlob, page: p.n, kind: 'page' });
@@ -156,30 +216,18 @@
       const cover = files.find((f) => f.kind === 'cover').path;
 
       $('run-title').textContent = 'Drafting the articles…';
+      const todo = arts.map((a, i) => [a, i]).filter(([a]) => !a.skip);
       let drafted = 0;
-      step(4, 'run', `Drafting 0 of ${arts.length} articles…`);
-      const results = await pool(arts, 3, async (a, i) => {
-        const li = $('a' + i); li.querySelector('.tag').className = 'tag run'; li.querySelector('.tag').textContent = 'Drafting…';
-        const ps = pages.filter((p) => p.n >= a.from && p.n <= a.to);
-        const photos = ps.flatMap((p) => p.photos.map((ph) => ({ id: ph.id, page: ph.page, path: pathOf.get(ph.id), width: ph.width, height: ph.height, preview: ph.preview })));
-        try {
-          const saved = await call('clean', { issue_id: issue.id, sort: i, article: a, pages: ps.map((p) => ({ n: p.n, text: p.text })), photos });
-          const ph = (saved.photos || [])[0];
-          if (ph) li.querySelector('img').src = imgUrl(ph.path, 140);
-          li.querySelector('b').textContent = saved.title;
-          const tag = li.querySelector('.tag');
-          tag.className = 'tag ' + (saved.flag ? 'flag' : 'ok'); tag.textContent = saved.flag ? 'Needs a look' : 'Drafted';
-          return saved;
-        } catch (err) {
-          const tag = li.querySelector('.tag'); tag.className = 'tag off'; tag.textContent = 'Could not draft';
-          li.title = err.message; return null;
-        } finally {
-          drafted++; step(4, 'run', `Drafting ${drafted} of ${arts.length} articles…`); setBar(0.55 + drafted / arts.length * 0.45);
-        }
+      step(4, 'run', `Drafting 0 of ${todo.length} articles…`);
+      runCtx = { issue, pages, pathOf };
+      const results = await pool(todo, 3, async ([a, i]) => {
+        const r = await draftArticle(a, i);
+        drafted++; step(4, 'run', `Drafting ${drafted} of ${todo.length} articles…`); setBar(0.55 + drafted / Math.max(1, todo.length) * 0.45);
+        return r;
       });
-      const ok = results.filter(Boolean).length;
+      const ok = results.filter(Boolean).length; const total = todo.length;
       await call('finish', { issue_id: issue.id, fields: { issue_date: $('in-date').value || null, meeting: plan.issue && plan.issue.meeting, guest: plan.issue && plan.issue.guest, summary: plan.issue && plan.issue.summary, cover_path: cover, pages: pagePaths, page_count: pages.length } });
-      step(4, ok === arts.length ? 'ok' : 'err', ok === arts.length ? `Drafted all ${ok} articles` : `Drafted ${ok} of ${arts.length} articles; the rest can be retried by uploading again`);
+      step(4, ok === total ? 'ok' : 'err', ok === total ? `Drafted all ${ok} articles` : `Drafted ${ok} of ${total} articles. Click “Try again” next to the ones that failed.`);
       setBar(1);
       $('run-title').textContent = 'Ready for you to check';
       $('to-review').classList.remove('hidden');
