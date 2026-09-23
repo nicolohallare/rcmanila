@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Balita editor · Rotary Club of Manila</title>
+<link rel="icon" href="/assets/logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Text:wght@400;700&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/site.css">
+<style>
+body{background:var(--tint)}
+.ed-head{background:var(--navy);color:#fff}
+.ed-head .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:64px}
+.ed-head .chip{background:#fff;border-radius:6px;padding:6px 10px}
+.ed-head .chip img{height:34px;width:auto}
+.ed-head a{color:var(--gold);font-weight:600}
+.panel{background:#fff;border:1px solid var(--line);border-radius:10px;padding:22px}
+.stack{display:flex;flex-direction:column;gap:16px}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+label.f{display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:700;color:var(--ink-2)}
+input[type=text],input[type=password],input[type=number],input[type=date],input[type=datetime-local],textarea{font:inherit;font-size:16px;border:1px solid #c7d2df;border-radius:6px;padding:10px 12px;background:#fff;color:var(--ink);width:100%}
+textarea{min-height:90px;resize:vertical;line-height:1.55}
+.drop{border:2px dashed #9fb3cb;border-radius:12px;padding:44px 20px;text-align:center;background:#fff;cursor:pointer;display:flex;flex-direction:column;gap:10px;align-items:center}
+.drop.over{border-color:var(--blue);background:var(--sky)}
+.drop strong{font-size:20px;color:var(--navy)}
+.bar{height:12px;border-radius:6px;background:#e3e8ef;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--blue);transition:width .2s}
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px;font-size:16px}
+.steps li{display:flex;gap:12px;align-items:center}
+.dot{width:26px;height:26px;border-radius:13px;border:2px solid #9fb3cb;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff}
+.dot.run{border-color:var(--blue);border-top-color:transparent;animation:spin 1s linear infinite}
+.dot.ok{background:#1d7a46;border-color:#1d7a46}
+.dot.err{background:#a3262a;border-color:#a3262a}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.dot.run{animation:none}}
+.thumbs{display:flex;gap:6px;overflow:hidden;height:92px}
+.thumbs img{height:92px;width:auto;border:1px solid var(--line);border-radius:3px}
+.alist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.alist li{display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid #eef1f5}
+.alist img{width:64px;height:46px;object-fit:cover;border-radius:4px;background:var(--sky);flex-shrink:0}
+.tag{font-size:13px;font-weight:700;padding:4px 10px;border-radius:12px;white-space:nowrap}
+.tag.wait{background:#eef1f5;color:var(--muted)}
+.tag.run{background:var(--sky);color:var(--blue)}
+.tag.ok{background:#e2f4e8;color:#1d7a46}
+.tag.flag{background:#fdf0d5;color:#8a4b00}
+.tag.off{background:#f3e3e3;color:#8a2b2b}
+.review{display:grid;grid-template-columns:280px minmax(0,1fr) minmax(0,1.2fr);gap:18px;align-items:start}
+@media (max-width:1100px){.review{grid-template-columns:1fr}}
+.rlist{list-style:none;margin:0;padding:0}
+.rlist button{width:100%;text-align:left;border:0;border-left:4px solid transparent;background:#fff;padding:12px 14px;font:inherit;cursor:pointer;display:flex;flex-direction:column;gap:3px;border-bottom:1px solid #eef1f5}
+.rlist button[aria-current="true"]{background:var(--sky);border-left-color:var(--blue)}
+.rlist b{font-size:15px}
+.printed{display:flex;flex-direction:column;gap:10px;max-height:78vh;overflow:auto}
+.printed img{width:100%;border:1px solid var(--line);border-radius:4px}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.pcell{border:1px solid var(--line);border-radius:6px;padding:6px;display:flex;flex-direction:column;gap:6px;background:#fff}
+.pcell img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:4px}
+.pcell.off img{opacity:.35}
+.pcell textarea{min-height:56px;font-size:13px;padding:6px}
+.pcell .row{gap:6px}
+.smallbtn{font:inherit;font-size:13px;font-weight:700;border:1px solid #c7d2df;background:#fff;border-radius:5px;padding:5px 8px;cursor:pointer}
+.note{background:#fdf0d5;border:1px solid #f0cf8a;border-radius:8px;padding:12px 14px;color:#5c3a00}
+.okbox{background:#e8f5ec;border:1px solid #b9dcc6;border-radius:10px;padding:18px}
+.err{color:#a3262a;font-weight:600}
+.muted{color:var(--muted)}
+.hidden{display:none!important}
+.sharemsg{white-space:pre-line;background:#f8fafc;border:1px solid #c7d2df;border-radius:8px;padding:12px;font-size:15px}
+</style>
+</head>
+<body>
+<header class="ed-head"><div class="wrap">
+<span class="chip"><img src="/assets/logo.png" alt="Rotary Club of Manila"></span>
+<strong style="font-size:18px">Balita editor</strong>
+<a href="/" target="_blank" rel="noopener">View the website ↗</a>
+</div></header>
+
+<main class="wrap" style="padding-block:28px;display:flex;flex-direction:column;gap:20px">
+
+<section id="v-login" class="panel stack" style="max-width:420px">
+<h1 style="font-size:28px">Sign in</h1>
+<form id="login-form" class="stack">
+<label class="f" for="code">Editor passcode<input id="code" type="password" autocomplete="current-password" required></label>
+<button class="btn btn-blue" type="submit">Continue</button>
+<p id="login-err" class="err hidden" role="alert"></p>
+</form>
+</section>
+
+<section id="v-home" class="stack hidden">
+<div class="row" style="justify-content:space-between"><h1 style="font-size:30px">Upload this week's Balita</h1><button class="smallbtn" id="signout" type="button">Sign out</button></div>
+<label class="drop" id="drop" for="file">
+<strong>Drop the final Balita PDF here</strong>
+<span class="muted">or tap to choose the file. The AI reads it on this computer, pulls out each article and its photos, and gets them ready for you to check.</span>
+<span class="btn btn-blue" style="margin-top:6px">Choose PDF</span>
+</label>
+<input id="file" type="file" accept="application/pdf" class="hidden">
+<div class="panel stack"><h2 style="font-size:22px">Recent issues</h2><ul id="issues" class="alist"><li class="muted">Loading…</li></ul></div>
+</section>
+
+<section id="v-run" class="stack hidden">
+<div class="panel stack">
+<div class="row" style="justify-content:space-between;align-items:flex-end">
+<div><span class="muted" id="run-file"></span><h1 style="font-size:28px" id="run-title">Reading the issue…</h1></div>
+<div class="row">
+<label class="f" for="in-no">Issue no.<input id="in-no" type="number" style="width:120px"></label>
+<label class="f" for="in-date">Issue date<input id="in-date" type="date"></label>
+</div>
+</div>
+<div class="bar" aria-hidden="true"><i id="bar"></i></div>
+<ol class="steps">
+<li><span class="dot" id="d1"></span><span id="s1">Read the pages and photos</span></li>
+<li><span class="dot" id="d2"></span><span id="s2">Find the articles</span></li>
+<li><span class="dot" id="d3"></span><span id="s3">Save pages and photos to the website</span></li>
+<li><span class="dot" id="d4"></span><span id="s4">Draft each article</span></li>
+</ol>
+<div class="thumbs" id="thumbs"></div>
+<p id="run-err" class="err hidden" role="alert"></p>
+</div>
+<div class="panel stack"><div class="row" style="justify-content:space-between"><h2 style="font-size:22px">Articles</h2><span class="muted">They appear here as the AI drafts them</span></div>
+<ul class="alist" id="alist"></ul>
+<div class="row" style="justify-content:flex-end"><button class="btn btn-blue hidden" id="to-review" type="button">Check the articles →</button></div>
+</div>
+</section>
+
+<section id="v-review" class="stack hidden">
+<div class="panel row" style="justify-content:space-between">
+<div><span class="muted" id="rv-sub"></span><h1 style="font-size:26px" id="rv-title">Check the articles</h1><span id="rv-count" class="muted"></span></div>
+<div class="row" style="align-items:flex-end">
+<label class="f" for="pub-at">Go live on<input id="pub-at" type="datetime-local"></label>
+<button class="btn btn-blue" id="btn-schedule" type="button">Schedule</button>
+<button class="btn btn-line" style="color:var(--blue)" id="btn-now" type="button">Publish now</button>
+</div>
+</div>
+<div id="published" class="okbox stack hidden"></div>
+<div class="review">
+<div class="panel" style="padding:0;overflow:hidden"><ul class="rlist" id="rlist"></ul></div>
+<div class="panel stack"><div class="row" style="justify-content:space-between"><strong>As printed</strong><span class="muted" id="pp"></span></div><div class="printed" id="printed"></div></div>
+<div class="panel stack" id="editor"></div>
+</div>
+<div><button class="smallbtn" id="back-home" type="button">← All issues</button></div>
+</section>
+</main>
+<script src="/assets/extract.js"></script>
+<script src="/assets/admin.js"></script>
+</body>
+</html>

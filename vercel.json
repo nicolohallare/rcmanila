@@ -1,0 +1,13 @@
+{
+  "cleanUrls": false,
+  "rewrites": [
+    { "source": "/", "destination": "/api/page?r=home" },
+    { "source": "/balita", "destination": "/api/page?r=archive" },
+    { "source": "/balita/:no", "destination": "/api/page?r=issue&no=:no" },
+    { "source": "/balita/:no/:slug", "destination": "/api/page?r=article&no=:no&slug=:slug" },
+    { "source": "/admin", "destination": "/admin.html" }
+  ],
+  "headers": [
+    { "source": "/assets/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=300" }] }
+  ]
+}

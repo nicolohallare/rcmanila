@@ -1,0 +1,293 @@
+(function () {
+  const SB = 'https://unavxknqpibxwcoqemaf.supabase.co';
+  const FN = SB + '/functions/v1/rcm-admin';
+  const PUB = 'sb_publishable_zebFaErs-sjDwYWQUMfq3g_VuF2DTI6';
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const imgUrl = (path, w) => `${SB}/storage/v1/render/image/public/rcm/${path.split('/').map(encodeURIComponent).join('/')}?width=${w}&quality=75`;
+  let code = '';
+  try { code = localStorage.getItem('rcm-editor-code') || ''; } catch (e) {}
+
+  function show(v) { for (const id of ['v-login', 'v-home', 'v-run', 'v-review']) $(id).classList.toggle('hidden', id !== v); window.scrollTo(0, 0); }
+
+  async function call(action, payload) {
+    const r = await fetch(FN, { method: 'POST', headers: { 'content-type': 'application/json', 'x-editor-code': code, apikey: PUB }, body: JSON.stringify(Object.assign({ action }, payload || {})) });
+    const text = await r.text();
+    const line = text.trim().split('\n').pop();
+    let data;
+    try { data = JSON.parse(line); } catch (e) { throw new Error('The server did not answer properly (' + r.status + '). Please try again.'); }
+    if (r.status === 401) { throw Object.assign(new Error(data.error || 'Wrong passcode'), { auth: true }); }
+    if (!r.ok || data.error) throw new Error(data.error || ('Error ' + r.status));
+    if ('ok' in data && 'data' in data) { if (!data.ok) throw new Error(data.error); return data.data; }
+    if (data.ok === false) throw new Error(data.error);
+    return data;
+  }
+
+  // ---------- sign in ----------
+  $('login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    code = $('code').value.trim();
+    $('login-err').classList.add('hidden');
+    try { await call('login'); try { localStorage.setItem('rcm-editor-code', code); } catch (x) {} openHome(); }
+    catch (err) { $('login-err').textContent = err.auth ? 'That passcode is not right. Check it and try again.' : err.message; $('login-err').classList.remove('hidden'); }
+  });
+  $('signout').onclick = () => { try { localStorage.removeItem('rcm-editor-code'); } catch (e) {} code = ''; show('v-login'); };
+
+  // ---------- home ----------
+  const STATUS = { processing: ['Processing', 'run'], draft: ['Ready to check', 'flag'], scheduled: ['Scheduled', 'ok'], published: ['Live', 'ok'] };
+  async function openHome() {
+    show('v-home');
+    try {
+      const { issues } = await call('issues');
+      $('issues').innerHTML = issues.length ? issues.map((i) => {
+        const s = STATUS[i.status] || [i.status, 'wait'];
+        const when = i.status === 'scheduled' && i.publish_at ? ' · goes live ' + new Date(i.publish_at).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Manila' }) : '';
+        return `<li>${i.cover_path ? `<img src="${imgUrl(i.cover_path, 140)}" alt="">` : '<img alt="">'}<div style="flex:1"><b>Issue ${i.issue_no}</b><br><span class="muted">${esc(i.issue_date || '')}${esc(when)}</span></div><span class="tag ${s[1]}">${s[0]}</span><button class="smallbtn" data-open="${i.id}" type="button">Open</button>${i.status === 'published' || i.status === 'scheduled' ? `<a class="smallbtn" href="/balita/${i.issue_no}" target="_blank" rel="noopener">View</a>` : ''}</li>`;
+      }).join('') : '<li class="muted">No issues yet. Upload the first one above.</li>';
+    } catch (err) {
+      if (err.auth) return show('v-login');
+      $('issues').innerHTML = `<li class="err">${esc(err.message)}</li>`;
+    }
+  }
+  $('issues').addEventListener('click', (e) => { const b = e.target.closest('[data-open]'); if (b) openReview(b.getAttribute('data-open')); });
+
+  const drop = $('drop');
+  ['dragenter', 'dragover'].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop', (e) => { const f = e.dataTransfer.files[0]; if (f) run(f); });
+  $('file').addEventListener('change', (e) => { const f = e.target.files[0]; if (f) run(f); });
+
+  // ---------- processing ----------
+  const MONTHS = { january: 1, february: 2, march: 3, april: 4, may: 5, june: 6, july: 7, august: 8, september: 9, sept: 9, october: 10, november: 11, december: 12 };
+  function guessMeta(text, filename) {
+    const out = {};
+    const n = /issue\s*no\.?\s*(\d{3,5})/i.exec(text); if (n) out.no = Number(n[1]);
+    const d = /(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2}),?\s+(\d{4})/i.exec(text) ||
+      /(jan|feb|mar|apr|may|jun|jul|aug|sept|sep|oct|nov|dec)[a-z]*[_\s.-]+(\d{1,2})[_\s.,-]+(\d{4})/i.exec(filename);
+    if (d) {
+      const key = d[1].toLowerCase(); const m = MONTHS[key] || MONTHS[Object.keys(MONTHS).find((k) => k.startsWith(key.slice(0, 3)))];
+      if (m) out.date = `${d[3]}-${String(m).padStart(2, '0')}-${String(d[2]).padStart(2, '0')}`;
+    }
+    return out;
+  }
+  function step(i, state, text) {
+    const d = $('d' + i); d.className = 'dot ' + (state || ''); d.textContent = state === 'ok' ? '✓' : state === 'err' ? '!' : '';
+    if (text) $('s' + i).textContent = text;
+  }
+  function setBar(f) { $('bar').style.width = Math.round(f * 100) + '%'; }
+  function fail(msg) { $('run-err').textContent = msg; $('run-err').classList.remove('hidden'); $('run-title').textContent = 'Something went wrong'; }
+
+  async function pool(items, n, fn) {
+    let i = 0; const res = [];
+    await Promise.all(Array.from({ length: Math.min(n, items.length) }, async () => { while (i < items.length) { const k = i++; res[k] = await fn(items[k], k); } }));
+    return res;
+  }
+
+  async function uploadAll(issueNo, files, onEach) {
+    const names = files.map((f) => f.name);
+    const signed = [];
+    for (let i = 0; i < names.length; i += 100) signed.push(...(await call('sign', { issue_no: issueNo, names: names.slice(i, i + 100) })).uploads);
+    const byName = new Map(signed.map((s) => [s.name, s]));
+    let done = 0;
+    await pool(files, 6, async (f) => {
+      const s = byName.get(f.name); if (!s) return;
+      const fd = new FormData(); fd.append('cacheControl', '31536000'); fd.append('', f.blob, f.name.split('/').pop());
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const r = await fetch(s.signedUrl, { method: 'PUT', headers: { 'x-upsert': 'true' }, body: fd });
+        if (r.ok) break;
+        if (attempt === 2) throw new Error('Could not save ' + f.name + ' (' + r.status + ')');
+      }
+      f.path = s.path; onEach(++done);
+    });
+    return files;
+  }
+
+  let current = null;
+  async function run(file) {
+    show('v-run');
+    $('run-err').classList.add('hidden'); $('alist').innerHTML = ''; $('thumbs').innerHTML = ''; $('to-review').classList.add('hidden');
+    for (let i = 1; i <= 4; i++) step(i, '');
+    $('run-file').textContent = file.name + ' · ' + (file.size / 1048576).toFixed(1) + ' MB';
+    $('run-title').textContent = 'Reading the issue…';
+    setBar(0);
+    let pages;
+    try {
+      step(1, 'run', 'Reading pages…');
+      pages = await BalitaExtract.extractPdf(file, ({ n, total, page }) => {
+        setBar(n / total * 0.25);
+        step(1, 'run', `Reading page ${n} of ${total} · ${pagesPhotos()} photos found`);
+        const t = document.createElement('img'); t.src = page.thumbUrl; t.alt = ''; $('thumbs').prepend(t);
+        while ($('thumbs').children.length > 14) $('thumbs').lastChild.remove();
+        function pagesPhotos() { return (window.__photoCount = (window.__photoCount || 0) + page.photos.length); }
+      });
+      window.__photoCount = 0;
+      const photoTotal = pages.reduce((a, p) => a + p.photos.length, 0);
+      step(1, 'ok', `Read ${pages.length} pages and found ${photoTotal} photos`);
+      const meta = guessMeta(pages[0].text + '\n' + (pages[1] ? pages[1].text : ''), file.name);
+      if (!$('in-no').value && meta.no) $('in-no').value = meta.no;
+      if (!$('in-date').value && meta.date) $('in-date').value = meta.date;
+
+      step(2, 'run', 'The AI is finding the articles…'); setBar(0.3);
+      $('run-title').textContent = 'Finding the articles…';
+      const plan = await call('plan', { pages: pages.map((p) => ({ n: p.n, text: p.text })) });
+      const arts = (plan.articles || []).filter((a) => a.from && a.to);
+      if (!arts.length) throw new Error('The AI could not find any articles in this PDF.');
+      if (!$('in-no').value && plan.issue && plan.issue.issue_no) $('in-no').value = plan.issue.issue_no;
+      if (!$('in-date').value && plan.issue && plan.issue.date) $('in-date').value = plan.issue.date;
+      const issueNo = Number($('in-no').value);
+      if (!issueNo) throw new Error('Type the issue number in the box above, then upload the PDF again.');
+      step(2, 'ok', `Found ${arts.length} articles`);
+      $('alist').innerHTML = arts.map((a, i) => `<li id="a${i}"><img alt=""><div style="flex:1"><b>${esc(a.title)}</b><br><span class="muted">${esc(a.kicker || '')}${a.printed ? ' · ' + esc(a.printed) : ''}</span></div><span class="tag wait">Waiting</span></li>`).join('');
+
+      $('run-title').textContent = 'Saving pages and photos…';
+      const { issue } = await call('start', { issue_no: issueNo, issue_date: $('in-date').value || null, page_count: pages.length });
+      current = issue;
+      const files = [];
+      pages.forEach((p) => {
+        files.push({ name: `pages/page-${String(p.n).padStart(3, '0')}.jpg`, blob: p.thumbBlob, page: p.n, kind: 'page' });
+        p.photos.forEach((ph) => files.push({ name: `photos/${ph.id}.jpg`, blob: ph.blob, photo: ph, kind: 'photo' }));
+      });
+      files.push({ name: 'cover.jpg', blob: await BalitaExtract.coverFrom(pages[0]), kind: 'cover' });
+      step(3, 'run', `Saving 0 of ${files.length} files…`);
+      await uploadAll(issueNo, files, (n) => { step(3, 'run', `Saving ${n} of ${files.length} files…`); setBar(0.3 + n / files.length * 0.25); });
+      step(3, 'ok', `Saved ${files.length} pages and photos`);
+      const pathOf = new Map(files.filter((f) => f.photo).map((f) => [f.photo.id, f.path]));
+      const pagePaths = files.filter((f) => f.kind === 'page').map((f) => f.path);
+      const cover = files.find((f) => f.kind === 'cover').path;
+
+      $('run-title').textContent = 'Drafting the articles…';
+      let drafted = 0;
+      step(4, 'run', `Drafting 0 of ${arts.length} articles…`);
+      const results = await pool(arts, 3, async (a, i) => {
+        const li = $('a' + i); li.querySelector('.tag').className = 'tag run'; li.querySelector('.tag').textContent = 'Drafting…';
+        const ps = pages.filter((p) => p.n >= a.from && p.n <= a.to);
+        const photos = ps.flatMap((p) => p.photos.map((ph) => ({ id: ph.id, page: ph.page, path: pathOf.get(ph.id), width: ph.width, height: ph.height, preview: ph.preview })));
+        try {
+          const saved = await call('clean', { issue_id: issue.id, sort: i, article: a, pages: ps.map((p) => ({ n: p.n, text: p.text })), photos });
+          const ph = (saved.photos || [])[0];
+          if (ph) li.querySelector('img').src = imgUrl(ph.path, 140);
+          li.querySelector('b').textContent = saved.title;
+          const tag = li.querySelector('.tag');
+          tag.className = 'tag ' + (saved.flag ? 'flag' : 'ok'); tag.textContent = saved.flag ? 'Needs a look' : 'Drafted';
+          return saved;
+        } catch (err) {
+          const tag = li.querySelector('.tag'); tag.className = 'tag off'; tag.textContent = 'Could not draft';
+          li.title = err.message; return null;
+        } finally {
+          drafted++; step(4, 'run', `Drafting ${drafted} of ${arts.length} articles…`); setBar(0.55 + drafted / arts.length * 0.45);
+        }
+      });
+      const ok = results.filter(Boolean).length;
+      await call('finish', { issue_id: issue.id, fields: { issue_date: $('in-date').value || null, meeting: plan.issue && plan.issue.meeting, guest: plan.issue && plan.issue.guest, summary: plan.issue && plan.issue.summary, cover_path: cover, pages: pagePaths, page_count: pages.length } });
+      step(4, ok === arts.length ? 'ok' : 'err', ok === arts.length ? `Drafted all ${ok} articles` : `Drafted ${ok} of ${arts.length} articles; the rest can be retried by uploading again`);
+      setBar(1);
+      $('run-title').textContent = 'Ready for you to check';
+      $('to-review').classList.remove('hidden');
+    } catch (err) {
+      if (err.auth) return show('v-login');
+      [1, 2, 3, 4].forEach((i) => { if ($('d' + i).classList.contains('run')) step(i, 'err'); });
+      fail(err.message);
+    }
+  }
+  $('to-review').onclick = () => current && openReview(current.id);
+
+  // ---------- review ----------
+  let R = { issue: null, articles: [], sel: 0 };
+  function toLocalInput(d) {
+    const z = new Date(d.getTime() + 8 * 3600 * 1000); return z.toISOString().slice(0, 16);
+  }
+  function defaultGoLive(issue) {
+    if (issue.publish_at) return new Date(issue.publish_at);
+    if (issue.issue_date) { const d = new Date(issue.issue_date + 'T12:00:00+08:00'); if (d > new Date()) return d; }
+    return new Date(Date.now() + 5 * 60000);
+  }
+  async function openReview(id) {
+    show('v-review');
+    $('editor').innerHTML = '<p class="muted">Loading…</p>';
+    try {
+      const d = await call('get', { issue_id: id });
+      R = { issue: d.issue, articles: d.articles || [], sel: 0 };
+      $('pub-at').value = toLocalInput(defaultGoLive(d.issue));
+      renderReview();
+      if (d.issue.status === 'scheduled' || d.issue.status === 'published') showPublished();
+      else $('published').classList.add('hidden');
+    } catch (err) { if (err.auth) return show('v-login'); $('editor').innerHTML = `<p class="err">${esc(err.message)}</p>`; }
+  }
+  function statusOf(a) { if (!a.included) return ['Left out', 'off']; if (a.checked) return ['Checked', 'ok']; if (a.flag) return ['Needs a look', 'flag']; return ['To check', 'wait']; }
+  function renderReview() {
+    const { issue, articles } = R;
+    $('rv-sub').textContent = `Issue ${issue.issue_no} · ${issue.issue_date || ''}`;
+    const checked = articles.filter((a) => a.checked || !a.included).length;
+    $('rv-count').textContent = `${checked} of ${articles.length} articles checked`;
+    $('rlist').innerHTML = articles.map((a, i) => { const s = statusOf(a); return `<li><button type="button" data-i="${i}" aria-current="${i === R.sel}"><b>${esc(a.title)}</b><span class="tag ${s[1]}" style="align-self:flex-start">${s[0]}</span></button></li>`; }).join('');
+    const a = articles[R.sel]; if (!a) { $('editor').innerHTML = '<p class="muted">No articles.</p>'; return; }
+    const pages = (issue.pages || []).slice((a.page_from || 1) - 1, a.page_to || a.page_from || 1);
+    $('pp').textContent = a.printed_pages || `PDF pages ${a.page_from}–${a.page_to}`;
+    $('printed').innerHTML = pages.map((p) => `<img src="${imgUrl(p, 900)}" alt="Printed page" loading="lazy">`).join('') || '<p class="muted">No page images.</p>';
+    const bodyText = (a.body || []).map((b) => (b.t === 'h' ? '## ' : b.t === 'q' ? '> ' : '') + b.text).join('\n\n');
+    $('editor').innerHTML = `
+${a.flag ? `<div class="note" role="note"><strong>Please check:</strong> ${esc(a.flag)}</div>` : ''}
+<label class="f" for="e-title">Headline<input id="e-title" type="text" value="${esc(a.title)}"></label>
+<label class="f" for="e-dek">Summary shown when shared<textarea id="e-dek" style="min-height:64px">${esc(a.dek || '')}</textarea></label>
+<div class="row"><label class="f" for="e-byline" style="flex:1">Byline<input id="e-byline" type="text" value="${esc(a.byline || '')}"></label><label class="f" for="e-kicker" style="flex:1">Section label<input id="e-kicker" type="text" value="${esc(a.kicker || '')}"></label></div>
+<div class="stack" style="gap:8px"><strong style="font-size:14px;color:var(--ink-2)">Photos — the first one included leads the article</strong>
+<div class="pgrid">${(a.photos || []).map((p, k) => `<div class="pcell ${p.include === false ? 'off' : ''}"><img src="${imgUrl(p.path, 320)}" alt=""><textarea data-cap="${k}" aria-label="Caption">${esc(p.caption || '')}</textarea><div class="row"><button class="smallbtn" type="button" data-tog="${k}">${p.include === false ? 'Include' : 'Leave out'}</button>${k > 0 ? `<button class="smallbtn" type="button" data-lead="${k}">Make first</button>` : ''}</div></div>`).join('') || '<p class="muted">No photos for this article.</p>'}</div></div>
+<label class="f" for="e-body">Text <span class="muted" style="font-weight:400">(blank line between paragraphs; start a line with ## for a subheading)</span><textarea id="e-body" style="min-height:320px">${esc(bodyText)}</textarea></label>
+<div class="row" style="justify-content:space-between">
+<div class="row"><button class="smallbtn" type="button" id="e-incl">${a.included ? 'Leave out of website' : 'Put back on website'}</button><button class="smallbtn" type="button" id="e-lead">${a.lead ? '★ Featured on homepage' : 'Feature on homepage'}</button></div>
+<div class="row"><button class="btn btn-line" style="color:var(--blue)" type="button" id="e-save">Save changes</button><button class="btn btn-blue" type="button" id="e-ok">Looks right ✓</button></div>
+</div><p id="e-msg" class="muted" aria-live="polite"></p>`;
+  }
+  function readEditor(a) {
+    const blocks = $('e-body').value.split(/\n\s*\n/).map((s) => s.trim()).filter(Boolean).map((s) => s.startsWith('## ') ? { t: 'h', text: s.slice(3).trim() } : s.startsWith('> ') ? { t: 'q', text: s.slice(2).trim() } : { t: 'p', text: s });
+    const photos = (a.photos || []).map((p, k) => Object.assign({}, p, { caption: (document.querySelector(`[data-cap="${k}"]`) || {}).value ?? p.caption }));
+    return { title: $('e-title').value.trim() || a.title, dek: $('e-dek').value.trim(), byline: $('e-byline').value.trim() || null, kicker: $('e-kicker').value.trim(), body: blocks, photos };
+  }
+  async function save(extra) {
+    const a = R.articles[R.sel];
+    const fields = Object.assign(readEditor(a), extra || {});
+    $('e-msg').textContent = 'Saving…';
+    try {
+      const { article } = await call('save-article', { id: a.id, fields });
+      if (fields.lead) R.articles.forEach((x) => { x.lead = false; });
+      R.articles[R.sel] = article; renderReview(); $('e-msg').textContent = 'Saved.';
+    } catch (err) { $('e-msg').textContent = err.message; }
+  }
+  $('rlist').addEventListener('click', (e) => { const b = e.target.closest('[data-i]'); if (!b) return; R.sel = Number(b.getAttribute('data-i')); renderReview(); });
+  $('editor').addEventListener('click', (e) => {
+    const a = R.articles[R.sel]; if (!a) return;
+    const t = e.target.closest('[data-tog]'), l = e.target.closest('[data-lead]');
+    if (t) { const k = +t.getAttribute('data-tog'); const cur = readEditor(a); cur.photos[k].include = cur.photos[k].include === false; Object.assign(a, cur); renderReview(); return; }
+    if (l) { const k = +l.getAttribute('data-lead'); const cur = readEditor(a); cur.photos.unshift(cur.photos.splice(k, 1)[0]); Object.assign(a, cur); renderReview(); return; }
+    if (e.target.id === 'e-save') save();
+    if (e.target.id === 'e-ok') save({ checked: true }).then(() => { const next = R.articles.findIndex((x, i) => i > R.sel && !x.checked && x.included); if (next >= 0) { R.sel = next; renderReview(); } });
+    if (e.target.id === 'e-incl') save({ included: !a.included });
+    if (e.target.id === 'e-lead') save({ lead: true });
+  });
+  async function publish(at) {
+    try {
+      const { issue } = await call('publish', { issue_id: R.issue.id, publish_at: at });
+      R.issue = issue; showPublished();
+    } catch (err) { alertBox(err.message); }
+  }
+  function alertBox(m) { const p = $('published'); p.classList.remove('hidden'); p.innerHTML = `<p class="err">${esc(m)}</p>`; }
+  $('btn-schedule').onclick = () => { const v = $('pub-at').value; if (!v) return; publish(new Date(v + ':00+08:00').toISOString()); };
+  $('btn-now').onclick = () => publish(null);
+  function showPublished() {
+    const i = R.issue, base = location.origin;
+    const live = i.status === 'published';
+    const when = new Date(i.publish_at).toLocaleString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Manila' });
+    const top = R.articles.filter((a) => a.included).sort((a, b) => (b.lead - a.lead) || (a.sort - b.sort)).slice(0, 4);
+    const msg = `Balita Issue ${i.issue_no} is out. Read it online:\n${base}/balita/${i.issue_no}\n\nIn this issue:\n` + top.map((a) => `• ${a.title}: ${base}/balita/${i.issue_no}/${a.slug}`).join('\n');
+    const p = $('published'); p.classList.remove('hidden');
+    p.innerHTML = `<strong style="color:#1d7a46;text-transform:uppercase;letter-spacing:.08em;font-size:14px">${live ? 'Live now' : 'Scheduled'}</strong>
+<h2 style="font-size:24px">${live ? `Issue ${i.issue_no} is live on the website` : `Issue ${i.issue_no} goes live ${esc(when)}`}</h2>
+<div class="sharemsg" id="msg">${esc(msg)}</div>
+<div class="row"><button class="btn btn-gold" type="button" id="copy-msg">Copy message for Viber and Facebook</button>${live ? `<a class="btn btn-line" style="color:var(--blue)" href="/balita/${i.issue_no}" target="_blank" rel="noopener">Open the issue page</a>` : ''}<button class="smallbtn" type="button" id="unpub">${live ? 'Take offline' : 'Cancel schedule'}</button></div>`;
+    $('copy-msg').onclick = async () => { try { await navigator.clipboard.writeText(msg); $('copy-msg').textContent = 'Copied'; } catch (e) { const r = document.createRange(); r.selectNodeContents($('msg')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); } };
+    $('unpub').onclick = async () => { try { const { issue } = await call('unpublish', { issue_id: i.id }); R.issue = issue; $('published').classList.add('hidden'); } catch (e) { alertBox(e.message); } };
+  }
+  $('back-home').onclick = openHome;
+
+  if (code) call('login').then(openHome).catch(() => show('v-login')); else show('v-login');
+})();
