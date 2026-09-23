@@ -36,14 +36,30 @@ function streamed(work: () => Promise<unknown>) {
   return new Response(body, { headers: { ...CORS, "Content-Type": "text/plain; charset=utf-8" } });
 }
 
-let cachedCode: string | null = null;
-async function checkCode(code: string | null) {
-  if (!cachedCode) {
-    const { data } = await db.from("rcm_settings").select("value").eq("key", "editor_code").single();
-    cachedCode = data?.value ?? null;
+// Two passcodes: the Balita editor (full access) and the Secretariat (meetings and sign-ups only).
+let codes: Record<string, string> | null = null;
+async function roleFor(code: string | null): Promise<"editor" | "secretariat" | null> {
+  if (!codes) {
+    const { data } = await db.from("rcm_settings").select("key,value").in("key", ["editor_code", "secretariat_code"]);
+    codes = Object.fromEntries((data || []).map((r: { key: string; value: string }) => [r.key, r.value]));
   }
-  return !!code && !!cachedCode && code === cachedCode;
+  if (!code) return null;
+  if (code === codes.editor_code) return "editor";
+  if (code === codes.secretariat_code) return "secretariat";
+  return null;
 }
+
+function manilaToday() {
+  return new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10);
+}
+const clean = (v: unknown, max: number) => (typeof v === "string" ? v.replace(/\s+/g, " ").trim().slice(0, max) : "");
+
+const MEETING_FIELDS = ["label", "topic", "speaker", "speaker_title", "speaker_bio", "time_text", "registration_text", "venue", "notes", "poster_path", "status", "rsvp_open"];
+
+const PARSE_SYSTEM = `You read an announcement for a weekly meeting of the Rotary Club of Manila (usually a Viber message, sometimes text from a poster) and pull out the details for the Club's website. Copy wording from the announcement; never invent details. Reply with JSON only.`;
+const PARSE_TASK = `Return exactly this JSON shape (use null when the announcement does not say):
+{"meeting_date":"YYYY-MM-DD","label":"e.g. 12th Weekly Membership Meeting","topic":"talk title","speaker":"speaker's full name with honorific as written","speaker_title":"speaker's position","speaker_bio":"short paragraph about the speaker taken from the announcement, plus any career milestones as lines starting with • ","time_text":"meeting time, e.g. 12:30 PM–2:00 PM","registration_text":"registration or lunch time if given","venue":"room and hotel","notes":"anything else members need to know that week (elections, special events, dress code, Zoom), in one or two plain sentences"}
+Do not include the list of people attending.`;
 
 function slugify(s: string) {
   return s.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
@@ -110,11 +126,117 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "Use POST" }, 405);
   let body: Record<string, any>;
   try { body = await req.json(); } catch { return json({ error: "Bad request" }, 400); }
-  if (!(await checkCode(req.headers.get("x-editor-code")))) return json({ error: "Wrong editor passcode." }, 401);
-
   const action = body.action;
+
+  // ---------- public: meeting sign-ups (no passcode) ----------
+  if (action === "rsvp") {
+    try {
+      if (body.website) return json({ ok: true, count: 0 }); // hidden field filled in = automated spam
+      const name = clean(body.name, 80);
+      if (name.length < 2) return json({ error: "Please type your name." }, 400);
+      const kind = body.kind === "guest" ? "guest" : "member";
+      const guest_of = kind === "guest" ? clean(body.guest_of, 80) || null : null;
+      const affiliation = clean(body.affiliation, 100) || null;
+      const { data: m } = await db.from("rcm_meetings").select("id,meeting_date,status,rsvp_open").eq("id", body.meeting_id).single();
+      if (!m || m.status !== "published") return json({ error: "This meeting is not open for sign-ups." }, 400);
+      if (!m.rsvp_open || m.meeting_date < manilaToday()) return json({ error: "Sign-ups for this meeting are closed. Please contact the Secretariat." }, 400);
+      const { count } = await db.from("rcm_signups").select("id", { count: "exact", head: true }).eq("meeting_id", m.id);
+      if ((count || 0) >= 400) return json({ error: "The list is full. Please contact the Secretariat." }, 400);
+      const { data: existing } = await db.from("rcm_signups").select("id,name").eq("meeting_id", m.id).ilike("name", name.replace(/[%_\\]/g, "\\$&"));
+      if (existing && existing.length) return json({ ok: true, already: true, count: count || 0 });
+      const { data, error } = await db.from("rcm_signups").insert({ meeting_id: m.id, name, kind, guest_of, affiliation, source: "web" }).select("id,cancel_token").single();
+      if (error) throw error;
+      return json({ ok: true, id: data.id, token: data.cancel_token, count: (count || 0) + 1 });
+    } catch (e) {
+      return json({ error: String((e as Error)?.message || e) }, 500);
+    }
+  }
+  if (action === "rsvp-cancel") {
+    const { error } = await db.from("rcm_signups").delete().eq("id", body.id).eq("cancel_token", body.token);
+    return error ? json({ error: error.message }, 500) : json({ ok: true });
+  }
+
+  const role = await roleFor(req.headers.get("x-editor-code"));
+  if (!role) return json({ error: "Wrong passcode." }, 401);
+  const isMeetingAction = action === "login" || String(action).startsWith("m-");
+  if (role === "secretariat" && !isMeetingAction) return json({ error: "This passcode is for the Secretariat page only." }, 403);
+
   try {
-    if (action === "login") return json({ ok: true });
+    if (action === "login") {
+      if (body.need !== "meetings" && role !== "editor") return json({ error: "This passcode is for the Secretariat page. Use /secretariat instead." }, 401);
+      return json({ ok: true, role });
+    }
+
+    // ---------- Secretariat: meetings and sign-ups ----------
+    if (action === "m-list") {
+      const { data, error } = await db.from("rcm_meetings").select("id,meeting_date,label,topic,speaker,status,rsvp_open,rcm_signups(count)").order("meeting_date", { ascending: false }).limit(30);
+      if (error) throw error;
+      const last = (data || [])[0];
+      return json({ today: manilaToday(), meetings: (data || []).map((m: any) => ({ ...m, signups: m.rcm_signups?.[0]?.count ?? 0, rcm_signups: undefined })), last_venue: last ? (await db.from("rcm_meetings").select("venue,time_text,registration_text").eq("id", last.id).single()).data : null });
+    }
+    if (action === "m-get") {
+      const { data: meeting, error } = await db.from("rcm_meetings").select("*").eq("id", body.id).single();
+      if (error) throw error;
+      const { data: signups } = await db.from("rcm_signups").select("id,name,kind,guest_of,affiliation,source,created_at").eq("meeting_id", body.id).order("created_at");
+      return json({ meeting, signups: signups || [] });
+    }
+    if (action === "m-save") {
+      const f = body.fields || {};
+      const row: Record<string, unknown> = { updated_at: new Date().toISOString() };
+      for (const k of MEETING_FIELDS) if (k in f) row[k] = typeof f[k] === "string" ? (f[k].trim() || null) : f[k];
+      if (row.status && !["draft", "published"].includes(row.status as string)) delete row.status;
+      let q;
+      if (body.id) q = db.from("rcm_meetings").update({ ...row, ...(f.meeting_date ? { meeting_date: f.meeting_date } : {}) }).eq("id", body.id);
+      else {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(f.meeting_date || "")) return json({ error: "Choose the meeting date." }, 400);
+        q = db.from("rcm_meetings").insert({ ...row, meeting_date: f.meeting_date });
+      }
+      const { data, error } = await q.select("*").single();
+      if (error) {
+        if (String(error.message).includes("duplicate")) return json({ error: "There is already a meeting on that date. Open it from the list instead." }, 400);
+        throw error;
+      }
+      return json({ meeting: data });
+    }
+    if (action === "m-delete") {
+      const { error } = await db.from("rcm_meetings").delete().eq("id", body.id);
+      if (error) throw error;
+      return json({ ok: true });
+    }
+    if (action === "m-poster-sign") {
+      const date = String(body.meeting_date || "").replace(/[^0-9-]/g, "");
+      if (!date) return json({ error: "Save the meeting date first." }, 400);
+      const path = `meetings/${date}/poster-${Date.now()}.jpg`;
+      const { data, error } = await db.storage.from(BUCKET).createSignedUploadUrl(path, { upsert: true });
+      if (error) throw error;
+      return json({ path, signedUrl: data.signedUrl });
+    }
+    if (action === "m-add-names") {
+      const lines: string[] = String(body.text || "").split(/\r?\n/).map((l) => l.replace(/^\s*\d+\s*[.)\-]\s*/, "").replace(/\s+/g, " ").trim()).filter((l) => l.length >= 2).slice(0, 300);
+      if (!lines.length) return json({ error: "Paste at least one name." }, 400);
+      const { data: have } = await db.from("rcm_signups").select("name").eq("meeting_id", body.meeting_id);
+      const seen = new Set((have || []).map((r: { name: string }) => r.name.toLowerCase()));
+      const t0 = Date.now();
+      const rows = lines.filter((l) => { const k = l.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; }).map((l, i) => ({
+        meeting_id: body.meeting_id, name: l.slice(0, 120), kind: /guest of|^spouse\b/i.test(l) ? "guest" : "member", source: "secretariat",
+        created_at: new Date(t0 + i).toISOString(),
+      }));
+      if (rows.length) { const { error } = await db.from("rcm_signups").insert(rows); if (error) throw error; }
+      return json({ added: rows.length, skipped: lines.length - rows.length });
+    }
+    if (action === "m-remove-signup") {
+      const { error } = await db.from("rcm_signups").delete().eq("id", body.id);
+      if (error) throw error;
+      return json({ ok: true });
+    }
+    if (action === "m-parse") {
+      const text = String(body.text || "").slice(0, 8000);
+      if (text.trim().length < 20) return json({ error: "Paste the announcement first." }, 400);
+      return streamed(async () => {
+        const reply = await claude([{ type: "text", text: `${PARSE_TASK}\n\nToday is ${manilaToday()} (Manila). The announcement:\n\n${text}` }], PARSE_SYSTEM, 2000);
+        return extractJson(reply);
+      });
+    }
 
     if (action === "issues") {
       const { data, error } = await db.from("rcm_issues").select("id,issue_no,issue_date,status,publish_at,cover_path,updated_at").order("issue_no", { ascending: false }).limit(30);

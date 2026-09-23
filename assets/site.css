@@ -5,6 +5,7 @@
   --sans:"Source Sans 3",system-ui,-apple-system,"Segoe UI",sans-serif;
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;font-family:var(--sans);color:var(--ink);background:var(--paper);font-size:17px;line-height:1.55}
 img{max-width:100%;display:block}
@@ -143,3 +144,56 @@ h1,h2,h3{font-family:var(--serif);line-height:1.18;text-wrap:balance;margin:0;co
 .from-issue div{display:flex;flex-direction:column;gap:4px;font-size:15px}
 .share-row{border-block:1px solid var(--line);padding-block:10px}
 .empty{padding:80px 20px;text-align:center;color:var(--muted)}
+
+/* Meetings */
+.date-chip small{font-size:11px;color:#c9d8e8;margin-top:2px}
+.meet-card h3{font-size:22px}
+.meet-note{background:#fdf5dc;border-left:4px solid var(--gold);border-radius:4px;padding:10px 12px;color:#4a3b0b!important;font-size:15px}
+.meet-note.big{font-size:17px;padding:14px 16px}
+.meet-note p{margin:0}.meet-note p+p{margin-top:8px}
+.meet-head .wrap{grid-template-columns:88px 1fr;gap:28px}
+.meet-head .date-chip{width:88px;height:98px}
+.meet-head .date-chip b{font-size:38px}
+@media (max-width:760px){.meet-head .wrap{grid-template-columns:1fr;gap:16px}}
+.meet-grid{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:40px;padding-block:40px;align-items:start}
+@media (max-width:900px){.meet-grid{grid-template-columns:1fr}}
+.meet-main{display:flex;flex-direction:column;gap:24px}
+.facts{margin:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.facts div{background:var(--tint);border-radius:8px;padding:14px 16px}
+.facts dt{font-size:13px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;color:var(--blue)}
+.facts dd{margin:4px 0 0;font-size:18px;font-weight:600}
+.bio h2{font-size:26px;margin-bottom:10px}
+.bio p{margin:0 0 12px;font-size:18px;color:var(--ink-2)}
+.bio ul{margin:0;padding-left:22px;font-size:17px;color:var(--ink-2);display:flex;flex-direction:column;gap:6px}
+.poster{margin:0;display:flex;flex-direction:column;gap:8px;max-width:520px}
+.poster img{border-radius:8px;border:1px solid var(--line)}
+.poster figcaption{font-size:14px;color:var(--muted)}
+.rsvp{position:sticky;top:96px;background:#fff;border:2px solid var(--blue);border-radius:12px;padding:22px;display:flex;flex-direction:column;gap:12px;scroll-margin-top:96px}
+@media (max-width:900px){.rsvp{position:static}}
+.rsvp h2{font-size:26px}
+.rsvp-count{margin:0;font-size:17px;color:var(--ink-2)}
+.rsvp form{display:flex;flex-direction:column;gap:14px}
+.rsvp label{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:15px;color:var(--ink-2)}
+.rsvp input[type=text],.rsvp input:not([type]){font:inherit;font-size:17px;border:1px solid #b9c6d6;border-radius:6px;padding:12px;min-height:48px}
+.rsvp fieldset{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.rsvp legend{font-weight:700;font-size:15px;color:var(--ink-2);margin-bottom:6px}
+.rsvp label.radio{flex-direction:row;align-items:center;gap:10px;font-weight:600;font-size:17px;color:var(--ink);border:1px solid #d5dde7;border-radius:8px;padding:12px;cursor:pointer}
+.rsvp label.radio input{width:22px;height:22px;margin:0}
+.rsvp .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.rsvp .small{font-size:14px;color:var(--muted);margin:0}
+.rsvp #rsvp-msg{margin:0;color:#a3262a;font-weight:600}
+.rsvp .ok{background:#e8f5ec;border-radius:8px;padding:12px;margin:0;color:#14532d;font-size:17px}
+.mine{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.mine li{display:flex;justify-content:space-between;align-items:center;gap:10px;border-bottom:1px solid var(--line);padding:8px 0;font-weight:600}
+.linkbtn{background:none;border:0;color:#a3262a;font:inherit;font-size:14px;font-weight:600;cursor:pointer;padding:6px}
+
+/* Donate */
+.donate-page .lead-p{font-size:19px;color:var(--ink-2);max-width:40em;margin:12px 0 0}
+.donate-grid{display:grid;grid-template-columns:420px 1fr;gap:40px;align-items:start}
+@media (max-width:860px){.donate-grid{grid-template-columns:1fr}}
+.qr-card{margin:0;background:#fff;border:1px solid var(--line);border-radius:14px;padding:22px;display:flex;flex-direction:column;align-items:center;gap:12px;box-shadow:0 10px 30px rgba(7,44,82,.08)}
+.qr-card img{width:100%;max-width:360px;height:auto;image-rendering:pixelated}
+.qr-name{font-weight:700;letter-spacing:.06em;color:var(--navy);font-size:18px}
+.qr-card figcaption{color:var(--muted);font-size:14px}
+.steps-card h2{font-size:28px;margin-bottom:12px}
+.howto{margin:0;padding-left:24px;display:flex;flex-direction:column;gap:14px;font-size:18px;color:var(--ink-2)}
