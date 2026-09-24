@@ -122,6 +122,7 @@ main.wide{max-width:1760px}
 <div class="row"><button class="btn btn-line" style="color:var(--blue)" type="button" id="split-load">Show the issues that need it</button><span id="split-msg" class="muted" aria-live="polite"></span></div>
 <div id="split-table" class="hidden stack">
 <table class="otab"><thead><tr><th><input type="checkbox" id="split-all" aria-label="Select all" checked></th><th>Issue</th><th>Now on the website</th><th>PDF</th><th>Status</th></tr></thead><tbody id="split-rows"></tbody></table>
+<div class="row"><label class="btn btn-line" style="color:var(--blue)">Add PDFs from this computer<input id="split-files" type="file" accept="application/pdf" multiple class="hidden"></label><span class="muted" style="font-size:14px">Choose several at once; each is matched to its issue by number or date.</span></div>
 <div class="row"><button class="btn btn-blue" type="button" id="split-start">Start with the ticked issues</button><span id="split-sum" class="muted"></span></div>
 </div>
 </details>

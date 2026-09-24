@@ -334,6 +334,20 @@
   });
   $('split-ai').addEventListener('change', drawSplit);
   $('split-all').addEventListener('change', (e) => { splitQ.forEach((x) => { x.on = e.target.checked; }); drawSplit(); });
+  // Many PDFs at once: match each to its row by the issue number printed inside, or the date in the file name/cover.
+  $('split-files').addEventListener('change', async (e) => {
+    const files = [...e.target.files]; e.target.value = '';
+    let matched = 0; const miss = [];
+    for (const f of files) {
+      $('split-sum').textContent = `Matching ${f.name}…`;
+      let m = {};
+      try { const pk = await BalitaExtract.peek(f); m = guessMeta(pk.text, f.name); } catch (err) { m = guessMeta('', f.name); }
+      const x = splitQ.find((q) => (m.no && q.i.issue_no === m.no) || (!m.no && m.date && q.i.issue_date === m.date)) || (m.date && splitQ.find((q) => q.i.issue_date === m.date));
+      if (x) { x.file = f; x.on = true; matched++; } else miss.push(f.name);
+    }
+    drawSplit();
+    $('split-msg').textContent = `${matched} of ${files.length} PDFs matched to an issue.` + (miss.length ? ` Not matched: ${miss.join(', ')}. Use “Choose the PDF” on the right row for these.` : '');
+  });
   const setSplit = (x, t) => { x.state = t; const c = document.querySelector(`[data-sst="${x.k}"]`); if (c) c.textContent = t; };
 
   async function splitOne(x) {
