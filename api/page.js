@@ -540,21 +540,67 @@ showDone();
   return layout({ title: `${title} · Rotary Club of Manila`, description: desc, image: m.poster_path ? img(m.poster_path, 1200) : '', url, body, nav: 'meeting' });
 }
 
-function donatePage(origin) {
+async function donatePage(origin, pick) {
+  const camps = await q('rcm_campaigns?select=id,slug,title,blurb,image_path,sort&active=eq.true&order=sort.asc,created_at.asc').catch(() => []);
+  const chosen = camps.find((c) => c.slug === pick) || camps[0];
+  const campCards = camps.map((c) => `<label class="camp${c === chosen ? ' on' : ''}"><input type="radio" name="campaign" value="${c.id}" data-title="${esc(c.title)}"${c === chosen ? ' checked' : ''}>
+${c.image_path ? `<span class="camp-im"><img src="${img(c.image_path, 480)}" alt="" loading="lazy"></span>` : ''}<span class="camp-t"><strong>${esc(c.title)}</strong>${c.blurb ? `<span>${esc(c.blurb)}</span>` : ''}</span></label>`).join('');
   const body = `<section class="wrap section donate-page">
 <div><span class="eyebrow">Support our projects</span><h1 style="font-size:clamp(32px,5vw,48px)">Donate to the Rotary Club of Manila</h1>
-<p class="lead-p">Your gift supports the Club's service projects in Manila and across the Philippines. Pay with any Philippine bank or e-wallet app, with no fees, using the Club's QR Ph code.</p></div>
+<p class="lead-p">Choose what your gift supports, pay with any Philippine bank or e-wallet app using the Club's QR Ph code, then send us your proof of payment so the Secretariat can issue your official receipt.</p></div>
+
+${camps.length ? `<div class="don-step"><span class="don-n">1</span><div style="flex:1;min-width:0"><h2>Choose what your gift supports</h2><div class="camps" id="camps">${campCards}</div></div></div>` : ''}
+
+<div class="don-step"><span class="don-n">${camps.length ? 2 : 1}</span><div style="flex:1;min-width:0"><h2>Pay with QR Ph</h2>
 <div class="donate-grid">
-<figure class="qr-card"><span class="qr-name">ROTARY CLUB OF MANILA</span><img src="/assets/rcm-qrph.png" alt="QR Ph code for the Rotary Club of Manila" width="410" height="410"><figcaption>QR Ph · RCBC QR Pay</figcaption>
+<figure class="qr-card"><span class="qr-name">ROTARY CLUB OF MANILA</span><img src="/assets/rcm-qrph.png" alt="QR Ph code for the Rotary Club of Manila" width="410" height="410"><figcaption>QR Ph · RCBC QR Pay · no fees</figcaption>
 <a class="btn btn-navy" href="/assets/rcm-qrph.png" download="Rotary-Club-of-Manila-QRPh.png">Save QR image</a></figure>
-<div class="steps-card"><h2>How to give</h2>
 <ol class="howto">
 <li><strong>Open your bank or e-wallet app</strong> such as GCash, Maya, BPI, BDO, RCBC or any app with QR Ph.</li>
-<li><strong>Choose Scan QR or Pay QR,</strong> and point your camera at the code. On a phone, tap <em>Save QR image</em> first, then choose <em>Upload QR</em> in your app.</li>
+<li><strong>Choose Scan QR or Pay QR</strong> and point your camera at the code. On a phone, tap <em>Save QR image</em> first, then choose <em>Upload QR</em> in your app.</li>
 <li><strong>Check that the name shows Rotary Club of Manila,</strong> enter the amount, and confirm.</li>
-<li><strong>Tell us about your gift</strong> so we can thank you and send an acknowledgment: <a href="${mailto('Donation made via QR Ph')}">${MAIL}</a> or <a href="${TEL}">(02) 8527-1885</a>. Mention a project if you'd like your gift to go to one.</li>
-</ol></div>
-</div></section>`;
+<li><strong>Take a screenshot</strong> of the confirmation screen. You will attach it below.</li>
+</ol></div></div></div>
+
+<div class="don-step"><span class="don-n">${camps.length ? 3 : 2}</span><div style="flex:1;min-width:0"><h2>Send us your proof of payment</h2>
+<p class="muted-p">The Secretariat matches it with the Club's bank record and sends your official receipt.</p>
+<form id="don-form" class="don-form" novalidate>
+<div class="don-grid">
+<label>Your name<input name="member_name" autocomplete="name" required placeholder="e.g. Rtn. Juan dela Cruz"></label>
+<label>Name on the official receipt<input name="receipt_name" required placeholder="Your name, or your company's name"></label>
+<label>Amount you gave (₱)<input name="amount" inputmode="decimal" required placeholder="e.g. 5,000"></label>
+<label>Mobile number or email<input name="contact" autocomplete="email" required placeholder="Where we send your receipt"></label>
+</div>
+<label>Screenshot of your payment<input name="proof" type="file" accept="image/*" required></label>
+<label>Note to the Secretariat <span class="opt">(optional)</span><textarea name="notes" rows="2" placeholder="e.g. in memory of…, or split between two projects"></textarea></label>
+<input name="website" tabindex="-1" autocomplete="off" class="hp" aria-hidden="true">
+<p id="don-for" class="muted-p"></p>
+<button class="btn btn-gold" type="submit" id="don-send">Send to the Secretariat</button>
+<p id="don-msg" role="status" aria-live="polite"></p>
+</form>
+<div id="don-done" class="don-done" hidden></div>
+<p class="muted-p" style="margin-top:14px">Questions? Call the Secretariat at <a href="${TEL}">(02) 8527-1885</a> or email <a href="${mailto('Donation made via QR Ph')}">${MAIL}</a>.</p>
+</div></div>
+</section>
+<script>
+(function(){
+var FN='${FN}',PUB='${PUB}',f=document.getElementById('don-form'),msg=document.getElementById('don-msg');
+function sel(){var r=document.querySelector('input[name=campaign]:checked');document.querySelectorAll('.camp').forEach(function(l){l.classList.toggle('on',l.contains(r))});document.getElementById('don-for').textContent=r?'For: '+r.getAttribute('data-title'):'';return r;}
+document.addEventListener('change',function(e){if(e.target.name==='campaign')sel();});sel();
+async function call(action,p){var r=await fetch(FN,{method:'POST',headers:{'content-type':'application/json',apikey:PUB},body:JSON.stringify(Object.assign({action:action},p))});var d=await r.json().catch(function(){return{error:'The server did not answer. Please try again.'}});if(!r.ok||d.error)throw new Error(d.error||'Please try again.');return d;}
+async function shrink(file){var bm=await createImageBitmap(file);var k=Math.min(1,1800/Math.max(bm.width,bm.height));var c=document.createElement('canvas');c.width=Math.round(bm.width*k);c.height=Math.round(bm.height*k);c.getContext('2d').drawImage(bm,0,0,c.width,c.height);return await new Promise(function(res){c.toBlob(res,'image/jpeg',.88)});}
+f.addEventListener('submit',async function(e){e.preventDefault();var b=document.getElementById('don-send');var fd=new FormData(f);var file=fd.get('proof');
+if(!fd.get('member_name')||!fd.get('receipt_name')||!fd.get('amount')||!fd.get('contact')){msg.textContent='Please fill in your name, the name for the receipt, the amount and how to reach you.';return;}
+if(!file||!file.size){msg.textContent='Please attach the screenshot of your payment.';return;}
+b.disabled=true;msg.textContent='Sending…';
+try{var blob;try{blob=await shrink(file);}catch(x){throw new Error('That file could not be opened. Please attach a screenshot (JPG or PNG).');}
+var s=await call('donate-sign',{type:'image/jpeg'});var up=new FormData();up.append('cacheControl','3600');up.append('',blob,'proof.jpg');
+var u=await fetch(s.signedUrl,{method:'PUT',body:up});if(!u.ok)throw new Error('The screenshot could not be uploaded. Please try again.');
+var r=sel();var d=await call('donate',{member_name:fd.get('member_name'),receipt_name:fd.get('receipt_name'),amount:fd.get('amount'),contact:fd.get('contact'),notes:fd.get('notes'),website:fd.get('website'),campaign_id:r?r.value:null,proof_path:s.path});
+f.hidden=true;var done=document.getElementById('don-done');done.hidden=false;done.innerHTML='<strong>Thank you!</strong><p>The Secretariat has your proof of payment and will send your official receipt to '+String(fd.get('contact')).replace(/[<>&]/g,'')+'. Your reference is <b>'+d.ref+'</b>.</p>';}
+catch(err){msg.textContent=err.message;b.disabled=false;}});
+})();
+</script>`;
   return layout({ title: 'Donate · Rotary Club of Manila', description: 'Support the service projects of the Rotary Club of Manila using QR Ph from any bank or e-wallet app.', url: origin + '/donate', body });
 }
 
@@ -600,7 +646,7 @@ module.exports = async (req, res) => {
     else if (r === 'issue') html = await issuePage(origin, u.searchParams.get('no'));
     else if (r === 'article') html = await articlePage(origin, u.searchParams.get('no'), u.searchParams.get('slug'));
     else if (r === 'meeting') html = await meetingPage(origin, u.searchParams.get('date'));
-    else if (r === 'donate') html = donatePage(origin);
+    else if (r === 'donate') html = await donatePage(origin, u.searchParams.get('for'));
   } catch (e) {
     res.statusCode = 500;
     res.setHeader('Content-Type', 'text/html; charset=utf-8');

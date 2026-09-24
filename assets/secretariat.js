@@ -11,7 +11,14 @@
   try { code = localStorage.getItem('rcm-sec-code') || ''; } catch (e) {}
   let state = { meeting: null, signups: [], posterPath: null, lastVenue: null };
 
-  function show(v) { for (const id of ['v-login', 'v-list', 'v-edit']) $(id).classList.toggle('hidden', id !== v); window.scrollTo(0, 0); }
+  function show(v) {
+    for (const id of ['v-login', 'v-list', 'v-edit', 'v-don', 'v-camp']) $(id).classList.toggle('hidden', id !== v);
+    $('sec-tabs').classList.toggle('hidden', v === 'v-login');
+    const tab = v === 'v-edit' ? 'v-list' : v;
+    document.querySelectorAll('[data-tab]').forEach((b) => b.setAttribute('aria-current', String(b.getAttribute('data-tab') === tab)));
+    window.scrollTo(0, 0);
+  }
+  window.RCMSec = { call: (a, p) => call(a, p), show: (v) => show(v), esc, openList: () => openList() };
 
   async function call(action, payload) {
     const r = await fetch(FN, { method: 'POST', headers: { 'content-type': 'application/json', 'x-editor-code': code, apikey: PUB }, body: JSON.stringify(Object.assign({ action }, payload || {})) });

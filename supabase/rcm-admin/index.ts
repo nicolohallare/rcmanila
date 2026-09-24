@@ -156,6 +156,42 @@ async function uniqueSlug(issueId: string, base: string) {
   return s;
 }
 
+// ---------- donations: proof-of-payment check ----------
+const PRIVATE = "rcm-private";
+const PROOF_SYSTEM = `You read one screenshot of a Philippine bank or e-wallet payment confirmation (GCash, Maya, BPI, BDO, RCBC, UnionBank, etc.) for the Secretariat of the Rotary Club of Manila. Copy what the screenshot shows; never guess or fill in. Reply with JSON only.`;
+const PROOF_TASK = `Return exactly this JSON shape:
+{"is_payment_confirmation":true|false,"amount":number or null (amount paid, in pesos, without fees),"currency":"PHP" or other or null,"recipient":"payee or merchant name as shown, or null","reference":"reference / transaction number as shown, or null","date":"YYYY-MM-DD or null","time":"HH:MM or null","sender":"payer name or account as shown, or null","status":"success" | "pending" | "failed" | "unknown","remark":"one short sentence if anything looks odd (cropped, edited, a different amount field, not a payment), else null"}`;
+
+function b64(buf: ArrayBuffer) {
+  const bytes = new Uint8Array(buf); let s = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+
+async function checkProof(id: string) {
+  const { data: d } = await db.from("rcm_donations").select("id,amount,proof_path").eq("id", id).single();
+  if (!d || !d.proof_path) return;
+  let ai: Record<string, unknown> = {}, status = "unreadable";
+  try {
+    const file = await db.storage.from(PRIVATE).download(d.proof_path);
+    if (file.error || !file.data) throw new Error("Proof file not found");
+    const buf = await file.data.arrayBuffer();
+    const media = d.proof_path.endsWith(".png") ? "image/png" : d.proof_path.endsWith(".webp") ? "image/webp" : "image/jpeg";
+    ai = extractJson(await claude([{ type: "image", source: { type: "base64", media_type: media, data: b64(buf) } }, { type: "text", text: PROOF_TASK }], PROOF_SYSTEM, 800));
+    const amt = typeof ai.amount === "number" ? ai.amount : Number(String(ai.amount ?? "").replace(/[^0-9.]/g, "")) || null;
+    if (!ai.is_payment_confirmation || amt == null) status = "unreadable";
+    else if (ai.status === "failed") status = "failed";
+    else if (Math.abs(amt - Number(d.amount)) > 0.5) status = "mismatch";
+    else if (ai.recipient && !/rotary/i.test(String(ai.recipient))) status = "check_payee";
+    else status = "match";
+    if (ai.reference && status !== "unreadable") {
+      const { data: dup } = await db.from("rcm_donations").select("id").neq("id", id).eq("ai->>reference", String(ai.reference)).limit(1);
+      if (dup && dup.length) status = "duplicate";
+    }
+  } catch (e) { ai = { error: String((e as Error)?.message || e) }; status = "unreadable"; }
+  await db.from("rcm_donations").update({ ai, check_status: status, updated_at: new Date().toISOString() }).eq("id", id);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ error: "Use POST" }, 405);
@@ -189,6 +225,41 @@ Deno.serve(async (req) => {
   if (action === "rsvp-cancel") {
     const { error } = await db.from("rcm_signups").delete().eq("id", body.id).eq("cancel_token", body.token);
     return error ? json({ error: error.message }, 500) : json({ ok: true });
+  }
+
+  // ---------- public: tell the Club about a donation ----------
+  if (action === "donate-sign") {
+    const ext = body.type === "image/png" ? "png" : body.type === "image/webp" ? "webp" : "jpg";
+    const path = `donations/${manilaToday().slice(0, 7)}/${crypto.randomUUID()}.${ext}`;
+    const { data, error } = await db.storage.from(PRIVATE).createSignedUploadUrl(path);
+    if (error) return json({ error: error.message }, 500);
+    return json({ path, signedUrl: data.signedUrl });
+  }
+  if (action === "donate") {
+    try {
+      if (body.website) return json({ ok: true, ref: "THANKYOU" });
+      const member_name = clean(body.member_name, 120), receipt_name = clean(body.receipt_name, 160), contact = clean(body.contact, 120);
+      const amount = Math.round(Number(String(body.amount ?? "").replace(/[^0-9.]/g, "")) * 100) / 100;
+      if (member_name.length < 2) return json({ error: "Please type your name." }, 400);
+      if (receipt_name.length < 2) return json({ error: "Please type the name to put on the official receipt." }, 400);
+      if (!(amount > 0) || amount > 50000000) return json({ error: "Please type the amount you gave, in pesos." }, 400);
+      if (contact.length < 5) return json({ error: "Please give a mobile number or email so the Secretariat can send your receipt." }, 400);
+      const proof_path = String(body.proof_path || "");
+      if (!/^donations\/\d{4}-\d{2}\/[0-9a-f-]{36}\.(jpg|png|webp)$/.test(proof_path)) return json({ error: "Please attach the screenshot of your payment." }, 400);
+      let campaign_id = null, campaign_title = null;
+      if (body.campaign_id) {
+        const { data: c } = await db.from("rcm_campaigns").select("id,title").eq("id", body.campaign_id).eq("active", true).maybeSingle();
+        if (c) { campaign_id = c.id; campaign_title = c.title; }
+      }
+      const { data, error } = await db.from("rcm_donations").insert({ member_name, receipt_name, amount, contact, notes: clean(body.notes, 500) || null, proof_path, campaign_id, campaign_title }).select("id").single();
+      if (error) throw error;
+      // Read the screenshot after answering, so the donor is not kept waiting.
+      // @ts-ignore EdgeRuntime is provided by Supabase
+      EdgeRuntime.waitUntil(checkProof(data.id));
+      return json({ ok: true, ref: data.id.slice(0, 8).toUpperCase() });
+    } catch (e) {
+      return json({ error: String((e as Error)?.message || e) }, 500);
+    }
   }
 
   const role = await roleFor(req.headers.get("x-editor-code"));
@@ -264,6 +335,65 @@ Deno.serve(async (req) => {
       if (error) throw error;
       return json({ ok: true });
     }
+    // ---------- Secretariat: donations and initiatives ----------
+    if (action === "m-don-list") {
+      const { data, error } = await db.from("rcm_donations").select("id,created_at,campaign_id,campaign_title,member_name,receipt_name,amount,contact,notes,check_status,status,secretariat_note,verified_at,ai").order("created_at", { ascending: false }).limit(500);
+      if (error) throw error;
+      return json({ donations: data || [] });
+    }
+    if (action === "m-don-proof") {
+      const { data: d } = await db.from("rcm_donations").select("proof_path").eq("id", body.id).single();
+      if (!d?.proof_path) return json({ error: "No screenshot attached." }, 404);
+      const { data, error } = await db.storage.from(PRIVATE).createSignedUrl(d.proof_path, 600);
+      if (error) throw error;
+      return json({ url: data.signedUrl });
+    }
+    if (action === "m-don-update") {
+      const upd: Record<string, unknown> = { updated_at: new Date().toISOString() };
+      if (["new", "verified", "receipt_sent", "rejected"].includes(body.status)) { upd.status = body.status; if (body.status === "verified") upd.verified_at = new Date().toISOString(); }
+      if ("secretariat_note" in body) upd.secretariat_note = clean(body.secretariat_note, 500) || null;
+      for (const k of ["member_name", "receipt_name"]) if (k in body) upd[k] = clean(body[k], 160);
+      if ("amount" in body) { const a = Number(body.amount); if (a > 0) upd.amount = a; }
+      const { data, error } = await db.from("rcm_donations").update(upd).eq("id", body.id).select("id,status,secretariat_note,verified_at,amount,member_name,receipt_name").single();
+      if (error) throw error;
+      return json({ donation: data });
+    }
+    if (action === "m-don-recheck") {
+      await checkProof(body.id);
+      const { data } = await db.from("rcm_donations").select("id,check_status,ai").eq("id", body.id).single();
+      return json({ donation: data });
+    }
+    if (action === "m-camp-list") {
+      const { data, error } = await db.from("rcm_campaigns").select("*").order("sort").order("created_at");
+      if (error) throw error;
+      return json({ campaigns: data || [] });
+    }
+    if (action === "m-camp-save") {
+      const f = body.fields || {};
+      const row: Record<string, unknown> = { updated_at: new Date().toISOString() };
+      for (const k of ["title", "blurb", "body", "image_path"]) if (k in f) row[k] = typeof f[k] === "string" ? (f[k].trim() || null) : f[k];
+      if ("active" in f) row.active = !!f.active;
+      if ("sort" in f) row.sort = Number(f.sort) || 0;
+      if ("goal" in f) row.goal = f.goal === "" || f.goal == null ? null : Number(f.goal) || null;
+      if (!body.id && !row.title) return json({ error: "Give the initiative a name." }, 400);
+      const q = body.id ? db.from("rcm_campaigns").update(row).eq("id", body.id)
+        : db.from("rcm_campaigns").insert({ ...row, slug: slugify(String(row.title)) + "-" + Date.now().toString(36).slice(-4) });
+      const { data, error } = await q.select("*").single();
+      if (error) throw error;
+      return json({ campaign: data });
+    }
+    if (action === "m-camp-delete") {
+      const { error } = await db.from("rcm_campaigns").delete().eq("id", body.id);
+      if (error) throw error;
+      return json({ ok: true });
+    }
+    if (action === "m-camp-image-sign") {
+      const path = `campaigns/${Date.now().toString(36)}.jpg`;
+      const { data, error } = await db.storage.from(BUCKET).createSignedUploadUrl(path, { upsert: true });
+      if (error) throw error;
+      return json({ path, signedUrl: data.signedUrl });
+    }
+
     if (action === "m-parse") {
       const text = String(body.text || "").slice(0, 8000);
       if (text.trim().length < 20) return json({ error: "Paste the announcement first." }, 400);

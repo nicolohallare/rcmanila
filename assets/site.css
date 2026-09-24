@@ -425,3 +425,25 @@ p{margin:0}
 @media (prefers-reduced-motion:reduce){.hx-then,.hx-now,.hx-cap-then,.hx-cap-now{animation:none}.hx-now,.hx-cap-now{opacity:0}}
 
 .h-balita-cover-note{font-size:16px;color:var(--ink-2);margin-top:-4px}.h-balita-cover-note a{font-weight:600}
+
+/* Donate: steps, initiatives, proof form */
+.don-step{display:flex;gap:18px;align-items:flex-start;padding-top:34px;margin-top:30px;border-top:1px solid var(--line)}
+.don-step h2{font-size:26px;margin-bottom:14px}
+.don-n{flex-shrink:0;width:38px;height:38px;border-radius:50%;background:var(--navy);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:18px}
+.camps{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.camp{display:flex;flex-direction:column;border:2px solid var(--line);border-radius:10px;overflow:hidden;cursor:pointer;background:#fff;position:relative;transition:border-color .15s}
+.camp input{position:absolute;top:12px;right:12px;width:20px;height:20px;accent-color:var(--blue)}
+.camp.on{border-color:var(--blue);box-shadow:0 0 0 3px rgba(23,69,143,.12)}
+.camp-im{display:block;aspect-ratio:16/9;background:var(--sky);overflow:hidden}.camp-im img{width:100%;height:100%;object-fit:cover}
+.camp-t{display:flex;flex-direction:column;gap:4px;padding:14px 16px}.camp-t strong{font-family:var(--serif);font-size:19px;color:var(--navy);padding-right:26px}.camp-t span{font-size:15px;color:var(--ink-2)}
+.don-form{display:flex;flex-direction:column;gap:14px;max-width:760px}
+.don-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.don-form label{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:15px;color:var(--ink-2)}
+.don-form input,.don-form textarea{font:inherit;font-weight:400;font-size:17px;border:1px solid #c7d2df;border-radius:6px;padding:11px 12px;background:#fff}
+.don-form .opt{font-weight:400;color:var(--muted)}
+.don-form .hp{position:absolute;left:-9999px;width:1px;height:1px}
+.don-form button{align-self:flex-start}
+#don-msg{color:#a3262a;font-weight:600}
+.don-done{background:#e8f5ec;border:1px solid #b9dcc6;border-radius:10px;padding:20px;max-width:760px}.don-done strong{font-size:20px;color:#1d5a36}
+.muted-p{color:var(--ink-2)}
+@media (max-width:640px){.don-grid{grid-template-columns:1fr}.don-step{gap:12px}.don-n{width:32px;height:32px;font-size:16px}}
