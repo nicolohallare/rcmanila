@@ -29,8 +29,8 @@ function size(b: Uint8Array): [number, number] | null {
 }
 const TYPES: Record<string, string> = { jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp", gif: "image/gif", pdf: "application/pdf" };
 
-async function work(n: number, chain: boolean, code: string) {
-  const { data: rows } = await db.from("rcm_legacy_files").select("id,from_url,to_path,tries").eq("done", false).lt("tries", 3).order("id").limit(n);
+async function work(n: number, chain: boolean, code: string, lo = 0, hi = 1e12) {
+  const { data: rows } = await db.from("rcm_legacy_files").select("id,from_url,to_path,tries").eq("done", false).lt("tries", 3).gte("id", lo).lt("id", hi).order("id").limit(n);
   for (const r of rows || []) {
     try {
       const res = await fetch(r.from_url, { headers: { "User-Agent": "Mozilla/5.0 (rcmanila migration)" } });
@@ -49,7 +49,7 @@ async function work(n: number, chain: boolean, code: string) {
     }
   }
   if (chain && rows && rows.length) {
-    await fetch(SELF, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code, n, chain }) }).catch(() => {});
+    await fetch(SELF, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code, n, chain, lo, hi }) }).catch(() => {});
   }
 }
 
@@ -84,17 +84,25 @@ async function importIssues(url: string) {
   await db.from("rcm_settings").upsert({ key: "legacy_import_log", value: log.join("\n") }, { onConflict: "key" });
 }
 
+const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "content-type, apikey, authorization", "Access-Control-Allow-Methods": "POST, OPTIONS" };
 Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   const body = await req.json().catch(() => ({}));
   const { data } = await db.from("rcm_settings").select("value").eq("key", "editor_code").single();
-  if (!data || body.code !== data.value) return new Response(JSON.stringify({ error: "no" }), { status: 401 });
+  if (!data || body.code !== data.value) return new Response(JSON.stringify({ error: "no" }), { status: 401, headers: CORS });
+  // Page text + photo list of a back issue, saved by the editor page so the articles can be written separately.
+  if (body.manifest) {
+    const m = body.manifest;
+    const { error } = await db.from("rcm_legacy_manifest").upsert({ issue_no: Number(m.issue_no), data: m, articles_done: false }, { onConflict: "issue_no" });
+    return new Response(JSON.stringify(error ? { error: error.message } : { ok: true }), { status: error ? 500 : 200, headers: { ...CORS, "Content-Type": "application/json" } });
+  }
   if (body.import_url) {
     EdgeRuntime.waitUntil(importIssues(String(body.import_url)).catch((e) =>
       db.from("rcm_settings").upsert({ key: "legacy_import_log", value: "FAILED " + String(e) }, { onConflict: "key" })));
     return new Response(JSON.stringify({ importing: true }), { headers: { "Content-Type": "application/json" } });
   }
   const n = Math.min(Number(body.n) || 6, 20);
-  EdgeRuntime.waitUntil(work(n, !!body.chain, body.code));
+  EdgeRuntime.waitUntil(work(n, !!body.chain, body.code, Number(body.lo) || 0, Number(body.hi) || 1e12));
   const { count } = await db.from("rcm_legacy_files").select("id", { count: "exact", head: true }).eq("done", false).lt("tries", 3);
   return new Response(JSON.stringify({ started: true, remaining: count }), { headers: { "Content-Type": "application/json" } });
 });

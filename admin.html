@@ -116,6 +116,15 @@ main.wide{max-width:1760px}
 <div class="row"><button class="btn btn-blue" type="button" id="old-start">Add these issues</button><span id="old-msg" class="muted"></span></div>
 </div>
 </details>
+<details class="panel stack" id="split-panel"><summary style="cursor:pointer;font-size:22px;font-weight:700;font-family:var(--serif)">Split old issues into articles with photos</summary>
+<p class="muted" style="margin-top:10px">Some back issues came from the old website as a PDF only, or as text without photos. This saves each one's pages, photos and text so it can be split into articles. Leave this page open while it runs; the issues stay online throughout.</p>
+<label class="row" style="gap:8px;font-size:15px"><input type="checkbox" id="split-ai"> Also write the articles with the website's AI now (about US$0.50–1 of API credit per issue). Leave unticked if the articles are being written in the Claude chat.</label>
+<div class="row"><button class="btn btn-line" style="color:var(--blue)" type="button" id="split-load">Show the issues that need it</button><span id="split-msg" class="muted" aria-live="polite"></span></div>
+<div id="split-table" class="hidden stack">
+<table class="otab"><thead><tr><th><input type="checkbox" id="split-all" aria-label="Select all" checked></th><th>Issue</th><th>Now on the website</th><th>PDF</th><th>Status</th></tr></thead><tbody id="split-rows"></tbody></table>
+<div class="row"><button class="btn btn-blue" type="button" id="split-start">Start with the ticked issues</button><span id="split-sum" class="muted"></span></div>
+</div>
+</details>
 </section>
 
 <section id="v-run" class="stack hidden">

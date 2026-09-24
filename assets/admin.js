@@ -298,6 +298,134 @@
     btn.disabled = false; openHomeList();
   };
 
+  // ---------- old issues: split into articles with the AI (PDF-only or text-only back issues) ----------
+  const rest = async (q) => { const r = await fetch(`${SB}/rest/v1/${q}`, { headers: { apikey: PUB } }); if (!r.ok) throw new Error('Could not load the list (' + r.status + ')'); return r.json(); };
+  let splitQ = [];
+  $('split-load').onclick = async () => {
+    $('split-msg').textContent = 'Loading…';
+    try {
+      const issues = await rest('rcm_issues?select=id,issue_no,issue_date,pdf_url,page_count&source=eq.legacy&order=issue_no.desc&limit=500');
+      const arts = [];
+      for (let i = 0; i < issues.length; i += 20) arts.push(...await rest(`rcm_articles?select=issue_id,first:photos->0&issue_id=in.(${issues.slice(i, i + 20).map((x) => x.id).join(',')})&limit=1000`));
+      const by = new Map();
+      for (const a of arts) { const s = by.get(a.issue_id) || { n: 0, ph: 0 }; s.n++; if (a.first) s.ph++; by.set(a.issue_id, s); }
+      splitQ = issues.map((i, k) => {
+        const s = by.get(i.id) || { n: 0, ph: 0 };
+        const now = !s.n ? 'PDF only' : s.ph <= s.n / 3 ? `${s.n} articles, mostly without photos` : null;
+        return { k, i, now, onSite: /supabase\.co\/storage/.test(i.pdf_url || ''), file: null, on: true, state: 'Waiting' };
+      }).filter((x) => x.now);
+      drawSplit();
+      $('split-msg').textContent = splitQ.length ? `${splitQ.length} issues could be improved.` : 'Every old issue already has its articles and photos.';
+    } catch (err) { $('split-msg').textContent = err.message; }
+  };
+  function drawSplit() {
+    $('split-table').classList.toggle('hidden', !splitQ.length);
+    $('split-rows').innerHTML = splitQ.map((x) => `<tr><td><input type="checkbox" data-son="${x.k}" ${x.on ? 'checked' : ''} aria-label="Split issue ${x.i.issue_no}"></td>
+<td><b>No. ${x.i.issue_no}</b><br><span class="muted" style="font-size:13px">${esc(x.i.issue_date || '')}</span></td><td>${esc(x.now)}</td>
+<td>${x.onSite && !x.file ? 'On the website' : x.file ? esc(x.file.name) : ''}<br><label class="smallbtn" style="display:inline-block;margin-top:4px">${x.onSite || x.file ? 'Use another PDF' : 'Choose the PDF'}<input type="file" accept="application/pdf" data-sfile="${x.k}" class="hidden"></label></td>
+<td data-sst="${x.k}">${esc(x.state)}</td></tr>`).join('');
+    const n = splitQ.filter((x) => x.on).length;
+    $('split-sum').textContent = n ? `${n} ticked` + ($('split-ai').checked ? ` · roughly US$${Math.round(n * 0.5)}–${n} of AI` : ' · no AI cost') : '';
+  }
+  $('split-rows').addEventListener('change', (e) => {
+    const on = e.target.getAttribute('data-son'), f = e.target.getAttribute('data-sfile');
+    if (on != null) { splitQ.find((x) => x.k === +on).on = e.target.checked; drawSplit(); }
+    if (f != null && e.target.files[0]) { splitQ.find((x) => x.k === +f).file = e.target.files[0]; drawSplit(); }
+  });
+  $('split-ai').addEventListener('change', drawSplit);
+  $('split-all').addEventListener('change', (e) => { splitQ.forEach((x) => { x.on = e.target.checked; }); drawSplit(); });
+  const setSplit = (x, t) => { x.state = t; const c = document.querySelector(`[data-sst="${x.k}"]`); if (c) c.textContent = t; };
+
+  async function splitOne(x) {
+    const no = x.i.issue_no;
+    let blob = x.file;
+    if (!blob) {
+      if (!x.onSite) throw new Error('Choose the PDF for this issue first');
+      setSplit(x, 'Downloading the PDF…');
+      const r = await fetch(x.i.pdf_url); if (!r.ok) throw new Error('Could not download the PDF (' + r.status + ')');
+      blob = await r.blob();
+    }
+    setSplit(x, 'Reading pages…');
+    const pages = await BalitaExtract.extractPdf(blob, ({ n, total }) => setSplit(x, `Reading page ${n} of ${total}…`));
+    if (!$('split-ai').checked) return prepareOnly(x, blob, pages);
+    setSplit(x, 'The AI is finding the articles…');
+    const plan = await call('plan', { pages: pages.map((p) => ({ n: p.n, text: p.text })) });
+    const arts = (plan.articles || []).filter((a) => a.from && a.to);
+    if (!arts.length) throw new Error('The AI could not find articles in this PDF');
+    const { issue } = await call('start', { issue_no: no, issue_date: x.i.issue_date, page_count: pages.length, source: 'legacy' });
+    const publishBack = (fields) => call('legacy-finish', { issue_id: issue.id, fields: Object.assign({ issue_date: x.i.issue_date }, fields || {}) });
+    try {
+      const v = Date.now().toString(36);
+      const files = [];
+      pages.forEach((p) => {
+        files.push({ name: `pages/page-${String(p.n).padStart(3, '0')}-${v}.jpg`, blob: p.thumbBlob, kind: 'page' });
+        p.photos.forEach((ph) => files.push({ name: `photos/${ph.id}-${v}.jpg`, blob: ph.blob, photo: ph, kind: 'photo' }));
+      });
+      files.push({ name: `cover-${v}.jpg`, blob: await BalitaExtract.coverFrom(pages[0]), kind: 'cover' });
+      if (!x.onSite && blob.size <= 19.5 * 1048576) files.push({ name: `balita-${no}-${v}.pdf`, blob, kind: 'pdf' });
+      await uploadAll(no, files, (n) => setSplit(x, `Saving ${n} of ${files.length} pages and photos…`));
+      const pathOf = new Map(files.filter((f) => f.photo).map((f) => [f.photo.id, f.path]));
+      let done = 0, flagged = 0, failed = 0;
+      await pool(arts.map((a, i) => [a, i]), 3, async ([a, i]) => {
+        const groups = splitParts(pages.filter((p) => p.n >= a.from && p.n <= a.to));
+        try {
+          const parts = [];
+          for (let k = 0; k < groups.length; k++) {
+            const g = groups[k];
+            const photos = g.flatMap((p) => p.photos.map((ph) => ({ id: ph.id, page: ph.page, path: pathOf.get(ph.id), width: ph.width, height: ph.height, preview: ph.preview })));
+            let res, err;
+            for (let attempt = 0; attempt < 2 && !res; attempt++) {
+              try { res = await call('clean-part', { article: a, part: k, parts: groups.length, pages: g.map((p) => ({ n: p.n, text: p.text })), photos }); } catch (e) { err = e; }
+            }
+            if (!res) throw err;
+            parts.push(res);
+          }
+          const saved = await call('save-draft', { issue_id: issue.id, sort: i, article: a, parts });
+          if (saved.flag) flagged++;
+        } catch (e) { if (e.auth) throw e; failed++; }
+        done++; setSplit(x, `Writing articles: ${done} of ${arts.length}…`);
+      });
+      const pdf = files.find((f) => f.kind === 'pdf');
+      await call('finish', { issue_id: issue.id, fields: { meeting: plan.issue && plan.issue.meeting, summary: plan.issue && plan.issue.summary, ...(plan.issue && plan.issue.guest ? { guest: plan.issue.guest } : {}) } });
+      await publishBack({ cover_path: files.find((f) => f.kind === 'cover').path, pages: files.filter((f) => f.kind === 'page').map((f) => f.path), page_count: pages.length, search_text: pages.map((p) => p.text || '').join('\n\n').slice(0, 400000), ...(pdf ? { pdf_url: `${SB}/storage/v1/object/public/rcm/${pdf.path}` } : {}) });
+      return `Done ✓ ${arts.length - failed} articles` + (flagged ? ` · ${flagged} to look at (open it under Recent issues)` : '') + (failed ? ` · ${failed} could not be written` : '');
+    } catch (err) {
+      try { await publishBack(); } catch (e) { /* keep the first error */ }
+      throw err;
+    }
+  }
+  // Without the website's AI: save pages, photos and the page text; the articles are then written in the Claude chat.
+  async function prepareOnly(x, blob, pages) {
+    const no = x.i.issue_no;
+    const { issue } = await call('start', { issue_no: no, issue_date: x.i.issue_date, page_count: pages.length, source: 'legacy', keep: true });
+    const v = Date.now().toString(36);
+    const files = [];
+    pages.forEach((p) => {
+      files.push({ name: `pages/page-${String(p.n).padStart(3, '0')}-${v}.jpg`, blob: p.thumbBlob, kind: 'page' });
+      p.photos.forEach((ph) => files.push({ name: `photos/${ph.id}-${v}.jpg`, blob: ph.blob, photo: ph, kind: 'photo' }));
+    });
+    files.push({ name: `cover-${v}.jpg`, blob: await BalitaExtract.coverFrom(pages[0]), kind: 'cover' });
+    if (!x.onSite && blob.size <= 19.5 * 1048576) files.push({ name: `balita-${no}-${v}.pdf`, blob, kind: 'pdf' });
+    await uploadAll(no, files, (n) => setSplit(x, `Saving ${n} of ${files.length} pages and photos…`));
+    const pdf = files.find((f) => f.kind === 'pdf');
+    await call('legacy-finish', { issue_id: issue.id, fields: { issue_date: x.i.issue_date, cover_path: files.find((f) => f.kind === 'cover').path, pages: files.filter((f) => f.kind === 'page').map((f) => f.path), page_count: pages.length, search_text: pages.map((p) => p.text || '').join('\n\n').slice(0, 400000), ...(pdf ? { pdf_url: `${SB}/storage/v1/object/public/rcm/${pdf.path}` } : {}) } });
+    const manifest = { issue_no: no, v, pages: pages.map((p) => ({ n: p.n, text: p.text || '' })), photos: files.filter((f) => f.photo).map((f) => ({ id: f.photo.id, page: f.photo.page, path: f.path, width: f.photo.width, height: f.photo.height })) };
+    const r = await fetch(SB + '/functions/v1/rcm-legacy-copy', { method: 'POST', headers: { 'content-type': 'application/json', apikey: PUB }, body: JSON.stringify({ code, manifest }) });
+    if (!r.ok) throw new Error('Could not save the page text (' + r.status + ')');
+    return `Pages and ${manifest.photos.length} photos saved ✓ · articles to be written in the Claude chat`;
+  }
+  $('split-start').onclick = async () => {
+    const btn = $('split-start'); btn.disabled = true; $('split-load').disabled = true;
+    let ok = 0, bad = 0;
+    for (const x of splitQ) {
+      if (!x.on || /^Done/.test(x.state)) continue;
+      try { setSplit(x, await splitOne(x)); ok++; x.on = false; }
+      catch (err) { if (err.auth) { btn.disabled = false; return show('v-login'); } setSplit(x, 'Failed: ' + err.message); bad++; }
+    }
+    $('split-sum').textContent = `${ok} finished${bad ? `, ${bad} need attention` : ''}.`;
+    btn.disabled = false; $('split-load').disabled = false; openHomeList();
+  };
+
   // ---------- review ----------
   let R = { issue: null, articles: [], sel: 0 };
   function toLocalInput(d) {
