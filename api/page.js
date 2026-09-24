@@ -95,7 +95,7 @@ ${url ? `<meta property="og:url" content="${esc(url)}">` : ''}
 <body class="pub">
 <div class="topbar"><div class="wrap"><span class="tb-l">The first Rotary club in Asia · Established 1919</span><span class="tb-r"><a href="/secretariat">Secretariat login</a><a href="/admin">Editor login</a></span></div></div>
 <header class="site-head"><div class="wrap">
-<a class="logo" href="/" aria-label="Rotary Club of Manila home"><img src="/assets/logo.png" alt="Rotary Club of Manila" width="255" height="108"></a>
+<a class="logo" href="/" aria-label="Rotary Club of Manila home"><img src="/assets/logo.png" alt="Rotary Club of Manila" width="255" height="108"></a><span class="ri-msg" title="2026–27 Rotary International presidential message"><span>Create</span> <span>Lasting</span> <span>Impact</span></span>
 <nav class="nav" aria-label="Main">
 <a href="/#club">Our Club</a><a href="/#projects">Our Impact</a><a href="/meeting" class="${nav === 'meeting' ? 'on' : ''}">Meetings</a><a href="/balita" class="${nav === 'balita' ? 'on' : ''}">Balita</a><a href="/#join">Membership</a><a href="#contact">Contact</a>
 </nav>
@@ -281,7 +281,7 @@ ${lead ? `<a class="wk-lead" href="/balita/${issue.issue_no}/${lead.slug}">${esc
 </div></section>
 
 <section class="h-sec" id="projects"><div class="wrap">
-<div class="h-head"><div><span class="kicker">Flagship projects</span><h2>Service that lasts</h2><p>Long-term projects the Club funds and runs with trusted partners.</p></div><a class="btn btn-gold" href="/donate">Support a project</a></div>
+<div class="h-head"><div><span class="kicker">Rotary Year 2026–27 · Flagship projects</span><h2>Create Lasting Impact</h2><p>Rotary’s message for 2026–27 encourages all of us, as people of action, to work together to make a meaningful difference in our communities and around the world. These are the long-term projects the Club funds and runs with trusted partners.</p></div><a class="btn btn-gold" href="/donate">Support a project</a></div>
 <article class="h-feature"><img src="${H(FEATURE.img)}" alt="Rotarians and the sisters of Hospicio de San Jose at the Project R.I.V.E.R. turnover" loading="lazy">
 <div class="h-feature-body"><span class="kicker">Water &amp; health</span><h3>${esc(FEATURE.title)}</h3><p>${esc(FEATURE.text)}</p><blockquote class="h-quote">${esc(FEATURE.quote)}</blockquote><ul class="tags">${FEATURE.tags.map((t) => `<li>${esc(t)}</li>`).join('')}</ul></div></article>
 <div class="h-cards c2">${FLAGSHIP.map((p) => `<article class="h-card"><div class="im"><img src="${H(p.img)}" alt="" loading="lazy"></div><span class="kicker">${esc(p.tag)}</span><h3>${esc(p.title)}</h3><p>${esc(p.text)}</p></article>`).join('')}</div>

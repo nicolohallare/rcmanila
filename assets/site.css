@@ -447,3 +447,7 @@ p{margin:0}
 .don-done{background:#e8f5ec;border:1px solid #b9dcc6;border-radius:10px;padding:20px;max-width:760px}.don-done strong{font-size:20px;color:#1d5a36}
 .muted-p{color:var(--ink-2)}
 @media (max-width:640px){.don-grid{grid-template-columns:1fr}.don-step{gap:12px}.don-n{width:32px;height:32px;font-size:16px}}
+
+/* 2026–27 RI presidential message, set beside the Club logo as Rotary's text lockup */
+.ri-msg{display:flex;flex-direction:column;justify-content:center;flex-shrink:0;padding-left:16px;margin-left:-12px;border-left:1.5px solid #c9d3e1;height:44px;font-family:var(--sans,inherit);font-weight:800;font-style:italic;text-transform:uppercase;color:var(--blue);font-size:12.5px;line-height:1.02;letter-spacing:.01em}
+@media (max-width:1180px){.ri-msg{display:none}}
