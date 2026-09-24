@@ -49,6 +49,7 @@ textarea{min-height:90px;resize:vertical;line-height:1.55}
 @media (max-width:1250px){.review{grid-template-columns:200px minmax(0,1fr)}.review>.pv-panel{grid-column:1/-1}}
 @media (max-width:800px){.review{grid-template-columns:1fr}}
 .pv-panel{position:sticky;top:12px}
+.otab{width:100%;border-collapse:collapse;font-size:15px}.otab th,.otab td{text-align:left;padding:8px 6px;border-bottom:1px solid #eef1f5;vertical-align:middle}.otab input{padding:6px 8px;font-size:15px}.otab td:first-child{max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 main.wide{max-width:1760px}
 .pv-tabs{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .pv-tabs button{font:inherit;font-size:14px;font-weight:700;border:1px solid #c7d2df;background:#fff;border-radius:20px;padding:6px 14px;cursor:pointer}
@@ -107,6 +108,14 @@ main.wide{max-width:1760px}
 </label>
 <input id="file" type="file" accept="application/pdf" class="hidden">
 <div class="panel stack"><h2 style="font-size:22px">Recent issues</h2><ul id="issues" class="alist"><li class="muted">Loading…</li></ul></div>
+<details class="panel stack" id="old-panel"><summary style="cursor:pointer;font-size:22px;font-weight:700;font-family:var(--serif)">Add old issues to the archive</summary>
+<p class="muted" style="margin-top:10px">For back issues. Choose many PDFs at once. Each one is added with its cover, a page-by-page reader and searchable text, and goes live straight away. No AI, nothing to check, no cost. Issues already on the website are skipped.</p>
+<label class="btn btn-blue" style="align-self:flex-start">Choose old Balita PDFs<input id="old-files" type="file" accept="application/pdf" multiple class="hidden"></label>
+<div id="old-table" class="hidden stack">
+<table class="otab"><thead><tr><th>File</th><th>Issue no.</th><th>Date</th><th>Status</th></tr></thead><tbody id="old-rows"></tbody></table>
+<div class="row"><button class="btn btn-blue" type="button" id="old-start">Add these issues</button><span id="old-msg" class="muted"></span></div>
+</div>
+</details>
 </section>
 
 <section id="v-run" class="stack hidden">

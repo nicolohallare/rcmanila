@@ -149,11 +149,20 @@ function storyCard(issue, a) {
   return `<a class="story" href="${href}">${visual}<span class="eyebrow">${esc(a.kicker || 'Balita')}${a.printed_pages ? ' · ' + esc(a.printed_pages) : ''}</span><h3>${esc(a.title)}</h3>${a.dek ? `<p>${esc(a.dek)}</p>` : ''}</a>`;
 }
 
-async function liveIssues(limit = 20) {
-  return q(`rcm_issues?select=*&order=issue_no.desc&limit=${limit}`);
+const ICOLS = 'id,issue_no,issue_date,meeting,guest,summary,cover_path,pages,page_count,status,publish_at,updated_at,source,pdf_url';
+const ACOLS = 'id,issue_id,slug,sort,kicker,title,dek,byline,body,photos,page_from,page_to,printed_pages,lead,included,source,legacy_url';
+async function liveIssues(limit = 20, cols = ICOLS) {
+  return q(`rcm_issues?select=${cols}&order=issue_no.desc&limit=${limit}`);
 }
 async function articlesOf(issueId) {
-  return q(`rcm_articles?select=*&issue_id=eq.${issueId}&order=sort.asc`);
+  return q(`rcm_articles?select=${ACOLS}&issue_id=eq.${issueId}&order=sort.asc`);
+}
+// Rotary years run July to June: an issue dated 2026-09-24 belongs to 2026–27.
+const rotaryYear = (d) => { if (!d) return 'Undated'; const y = +d.slice(0, 4), m = +d.slice(5, 7); const s = m >= 7 ? y : y - 1; return `${s}–${String(s + 1).slice(2)}`; };
+async function searchBalita(term) {
+  const r = await fetch(`${SB}/rest/v1/rpc/rcm_search`, { method: 'POST', headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, 'content-type': 'application/json' }, body: JSON.stringify({ q: term, lim: 60 }) });
+  if (!r.ok) throw new Error('Search error ' + r.status);
+  return r.json();
 }
 
 // Homepage. Everything except the "This week" cards and the Balita block is fixed content from the
@@ -180,7 +189,7 @@ const COMMUNITY = [
   { img: 'trees', title: 'Tree planting', text: 'Reforestation with the Dumagat community in Antipolo, alongside Rotaract.' },
 ];
 const YEARS = [
-  { img: 'lobby-1919', year: '1919', text: 'Leon Lambert and fellow business leaders form the club at the Manila Hotel; Charter No. 478 follows on 1 June.' },
+  { img: 'y1946', year: '1946', text: 'Club President Gil Puyat with then Vice President Elpidio Quirino: a moment of postwar leadership and national rebuilding.' },
   { img: 'y1986', year: '1986', text: 'Sagip Kabataan, a child-welfare program, is the Club’s flagship project under President Ed Reyes.' },
   { img: 'y1991', year: '1991', text: 'Pepo Nuñez leads relief distribution to communities hit by the Mount Pinatubo eruption.' },
   { img: 'y2024', year: '2024', text: 'Members gather at the Manila Hotel to celebrate 105 years of service and fellowship.' },
@@ -218,24 +227,29 @@ ${lead ? `<a class="wk-lead" href="/balita/${issue.issue_no}/${lead.slug}">${esc
 <div class="wk-actions"><a class="link-arrow" href="/balita/${issue.issue_no}">Read the issue</a></div></div></article>`
     : `<article class="wk"><div class="wk-body"><span class="wk-label">Balita</span><h3>The weekly newsletter</h3><p class="wk-meta">The latest issue appears here every Thursday.</p><div class="wk-actions"><a class="link-arrow" href="/balita">All issues</a></div></div></article>`;
 
-  const body = `
-<section class="h-hero">
-<div class="wrap h-hero-in">
-<span class="kicker">Rotary Club of Manila · Est. 1919</span>
-<h1>Asia’s first Rotary club. <span>Still leading through service.</span></h1>
-<div class="h-hero-side">
-<p>For more than a century, business, professional and civic leaders in Manila have met every week to serve communities across the Philippines and beyond.</p>
-<div class="h-cta"><a class="btn btn-gold" href="/meeting">Attend a meeting</a><a class="btn btn-ghost" href="#projects">See our work</a></div>
-</div>
-</div>
-<figure class="h-hero-photo"><img src="${H('hero-helipad')}" alt="The Rotary Club of Manila Board of Directors and Officers in barong on the Manila Hotel helipad, with the city behind them" fetchpriority="high">
-<figcaption>The Board of Directors and Officers on the Manila Hotel helipad, March 2026.</figcaption></figure>
-</section>
+  // Members arrive from Viber links straight to a meeting or Balita page, so the homepage is written for
+  // first-time visitors: heritage first, with this week's meeting and Balita kept to one slim bar.
+  const wkMeeting = mt ? `<a class="hx-item" href="/meetings/${mt.meeting_date}"><span class="hx-date"><b>${new Date(mt.meeting_date + 'T12:00:00+08:00').toLocaleDateString('en-GB', { timeZone: 'Asia/Manila', day: 'numeric' })}</b>${new Date(mt.meeting_date + 'T12:00:00+08:00').toLocaleDateString('en-GB', { timeZone: 'Asia/Manila', month: 'short' }).toUpperCase()}</span><span class="hx-txt"><small>This week's meeting${mtCount ? ` · ${mtCount} signed up` : ''}</small><strong>${esc(mt.topic || mt.label || 'Weekly membership meeting')}</strong>${mt.speaker ? `<em>${esc(mt.speaker)}</em>` : ''}</span><span class="hx-go">Sign up →</span></a>`
+    : `<a class="hx-item" href="/meeting"><span class="hx-date"><b>THU</b>12:15</span><span class="hx-txt"><small>Weekly meeting</small><strong>Every Thursday. Guests are welcome.</strong></span><span class="hx-go">Details →</span></a>`;
+  const wkBalita = issue ? `<a class="hx-item" href="/balita/${issue.issue_no}"><span class="hx-cov">${issue.cover_path ? `<img src="${coverSrc(issue, 120)}" alt="">` : ''}</span><span class="hx-txt"><small>Balita No. ${issue.issue_no} · ${esc(fmtDate(issue.issue_date))}</small><strong>${esc(lead ? lead.title : 'The latest issue')}</strong></span><span class="hx-go">Read →</span></a>`
+    : `<a class="hx-item" href="/balita"><span class="hx-txt"><small>Balita</small><strong>The Club's weekly publication</strong></span><span class="hx-go">Read →</span></a>`;
 
-<section class="h-week" aria-label="This week"><div class="wrap h-week-grid">
-${meetingCard}
-${balitaCard}
-</div></section>
+  const body = `
+<section class="hx" aria-label="Rotary Club of Manila">
+<div class="hx-stage">
+<img class="hx-img hx-then" src="${H('hero-1919')}" alt="The lobby of the Manila Hotel in 1919, where the Club was founded" fetchpriority="high">
+<img class="hx-img hx-now" src="${H('hero-helipad')}" alt="The Club's Board of Directors and Officers in barong on the Manila Hotel helipad in 2026">
+<div class="hx-shade" aria-hidden="true"></div>
+<div class="wrap hx-copy">
+<span class="hx-kicker">Est. 1919 · Rotary Charter No. 478</span>
+<h1>Asia’s first<br>Rotary club.</h1>
+<p>Founded at the Manila Hotel in 1919, the Club still meets every Thursday, bringing Manila’s business, professional and civic leaders together to serve.</p>
+<div class="h-cta"><a class="btn btn-gold" href="#club">Discover the Club</a><a class="btn btn-ghost" href="/meeting">Attend a meeting</a></div>
+</div>
+<div class="hx-cap" aria-hidden="true"><span class="hx-cap-then">1919 · The Manila Hotel, where the Club was founded</span><span class="hx-cap-now">2026 · The Board on the Manila Hotel helipad</span></div>
+</div>
+<div class="hx-week"><div class="wrap hx-week-in"><span class="hx-week-l">This week</span>${wkMeeting}${wkBalita}</div></div>
+</section>
 
 <section class="h-sec" id="club"><div class="wrap h-club">
 <div class="h-club-text">
@@ -245,7 +259,7 @@ ${balitaCard}
 <p>More than a century later, the Club still meets every Thursday for fellowship and service. It is led in Rotary Year 2026–2027 by President Reginald T. Yu.</p>
 <div class="h-facts"><div><b>1919</b><span>Founded in Manila</span></div><div><b>No. 478</b><span>Rotary charter</span></div><div><b>3810</b><span>Rotary district</span></div></div>
 </div>
-<figure class="h-photo"><img src="${H('lobby-1919')}" alt="Black-and-white photo of the Manila Hotel lobby with palms and rattan chairs" loading="lazy"><figcaption>The lobby of the Manila Hotel, where the Club was founded, circa 1919.</figcaption></figure>
+<figure class="h-photo"><img src="${H('club-1936')}" alt="Club President Charlie Romulo, smiling, cutting a birthday cake with members in 1936" loading="lazy"><figcaption>Fellowship in 1936: President Charlie Romulo celebrates his 37th birthday at the Club’s first membership meeting of the year.</figcaption></figure>
 </div></section>
 
 <section class="h-impact" id="impact"><div class="wrap">
@@ -269,8 +283,6 @@ ${balitaCard}
 <div class="h-sub"><span class="kicker">Signature awards</span><h2>Honoring excellence in the Philippines</h2></div>
 <div class="h-cards c3">${SIGNATURE.map((p) => `<article class="h-card"><div class="im"><img src="${H(p.img)}" alt="" loading="lazy"></div><h3>${esc(p.title)}</h3><p>${esc(p.text)}</p></article>`).join('')}</div>
 
-<div class="h-sub"><span class="kicker">In the community</span><h2>Across Metro Manila and beyond</h2></div>
-<div class="h-cards c4">${COMMUNITY.map((p) => `<article class="h-card"><div class="im"><img src="${H(p.img)}" alt="" loading="lazy"></div><h3>${esc(p.title)}</h3><p>${esc(p.text)}</p></article>`).join('')}</div>
 </div></section>
 
 <section class="h-heritage" id="history"><div class="wrap">
@@ -307,19 +319,32 @@ ${issue ? `<section class="h-sec alt" id="balita"><div class="wrap h-balita">
   });
 }
 
-async function archive(origin) {
-  const issues = await liveIssues(40);
-  const body = `<section class="wrap section">
-<div><span class="eyebrow">The official publication of the Rotary Club of Manila</span><h1 style="font-size:48px">Balita</h1></div>
-${issues.length ? `<div class="grid3">${issues.map((i) => `<a class="story" href="/balita/${i.issue_no}">
-${i.cover_path ? `<div class="ph" style="aspect-ratio:4/9;max-width:180px"><img style="object-position:right top" src="${coverSrc(i, 400)}" alt="Cover of issue ${i.issue_no}" loading="lazy"></div>` : ''}
-<h3>Issue No. ${i.issue_no}</h3><p>${esc(fmtDate(i.issue_date))}</p>${i.summary ? `<p>${esc(i.summary)}</p>` : ''}</a>`).join('')}</div>` : '<div class="empty">No issues published yet.</div>'}
+async function archive(origin, term) {
+  term = String(term || '').trim().slice(0, 120);
+  const searchBox = `<form class="arch-search" action="/balita" method="get" role="search"><label for="bq" class="sr-only">Search every Balita issue</label><input id="bq" name="q" type="search" value="${esc(term)}" placeholder="Search every issue: a name, project or topic"><button class="btn btn-blue" type="submit">Search</button></form>`;
+  let inner;
+  if (term) {
+    const hits = await searchBalita(term).catch(() => []);
+    inner = `<p class="arch-count">${hits.length ? `${hits.length}${hits.length >= 60 ? '+' : ''} results for “${esc(term)}”` : `Nothing found for “${esc(term)}”. Try fewer or different words.`} · <a href="/balita">Back to all issues</a></p>
+<ol class="hits">${hits.map((h) => `<li><a href="/balita/${h.issue_no}${h.slug ? '/' + esc(h.slug) : ''}"><span class="eyebrow">${h.kind === 'article' ? 'Article' : 'Full issue'} · Issue ${h.issue_no} · ${esc(fmtDate(h.issue_date))}</span><strong>${esc(h.title)}</strong><span class="snip">${String(h.snippet || '').replace(/</g, '&lt;').replace(/&lt;mark>/g, '<mark>').replace(/&lt;\/mark>/g, '</mark>')}</span></a></li>`).join('')}</ol>`;
+  } else {
+    const issues = await liveIssues(2000, 'id,issue_no,issue_date,cover_path,updated_at,summary');
+    const years = [];
+    for (const i of issues) { const y = rotaryYear(i.issue_date); let g = years.find((x) => x.y === y); if (!g) years.push(g = { y, list: [] }); g.list.push(i); }
+    inner = issues.length ? `<nav class="yr-nav" aria-label="Rotary years">${years.map((g) => `<a href="#ry-${g.y.slice(0, 4)}">${g.y}</a>`).join('')}</nav>
+${years.map((g) => `<section class="yr" id="ry-${g.y.slice(0, 4)}"><h2>Rotary Year ${g.y} <span>${g.list.length} issue${g.list.length === 1 ? '' : 's'}</span></h2>
+<div class="yr-grid">${g.list.map((i) => `<a class="yr-card" href="/balita/${i.issue_no}"><div class="yr-cover">${i.cover_path ? `<img src="${coverSrc(i, 300)}" alt="" loading="lazy">` : ''}</div><strong>No. ${i.issue_no}</strong><span>${esc(fmtDate(i.issue_date))}</span></a>`).join('')}</div></section>`).join('')}` : '<div class="empty">No issues published yet.</div>';
+  }
+  const body = `<section class="wrap section arch">
+<div><span class="eyebrow">The official publication of the Rotary Club of Manila</span><h1 style="font-size:48px">Balita</h1><p class="arch-lede">Every issue since the Club began publishing online, grouped by Rotary year. Search finds names, projects and topics inside every issue.</p></div>
+${searchBox}
+${inner}
 </section>`;
-  return layout({ title: 'Balita · Rotary Club of Manila', description: 'Every issue of the Balita, the weekly publication of the Rotary Club of Manila.', url: origin + '/balita', body, nav: 'balita' });
+  return layout({ title: term ? `“${term}” · Balita search` : 'Balita · Rotary Club of Manila', description: 'Every issue of the Balita, the weekly publication of the Rotary Club of Manila, by Rotary year and searchable.', url: origin + '/balita', body, nav: 'balita' });
 }
 
 async function issuePage(origin, no) {
-  const rows = await q(`rcm_issues?select=*&issue_no=eq.${Number(no)}`);
+  const rows = await q(`rcm_issues?select=${ICOLS}&issue_no=eq.${Number(no)}`);
   const issue = rows[0];
   if (!issue) return null;
   const arts = await articlesOf(issue.id);
@@ -339,17 +364,17 @@ ${issue.summary ? `<p>${esc(issue.summary)}</p>` : ''}
 ${shareBar(url, title, false)}
 </div></div></section>
 <div class="tabs"><div class="wrap" role="tablist" aria-label="How to read this issue">
-<button class="tab" role="tab" id="t-a" aria-selected="true" aria-controls="v-a">Articles</button>
-<button class="tab" role="tab" id="t-l" aria-selected="false" aria-controls="v-l">Layout view</button>
-<span style="margin-left:auto;align-self:center;color:var(--muted);font-size:15px">${arts.length} stories</span>
+${arts.length ? `<button class="tab" role="tab" id="t-a" aria-selected="true" aria-controls="v-a">Articles</button>` : ''}
+<button class="tab" role="tab" id="t-l" aria-selected="${arts.length ? 'false' : 'true'}" aria-controls="v-l">${arts.length ? 'Layout view' : 'Read the issue'}</button>
+<span style="margin-left:auto;align-self:center;color:var(--muted);font-size:15px">${arts.length ? `${arts.length} stories` : `${pages.length} pages`}${issue.pdf_url ? ` · <a href="${esc(issue.pdf_url)}" target="_blank" rel="noopener">Download PDF</a>` : ''}</span>
 </div></div>
-<section class="wrap section" id="v-a" role="tabpanel" aria-labelledby="t-a"><div class="grid3">${arts.map((a) => storyCard(issue, a)).join('')}</div></section>
-<section class="wrap section" id="v-l" role="tabpanel" aria-labelledby="t-l" hidden>
-<p style="margin:0;color:var(--ink-2)">The issue as it was printed, spread by spread. Switch to Articles for easy reading on a phone.</p>
-<div class="pages">${pages.map((p, i) => `<figure><a href="${raw(p)}" target="_blank" rel="noopener"><img src="${img(p, 900)}" alt="Balita issue ${issue.issue_no}, PDF page ${i + 1}" loading="lazy"></a><figcaption>Page ${i + 1} of ${pages.length}</figcaption></figure>`).join('')}</div>
+${arts.length ? '' : '<div hidden>'}<section class="wrap section" id="v-a" role="tabpanel" aria-labelledby="t-a"><div class="grid3">${arts.map((a) => storyCard(issue, a)).join('')}</div></section>${arts.length ? '' : '</div>'}
+<section class="wrap section" id="v-l" role="tabpanel" aria-labelledby="t-l"${arts.length ? ' hidden' : ''}>
+<p style="margin:0;color:var(--ink-2)">${arts.length ? 'The issue as it was printed, spread by spread. Switch to Articles for easy reading on a phone.' : 'The issue as it was printed, spread by spread. Tap a page to see it full size.'}</p>
+${pages.length ? '' : '<p class="empty">The printed pages of this issue are not online yet.</p>'}<div class="pages">${pages.map((p, i) => `<figure><a href="${raw(p)}" target="_blank" rel="noopener"><img src="${img(p, 900)}" alt="Balita issue ${issue.issue_no}, PDF page ${i + 1}" loading="lazy"></a><figcaption>Page ${i + 1} of ${pages.length}</figcaption></figure>`).join('')}</div>
 </section>
 <script>
-(function(){var a=document.getElementById('t-a'),l=document.getElementById('t-l'),va=document.getElementById('v-a'),vl=document.getElementById('v-l');
+(function(){if(!document.getElementById('t-a'))return;var a=document.getElementById('t-a'),l=document.getElementById('t-l'),va=document.getElementById('v-a'),vl=document.getElementById('v-l');
 function show(x){var isA=x===a;a.setAttribute('aria-selected',isA);l.setAttribute('aria-selected',!isA);va.hidden=!isA;vl.hidden=isA;}
 a.onclick=function(){show(a)};l.onclick=function(){show(l)};if(location.hash==='#layout')show(l);})();
 </script>`;
@@ -357,7 +382,7 @@ a.onclick=function(){show(a)};l.onclick=function(){show(l)};if(location.hash==='
 }
 
 async function articlePage(origin, no, slug) {
-  const rows = await q(`rcm_issues?select=*&issue_no=eq.${Number(no)}`);
+  const rows = await q(`rcm_issues?select=${ICOLS}&issue_no=eq.${Number(no)}`);
   const issue = rows[0];
   if (!issue) return null;
   const arts = await articlesOf(issue.id);
@@ -564,7 +589,7 @@ module.exports = async (req, res) => {
   let html = null;
   try {
     if (r === 'home') html = await home(origin);
-    else if (r === 'archive') html = await archive(origin);
+    else if (r === 'archive') html = await archive(origin, u.searchParams.get('q'));
     else if (r === 'issue') html = await issuePage(origin, u.searchParams.get('no'));
     else if (r === 'article') html = await articlePage(origin, u.searchParams.get('no'), u.searchParams.get('slug'));
     else if (r === 'meeting') html = await meetingPage(origin, u.searchParams.get('date'));

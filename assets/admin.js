@@ -37,6 +37,9 @@
   const STATUS = { processing: ['Processing', 'run'], draft: ['Ready to check', 'flag'], scheduled: ['Scheduled', 'ok'], published: ['Live', 'ok'] };
   async function openHome() {
     show('v-home');
+    return openHomeList();
+  }
+  async function openHomeList() {
     try {
       const { issues } = await call('issues');
       $('issues').innerHTML = issues.length ? issues.map((i) => {
@@ -227,7 +230,7 @@
         return r;
       });
       const ok = results.filter(Boolean).length; const total = todo.length;
-      await call('finish', { issue_id: issue.id, fields: { issue_date: $('in-date').value || null, meeting: plan.issue && plan.issue.meeting, guest: plan.issue && plan.issue.guest, summary: plan.issue && plan.issue.summary, cover_path: cover, pages: pagePaths, page_count: pages.length } });
+      await call('finish', { issue_id: issue.id, fields: { issue_date: $('in-date').value || null, meeting: plan.issue && plan.issue.meeting, guest: plan.issue && plan.issue.guest, summary: plan.issue && plan.issue.summary, cover_path: cover, pages: pagePaths, page_count: pages.length, search_text: pages.map((p) => p.text || '').join('\n\n').slice(0, 400000) } });
       step(4, ok === total ? 'ok' : 'err', ok === total ? `Drafted all ${ok} articles` : `Drafted ${ok} of ${total} articles. Click “Try again” next to the ones that failed.`);
       setBar(1);
       $('run-title').textContent = 'Ready for you to check';
@@ -239,6 +242,61 @@
     }
   }
   $('to-review').onclick = () => current && openReview(current.id);
+
+  // ---------- old issues: reader + search only, no AI ----------
+  let oldQueue = [];
+  $('old-files').addEventListener('change', async (e) => {
+    const files = [...e.target.files].sort((a, b) => a.name.localeCompare(b.name));
+    e.target.value = '';
+    if (!files.length) return;
+    $('old-table').classList.remove('hidden'); $('old-msg').textContent = 'Reading the first pages to find issue numbers and dates…';
+    oldQueue = files.map((f, k) => ({ f, k, no: '', date: '', state: 'Waiting' }));
+    drawOld();
+    for (const it of oldQueue) {
+      try { const pk = await BalitaExtract.peek(it.f); const m = guessMeta(pk.text, it.f.name); it.no = m.no || ''; it.date = m.date || ''; it.pages = pk.pages; }
+      catch (err) { it.state = 'Could not open this PDF'; }
+      drawOld();
+    }
+    $('old-msg').textContent = 'Check the issue numbers and dates, fix any that are blank or wrong, then click Add these issues.';
+  });
+  function drawOld() {
+    $('old-rows').innerHTML = oldQueue.map((it) => `<tr><td title="${esc(it.f.name)}">${esc(it.f.name)}<br><span class="muted" style="font-size:13px">${(it.f.size / 1048576).toFixed(1)} MB${it.pages ? ' · ' + it.pages + ' pages' : ''}</span></td>
+<td><input type="number" data-ono="${it.k}" value="${esc(it.no)}" style="width:100px"></td><td><input type="date" data-odate="${it.k}" value="${esc(it.date)}"></td><td data-ost="${it.k}">${esc(it.state)}</td></tr>`).join('');
+  }
+  $('old-rows').addEventListener('input', (e) => {
+    const n = e.target.getAttribute('data-ono'), d = e.target.getAttribute('data-odate');
+    if (n != null) oldQueue[+n].no = e.target.value; if (d != null) oldQueue[+d].date = e.target.value;
+  });
+  const setOld = (it, t) => { it.state = t; const c = document.querySelector(`[data-ost="${it.k}"]`); if (c) c.textContent = t; };
+  $('old-start').onclick = async () => {
+    const btn = $('old-start'); btn.disabled = true;
+    let done = 0, skipped = 0, failed = 0;
+    for (const it of oldQueue) {
+      if (/^(Added|Already)/.test(it.state)) continue;
+      const no = Number(it.no);
+      if (!no) { setOld(it, 'Needs an issue number'); failed++; continue; }
+      try {
+        const chk = await call('check-issue', { issue_no: no });
+        // An issue that so far has only the old website's articles gets its pages added; anything else is left alone.
+        const addPagesOnly = chk.exists && chk.source === 'legacy' && !chk.has_pages;
+        if (chk.exists && !addPagesOnly) { setOld(it, 'Already on the website, skipped'); skipped++; continue; }
+        setOld(it, 'Reading pages…');
+        const pages = await BalitaExtract.extractPdf(it.f, ({ n, total }) => setOld(it, `Reading page ${n} of ${total}…`), { pagesOnly: true });
+        const { issue } = await call('start', { issue_no: no, issue_date: it.date || null, page_count: pages.length, source: 'legacy', keep: addPagesOnly });
+        const v = Date.now().toString(36);
+        const files = pages.map((p) => ({ name: `pages/page-${String(p.n).padStart(3, '0')}-${v}.jpg`, blob: p.thumbBlob, kind: 'page' }));
+        files.push({ name: `cover-${v}.jpg`, blob: await BalitaExtract.coverFrom(pages[0]), kind: 'cover' });
+        if (it.f.size <= 19.5 * 1048576) files.push({ name: `balita-${no}-${v}.pdf`, blob: it.f, kind: 'pdf' });
+        await uploadAll(no, files, (n) => setOld(it, `Saving ${n} of ${files.length} files…`));
+        const text = pages.map((p) => p.text || '').join('\n\n').slice(0, 400000);
+        const pdf = files.find((f) => f.kind === 'pdf');
+        await call('legacy-finish', { issue_id: issue.id, fields: { issue_date: it.date || null, cover_path: files.find((f) => f.kind === 'cover').path, pages: files.filter((f) => f.kind === 'page').map((f) => f.path), page_count: pages.length, search_text: text, pdf_url: pdf ? `${SB}/storage/v1/object/public/rcm/${pdf.path}` : null } });
+        setOld(it, text.trim().length > 200 ? 'Added ✓' : 'Added ✓ (no text found: scanned pages are not searchable)'); done++;
+      } catch (err) { if (err.auth) return show('v-login'); setOld(it, 'Failed: ' + err.message); failed++; }
+    }
+    $('old-msg').textContent = `${done} added, ${skipped} skipped${failed ? `, ${failed} need attention` : ''}.`;
+    btn.disabled = false; openHomeList();
+  };
 
   // ---------- review ----------
   let R = { issue: null, articles: [], sel: 0 };

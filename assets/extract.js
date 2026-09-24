@@ -73,7 +73,8 @@
   }
 
   /* onProgress({stage:'page', n, total, thumbUrl, photos}) */
-  async function extractPdf(file, onProgress) {
+  async function extractPdf(file, onProgress, opts) {
+    opts = opts || {};
     const pdfjsLib = await loadPdfJs();
     const OPS = pdfjsLib.OPS;
     const data = new Uint8Array(await file.arrayBuffer());
@@ -91,7 +92,7 @@
       text = text.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
 
       // Candidate photos: real size on the page, not tiny icons and not full-page backgrounds.
-      const raw = await imagePlacements(page, OPS);
+      const raw = opts.pagesOnly ? [] : await imagePlacements(page, OPS);
       const seen = new Set();
       const cands = [];
       for (const r of raw) {
@@ -108,7 +109,7 @@
       }
 
       // Render once at a scale that gives photos up to ~1600px, then crop.
-      let scale = 1.6;
+      let scale = opts.pagesOnly ? Math.min(3, 1100 / W) : 1.6;
       for (const c of cands) {
         const want = Math.min(c.nw || 2000, 2000) / c.w;
         scale = Math.max(scale, want);
@@ -160,5 +161,15 @@
     return canvasToBlob(c, 0.82);
   }
 
-  window.BalitaExtract = { extractPdf, coverFrom, loadPdfJs };
+  // Reads only the first two pages' text, for guessing the issue number and date before a batch import.
+  async function peek(file) {
+    const pdfjsLib = await loadPdfJs();
+    const doc = await pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false }).promise;
+    let text = '';
+    for (let n = 1; n <= Math.min(2, doc.numPages); n++) { const tc = await (await doc.getPage(n)).getTextContent(); text += tc.items.map((i) => i.str).join(' ') + '\n'; }
+    const pages = doc.numPages; await doc.destroy();
+    return { text, pages };
+  }
+
+  window.BalitaExtract = { extractPdf, coverFrom, loadPdfJs, peek };
 })();

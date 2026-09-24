@@ -274,7 +274,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "issues") {
-      const { data, error } = await db.from("rcm_issues").select("id,issue_no,issue_date,status,publish_at,cover_path,updated_at").order("issue_no", { ascending: false }).limit(30);
+      const { data, error } = await db.from("rcm_issues").select("id,issue_no,issue_date,status,publish_at,cover_path,updated_at,source").order("issue_no", { ascending: false }).limit(60);
       if (error) throw error;
       return json({ issues: data });
     }
@@ -288,7 +288,7 @@ Deno.serve(async (req) => {
         return json({ issue: existing, kept: arts || [] });
       }
       await clearIssueFiles(issue_no);
-      const row = { issue_no, issue_date: body.issue_date || null, status: "processing", page_count: body.page_count || null, updated_at: new Date().toISOString() };
+      const row = { issue_no, issue_date: body.issue_date || null, status: "processing", page_count: body.page_count || null, source: body.source === "legacy" ? "legacy" : "upload", updated_at: new Date().toISOString() };
       const { data, error } = await db.from("rcm_issues").upsert(row, { onConflict: "issue_no" }).select("id,issue_no,status").single();
       if (error) throw error;
       await db.from("rcm_articles").delete().eq("issue_id", data.id);
@@ -305,10 +305,10 @@ Deno.serve(async (req) => {
     }
 
     if (action === "check-issue") {
-      const { data: existing } = await db.from("rcm_issues").select("id,issue_no,status").eq("issue_no", Number(body.issue_no)).maybeSingle();
+      const { data: existing } = await db.from("rcm_issues").select("id,issue_no,status,source,page_count").eq("issue_no", Number(body.issue_no)).maybeSingle();
       if (!existing) return json({ exists: false });
       const { count } = await db.from("rcm_articles").select("id", { count: "exact", head: true }).eq("issue_id", existing.id);
-      return json({ exists: true, status: existing.status, articles: count || 0 });
+      return json({ exists: true, status: existing.status, articles: count || 0, source: existing.source, has_pages: !!existing.page_count });
     }
 
     if (action === "sign") {
@@ -394,14 +394,56 @@ Deno.serve(async (req) => {
       const { data: cur } = await db.from("rcm_issues").select("status").eq("id", body.issue_id).single();
       const upd: Record<string, unknown> = { updated_at: new Date().toISOString() };
       if (!cur || cur.status === "processing") upd.status = "draft";
-      for (const k of ["issue_date", "meeting", "guest", "summary", "cover_path", "pages", "page_count"]) if (k in f) upd[k] = f[k];
-      const { data, error } = await db.from("rcm_issues").update(upd).eq("id", body.issue_id).select("*").single();
+      for (const k of ["issue_date", "meeting", "guest", "summary", "cover_path", "pages", "page_count", "search_text"]) if (k in f) upd[k] = f[k];
+      const { data, error } = await db.from("rcm_issues").update(upd).eq("id", body.issue_id).select("id,issue_no,status,cover_path,updated_at").single();
+      if (error) throw error;
+      return json({ issue: data });
+    }
+
+    // Articles carried over from the old website, attached to their issue (created as a live, reader-less issue if missing).
+    if (action === "legacy-articles") {
+      const issue_no = Number(body.issue_no);
+      if (!issue_no) return json({ error: "Missing issue number." }, 400);
+      let { data: iss } = await db.from("rcm_issues").select("id,issue_no").eq("issue_no", issue_no).maybeSingle();
+      if (!iss) {
+        const at = body.issue_date ? new Date(body.issue_date + "T12:00:00+08:00").toISOString() : new Date().toISOString();
+        const ins = await db.from("rcm_issues").insert({ issue_no, issue_date: body.issue_date || null, status: "published", publish_at: at, source: "legacy", pdf_url: body.pdf_url || null }).select("id,issue_no").single();
+        if (ins.error) throw ins.error;
+        iss = ins.data;
+      }
+      const { data: have } = await db.from("rcm_articles").select("legacy_url,sort").eq("issue_id", iss!.id);
+      const seen = new Set((have || []).map((r: { legacy_url: string }) => r.legacy_url).filter(Boolean));
+      let sort = Math.max(0, ...((have || []).map((r: { sort: number }) => r.sort || 0))) + 1;
+      let added = 0;
+      for (const a of (body.articles || []).slice(0, 60)) {
+        if (!a || !a.title || (a.legacy_url && seen.has(a.legacy_url))) continue;
+        const row = {
+          issue_id: iss!.id, sort: sort++, slug: await uniqueSlug(iss!.id, slugify(a.slug || a.title)), kicker: clean(a.kicker, 60) || "Balita",
+          title: clean(a.title, 300), dek: clean(a.dek, 400) || null, byline: clean(a.byline, 200) || null,
+          body: Array.isArray(a.body) ? a.body : [], photos: Array.isArray(a.photos) ? a.photos : [],
+          included: true, checked: true, lead: false, source: "legacy", legacy_url: a.legacy_url || null,
+        };
+        const { error } = await db.from("rcm_articles").insert(row);
+        if (error) throw error;
+        added++;
+      }
+      return json({ issue_id: iss!.id, added });
+    }
+
+    // Back issues: reader + search only. They go live at once, dated to their own issue day.
+    if (action === "legacy-finish") {
+      const f = body.fields || {};
+      const upd: Record<string, unknown> = { status: "published", updated_at: new Date().toISOString() };
+      for (const k of ["issue_date", "cover_path", "pages", "page_count", "search_text", "pdf_url", "summary"]) if (k in f) upd[k] = f[k];
+      upd.publish_at = f.issue_date ? new Date(f.issue_date + "T12:00:00+08:00").toISOString() : new Date().toISOString();
+      if (new Date(upd.publish_at as string) > new Date()) upd.publish_at = new Date().toISOString();
+      const { data, error } = await db.from("rcm_issues").update(upd).eq("id", body.issue_id).select("id,issue_no,status").single();
       if (error) throw error;
       return json({ issue: data });
     }
 
     if (action === "get") {
-      const { data: issue, error } = await db.from("rcm_issues").select("*").eq("id", body.issue_id).single();
+      const { data: issue, error } = await db.from("rcm_issues").select("id,issue_no,issue_date,meeting,guest,summary,cover_path,pages,page_count,status,publish_at,updated_at,source,pdf_url").eq("id", body.issue_id).single();
       if (error) throw error;
       const { data: articles } = await db.from("rcm_articles").select("*").eq("issue_id", body.issue_id).order("sort");
       return json({ issue, articles });
