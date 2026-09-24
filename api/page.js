@@ -95,7 +95,7 @@ ${url ? `<meta property="og:url" content="${esc(url)}">` : ''}
 <body class="pub">
 <div class="topbar"><div class="wrap"><span class="tb-l">The first Rotary club in Asia · Established 1919</span><span class="tb-r"><a href="/secretariat">Secretariat login</a><a href="/admin">Editor login</a></span></div></div>
 <header class="site-head"><div class="wrap">
-<a class="logo" href="/" aria-label="Rotary Club of Manila home"><img src="/assets/logo.png" alt="Rotary Club of Manila" width="255" height="108"></a><span class="ri-msg" title="2026–27 Rotary International presidential message"><span>Create</span> <span>Lasting</span> <span>Impact</span></span>
+<a class="logo lockup" href="/" aria-label="Rotary Club of Manila home"><img class="lk-club" src="/assets/club-logo.png" alt="Rotary Club of Manila" width="803" height="286"><span class="lk-rule" aria-hidden="true"></span><img class="lk-msg" src="/assets/msg-2026.png" alt="Create Lasting Impact" width="918" height="509"></a>
 <nav class="nav" aria-label="Main">
 <a href="/#club">Our Club</a><a href="/#projects">Our Impact</a><a href="/meeting" class="${nav === 'meeting' ? 'on' : ''}">Meetings</a><a href="/balita" class="${nav === 'balita' ? 'on' : ''}">Balita</a><a href="/#join">Membership</a><a href="#contact">Contact</a>
 </nav>
@@ -106,7 +106,7 @@ ${url ? `<meta property="og:url" content="${esc(url)}">` : ''}
 </div></header>
 <main>${body}</main>
 <footer class="foot" id="contact"><div class="wrap">
-<div style="display:flex;flex-direction:column;gap:14px"><span class="chip" style="align-self:flex-start"><img src="/assets/logo.png" alt="Rotary Club of Manila"></span><span>The first Rotary club in Asia. Service above self since 1919.</span></div>
+<div style="display:flex;flex-direction:column;gap:14px"><span class="foot-lockup"><img class="lk-club" src="/assets/club-logo-white.png" alt="Rotary Club of Manila" width="803" height="286"><span class="lk-rule" aria-hidden="true"></span><img class="lk-msg" src="/assets/msg-2026-white.png" alt="Create Lasting Impact" width="918" height="509"></span><span>The first Rotary club in Asia. Service above self since 1919.</span></div>
 <address style="font-style:normal"><strong>Secretariat</strong>RCM Office, 543 Arquiza St. cor. Grey St.<br>Ermita, Manila<br><a href="${TEL}">(02) 8527-1885</a><br><a href="mailto:${MAIL}">${MAIL}</a></address>
 <div><strong>Explore</strong><a href="/meeting">Weekly meeting</a><br><a href="/balita">Balita archive</a><br><a href="/donate">Donate</a><br><a href="https://www.facebook.com/RotaryClubofManila" target="_blank" rel="noopener">Facebook</a> · <a href="https://www.linkedin.com/company/rotary-club-of-manila/" target="_blank" rel="noopener">LinkedIn</a></div>
 <div><strong>Rotary family</strong><a href="https://rcmanilafoundation.com/" target="_blank" rel="noopener">RCManila Foundation, Inc.</a><br><a href="https://www.rotary.org/" target="_blank" rel="noopener">Rotary International</a><br>Rotary District 3810</div>

@@ -450,10 +450,21 @@ p{margin:0}
 
 /* 2026–27 RI presidential message, set beside the Club logo as Rotary's text lockup */
 .ri-msg{display:flex;flex-direction:column;justify-content:center;flex-shrink:0;padding-left:18px;border-left:1.5px solid #d0cfcd;height:44px;font-family:var(--sans,inherit);font-weight:800;font-style:italic;text-transform:uppercase;color:var(--blue);font-size:12.5px;line-height:1.02;letter-spacing:.01em}
-@media (max-width:1180px){.ri-msg{display:none}}
+@media (max-width:1260px){.site-head .wrap{gap:20px}.nav a{padding:10px 8px}}
+@media (max-width:600px){.site-head .wrap{gap:14px}.ri-msg{height:34px;padding-left:12px;font-size:10.5px}}
 
 /* Rotary Brand Center typography: primary font (Open Sans, for Frutiger) for headlines and navigation;
    secondary font (Georgia, for Sentinel) for body text, secondary headlines and captions. */
 h1,h2{font-family:var(--sans);font-weight:700;letter-spacing:-.015em}
 p,blockquote,figcaption,.dek,.article .body li,.hits .snip{font-family:var(--serif)}
 .hx h1{font-weight:800}
+.hx{overflow:hidden}
+
+/* Official Club logo + 2026–27 presidential message lockup (from the 107th anniversary souvenir program) */
+.logo.lockup,.foot-lockup{display:flex;align-items:center;gap:14px;flex:none}
+.logo.lockup img,.foot-lockup img{width:auto;display:block}
+.site-head .lk-club{height:54px}.site-head .lk-msg{height:40px}
+.lk-rule{width:1px;align-self:stretch;margin:6px 0;background:#b9d9eb}
+.foot-lockup{align-self:flex-start}.foot-lockup .lk-club{height:58px}.foot-lockup .lk-msg{height:42px}.foot-lockup .lk-rule{background:rgba(255,255,255,.45)}
+@media (max-width:600px){.site-head .lk-club{height:42px}.site-head .lk-msg{height:31px}.logo.lockup{gap:10px}}
+html,body{overflow-x:clip}
