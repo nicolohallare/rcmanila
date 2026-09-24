@@ -200,7 +200,13 @@ async function home(origin) {
   const issue = issues[0];
   const arts = issue ? await articlesOf(issue.id).catch(() => []) : [];
   const lead = arts.find((a) => a.lead) || arts[0];
-  const stories = lead ? [lead, ...arts.filter((a) => a !== lead)].slice(0, 6) : [];
+  // The Balita cover shows the week's guest speaker, not the lead story. Anything shown beside the cover
+  // talks about that speaker, so the picture and the words always match.
+  const guestName = issue && issue.guest ? issue.guest.split(',')[0].trim() : '';
+  const guestLast = guestName.replace(/[“”"()]/g, '').split(/\s+/).filter((w) => w.length > 2).pop() || '';
+  const coverStory = arts.find((a) => /guest (speaker|of honor)/i.test(a.kicker || '')) || (guestLast && arts.find((a) => (a.title || '').includes(guestLast))) || null;
+  const firstStory = coverStory || lead;
+  const stories = firstStory ? [firstStory, ...arts.filter((a) => a !== firstStory)].slice(0, 6) : [];
   const mt = await nextMeeting().catch(() => null);
   const mtCount = mt ? await signupCount(mt.id) : 0;
   const nextThu = (() => { const d = new Date(Date.now() + 8 * 3600 * 1000); const add = (4 - d.getUTCDay() + 7) % 7; d.setUTCDate(d.getUTCDate() + add); return d.toISOString().slice(0, 10); })();
@@ -231,7 +237,7 @@ ${lead ? `<a class="wk-lead" href="/balita/${issue.issue_no}/${lead.slug}">${esc
   // first-time visitors: heritage first, with this week's meeting and Balita kept to one slim bar.
   const wkMeeting = mt ? `<a class="hx-item" href="/meetings/${mt.meeting_date}"><span class="hx-date"><b>${new Date(mt.meeting_date + 'T12:00:00+08:00').toLocaleDateString('en-GB', { timeZone: 'Asia/Manila', day: 'numeric' })}</b>${new Date(mt.meeting_date + 'T12:00:00+08:00').toLocaleDateString('en-GB', { timeZone: 'Asia/Manila', month: 'short' }).toUpperCase()}</span><span class="hx-txt"><small>This week's meeting${mtCount ? ` · ${mtCount} signed up` : ''}</small><strong>${esc(mt.topic || mt.label || 'Weekly membership meeting')}</strong>${mt.speaker ? `<em>${esc(mt.speaker)}</em>` : ''}</span><span class="hx-go">Sign up →</span></a>`
     : `<a class="hx-item" href="/meeting"><span class="hx-date"><b>THU</b>12:15</span><span class="hx-txt"><small>Weekly meeting</small><strong>Every Thursday. Guests are welcome.</strong></span><span class="hx-go">Details →</span></a>`;
-  const wkBalita = issue ? `<a class="hx-item" href="/balita/${issue.issue_no}"><span class="hx-cov">${issue.cover_path ? `<img src="${coverSrc(issue, 120)}" alt="">` : ''}</span><span class="hx-txt"><small>Balita No. ${issue.issue_no} · ${esc(fmtDate(issue.issue_date))}</small><strong>${esc(lead ? lead.title : 'The latest issue')}</strong></span><span class="hx-go">Read →</span></a>`
+  const wkBalita = issue ? `<a class="hx-item" href="/balita/${issue.issue_no}"><span class="hx-cov">${issue.cover_path ? `<img src="${coverSrc(issue, 120)}" alt="">` : ''}</span><span class="hx-txt"><small>Balita No. ${issue.issue_no} · ${esc(fmtDate(issue.issue_date))}</small><strong>${guestName ? `On the cover: ${esc(guestName)}` : esc(coverStory ? coverStory.title : 'The latest issue')}</strong>${lead && lead !== coverStory ? `<em>Also: ${esc(lead.title)}</em>` : ''}</span><span class="hx-go">Read →</span></a>`
     : `<a class="hx-item" href="/balita"><span class="hx-txt"><small>Balita</small><strong>The Club's weekly publication</strong></span><span class="hx-go">Read →</span></a>`;
 
   const body = `
@@ -294,6 +300,7 @@ ${issue ? `<section class="h-sec alt" id="balita"><div class="wrap h-balita">
 <a class="h-balita-cover" href="/balita/${issue.issue_no}">${issue.cover_path ? `<img src="${coverSrc(issue, 480)}" alt="Cover of Balita issue ${issue.issue_no}" loading="lazy">` : ''}</a>
 <div class="h-balita-main"><span class="kicker">Published every Thursday</span><h2>Balita</h2>
 <p class="h-balita-meta">Issue No. ${issue.issue_no} · ${esc(fmtDate(issue.issue_date))}</p>
+${guestName ? `<p class="h-balita-cover-note">On the cover: ${coverStory ? `<a href="/balita/${issue.issue_no}/${coverStory.slug}">${esc(guestName)}</a>` : esc(guestName)}, guest of honor and speaker</p>` : ''}
 <ul class="h-stories">${stories.map((a) => `<li><a href="/balita/${issue.issue_no}/${a.slug}"><small>${esc(a.kicker || 'Balita')}</small><strong>${esc(a.title)}</strong></a></li>`).join('')}</ul>
 <div class="h-cta"><a class="btn btn-navy" href="/balita/${issue.issue_no}">Read issue ${issue.issue_no}</a><a class="btn btn-line" style="color:var(--navy)" href="/balita">All issues</a></div>
 </div></div></section>` : ''}
