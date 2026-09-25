@@ -1,17 +1,56 @@
 {
   "cleanUrls": false,
   "rewrites": [
-    { "source": "/", "destination": "/api/page?r=home" },
-    { "source": "/balita", "destination": "/api/page?r=archive" },
-    { "source": "/balita/:no", "destination": "/api/page?r=issue&no=:no" },
-    { "source": "/balita/:no/:slug", "destination": "/api/page?r=article&no=:no&slug=:slug" },
-    { "source": "/meeting", "destination": "/api/page?r=meeting&date=next" },
-    { "source": "/meetings/:date", "destination": "/api/page?r=meeting&date=:date" },
-    { "source": "/donate", "destination": "/api/page?r=donate" },
-    { "source": "/admin", "destination": "/admin.html" },
-    { "source": "/secretariat", "destination": "/secretariat.html" }
+    {
+      "source": "/",
+      "destination": "/api/page?r=home"
+    },
+    {
+      "source": "/balita",
+      "destination": "/api/page?r=archive"
+    },
+    {
+      "source": "/balita/:no",
+      "destination": "/api/page?r=issue&no=:no"
+    },
+    {
+      "source": "/balita/:no/:slug",
+      "destination": "/api/page?r=article&no=:no&slug=:slug"
+    },
+    {
+      "source": "/meeting",
+      "destination": "/api/page?r=meeting&date=next"
+    },
+    {
+      "source": "/meetings/:date",
+      "destination": "/api/page?r=meeting&date=:date"
+    },
+    {
+      "source": "/donate",
+      "destination": "/api/page?r=donate"
+    },
+    {
+      "source": "/admin",
+      "destination": "/admin.html"
+    },
+    {
+      "source": "/secretariat",
+      "destination": "/secretariat.html"
+    },
+    {
+      "source": "/:path*",
+      "destination": "/api/page?r=legacy&p=:path*"
+    }
   ],
   "headers": [
-    { "source": "/assets/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=300" }] }
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=300"
+        }
+      ]
+    }
   ]
 }

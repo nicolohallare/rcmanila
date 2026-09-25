@@ -625,6 +625,39 @@ async function previewPage(req, origin) {
   return { status: 200, html };
 }
 
+// Old rcmanila.org (WordPress) addresses → where the same content lives now. Returns a path, or null.
+let LEGACY = null;
+const PAGES = { about: '/#club', 'who-we-are': '/#club', 'rostrum-and-bell': '/#club', members: '/#join', membership: '/#join', balita: '/balita', 'rotary-balita': '/balita', contact: '/#contact', 'contact-us': '/#contact', donate: '/donate', home: '/' };
+async function legacyTarget(raw) {
+  const path = String(raw || '').replace(/^\/+|\/+$/g, '');
+  if (!path) return '/';
+  let m = /^wp-content\/uploads\/(.+)$/.exec(path);
+  if (m) return `${SB}/storage/v1/object/public/rcm/legacy/${m[1].split('/').map((x) => decodeURIComponent(x).replace(/[^A-Za-z0-9._-]/g, '-')).join('/')}`;
+  if (!LEGACY) LEGACY = require('./legacy-map.json');
+  m = /^category\/(?:[^/]+\/)*(issue-(?:no-)?\d+)$/i.exec(path) || /^(issue-\d+)$/i.exec(path);
+  if (m) { const n = LEGACY.cats[m[1].toLowerCase()] || Number(m[1].replace(/\D/g, '')); if (n) return `/balita/${n}`; }
+  if (/^category\/balita$/i.test(path) || /^category\/rotary-balita$/i.test(path)) return '/balita';
+  const slug = path.split('/').pop().toLowerCase();
+  if (PAGES[slug]) return PAGES[slug];
+  if (/^(wp-admin|wp-login\.php)/.test(path)) return '/';
+  const no = LEGACY.posts[slug];
+  if (no) {
+    try {
+      const a = await q(`rcm_articles?select=slug,issue_id&legacy_url=eq.${encodeURIComponent('https://rcmanila.org/' + slug + '/')}&limit=1`);
+      if (a[0]) { const i = await q(`rcm_issues?select=issue_no&id=eq.${a[0].issue_id}&limit=1`); if (i[0]) return `/balita/${i[0].issue_no}/${a[0].slug}`; }
+    } catch (e) { /* fall back to the issue */ }
+    return `/balita/${no}`;
+  }
+  return null;
+}
+function notFoundPage() {
+  return layout({ title: 'Page not found · Rotary Club of Manila', description: '', body: `<section class="wrap" style="padding:64px 0 80px;max-width:760px">
+<span class="kicker">Page not found</span><h1 style="margin:8px 0 12px">We couldn't find that page.</h1>
+<p class="dek">The Club's website has moved to a new home, and some old addresses have changed. Try searching the Balita, or pick a section below.</p>
+<form action="/balita" method="get" class="row" style="gap:8px;margin:20px 0 28px"><input name="q" type="search" placeholder="Search every Balita issue: a name, project or topic" aria-label="Search the Balita" style="flex:1;min-width:220px;padding:12px 14px;font-size:16px;border:1px solid #d0cfcd;border-radius:4px"><button class="btn btn-blue" type="submit">Search</button></form>
+<p><a href="/">Homepage</a> · <a href="/meeting">This week's meeting</a> · <a href="/balita">Balita archive</a> · <a href="/donate">Donate</a> · <a href="/#contact">Contact the Secretariat</a></p></section>` });
+}
+
 module.exports = async (req, res) => {
   const u = new URL(req.url, `https://${req.headers.host}`);
   const origin = `https://${req.headers['x-forwarded-host'] || req.headers.host}`;
@@ -638,6 +671,12 @@ module.exports = async (req, res) => {
       res.setHeader('Cache-Control', 'no-store');
       return res.end(out.html);
     } catch (e) { res.statusCode = 500; return res.end('Preview failed: ' + esc(e.message)); }
+  }
+  if (r === 'legacy') {
+    const to = await legacyTarget(u.searchParams.get('p'));
+    if (to) { res.statusCode = 301; res.setHeader('Location', to); res.setHeader('Cache-Control', 'public, max-age=86400'); return res.end(); }
+    res.statusCode = 404; res.setHeader('Content-Type', 'text/html; charset=utf-8'); res.setHeader('Cache-Control', 'public, s-maxage=300');
+    return res.end(notFoundPage());
   }
   let html = null;
   try {
