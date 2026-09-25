@@ -127,7 +127,7 @@ p{margin:0}
 .h-impact h2{color:#fff;font-size:clamp(30px,3.2vw,44px);margin-top:10px}
 .h-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin-top:48px;border-top:1px solid rgba(255,255,255,.25)}
 .h-stats div{padding:28px 28px 0 0;display:flex;flex-direction:column;gap:8px}
-.h-stats b{font-family:var(--serif);font-weight:600;font-size:clamp(46px,5vw,64px);line-height:1;color:#fff}
+.h-stats b{font-family:var(--serif);font-weight:600;font-size:clamp(36px,5vw,64px);line-height:1;color:#fff}
 .h-stats strong{font-size:17px;color:var(--gold-2)}
 .h-stats span{font-size:16px;color:#b9d9eb;line-height:1.45}
 .h-source{margin-top:40px;font-size:15px;color:#b9d9eb}
@@ -468,3 +468,6 @@ p,blockquote,figcaption,.dek,.article .body li,.hits .snip{font-family:var(--ser
 .foot-lockup{align-self:flex-start}.foot-lockup .lk-club{height:58px}.foot-lockup .lk-msg{height:42px}.foot-lockup .lk-rule{background:rgba(255,255,255,.45)}
 @media (max-width:600px){.site-head .lk-club{height:42px}.site-head .lk-msg{height:31px}.logo.lockup{gap:10px}}
 html,body{overflow-x:clip}
+
+.h-theme{margin:14px 0 20px;line-height:0}.h-theme img{display:block;width:min(100%,520px);height:auto}
+@media (max-width:480px){.h-stats div{padding-right:14px}.h-stats b{font-size:clamp(32px,9vw,46px)}}
