@@ -632,6 +632,9 @@ async function legacyTarget(raw) {
   const path = String(raw || '').replace(/^\/+|\/+$/g, '');
   if (!path) return '/';
   let m = /^wp-content\/uploads\/(.+)$/.exec(path);
+  // PDFs too large to copy as-is: send visitors to the issue page, which carries the compressed PDF
+  const BIG = { 'RCM-Balita-March-6-2025.pdf': 4042, 'RCM-Balita-Apr-24-2025.pdf': 4048, 'RCM-Balita-May-1-2025.pdf': 4049, 'RCM-Balita-May-29-2025.pdf': 4051, 'RCM-Balita-June-5-2025.pdf': 4052, 'RCM-Balita-Jun-19-2025.pdf': 4053, 'RCM-Balita-Jun-26-2025.pdf': 4054, 'RCM-Balita-July-24-2025.pdf': 4058, 'RCM-Balita-Issue-no-4088-May-14-2026.pdf': 4088 };
+  if (m && BIG[m[1].split('/').pop()]) return `/balita/${BIG[m[1].split('/').pop()]}`;
   if (m) return `${SB}/storage/v1/object/public/rcm/legacy/${m[1].split('/').map((x) => decodeURIComponent(x).replace(/[^A-Za-z0-9._-]/g, '-')).join('/')}`;
   if (!LEGACY) LEGACY = require('./legacy-map.json');
   m = /^category\/(?:[^/]+\/)*(issue-(?:no-)?\d+)$/i.exec(path) || /^(issue-\d+)$/i.exec(path);
