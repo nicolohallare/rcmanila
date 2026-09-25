@@ -19,7 +19,7 @@ body{background:#f2f2f2}
 .stack{display:flex;flex-direction:column;gap:16px}
 .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 label.f{display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:700;color:var(--ink-2)}
-input[type=text],input[type=password],input[type=number],input[type=date],input[type=datetime-local],textarea{font:inherit;font-size:16px;border:1px solid #c7d2df;border-radius:6px;padding:10px 12px;background:#fff;color:var(--ink);width:100%}
+input[type=text],input[type=search],input[type=password],input[type=number],input[type=date],input[type=datetime-local],textarea{font:inherit;font-size:16px;border:1px solid #c7d2df;border-radius:6px;padding:10px 12px;background:#fff;color:var(--ink);width:100%}
 textarea{min-height:90px;resize:vertical;line-height:1.55}
 .drop{border:2px dashed #9fb3cb;border-radius:12px;padding:44px 20px;text-align:center;background:#fff;cursor:pointer;display:flex;flex-direction:column;gap:10px;align-items:center}
 .drop.over{border-color:var(--blue);background:var(--sky)}
@@ -108,7 +108,13 @@ main.wide{max-width:1760px}
 </label>
 <input id="file" type="file" accept="application/pdf" class="hidden">
 <div class="panel stack"><h2 style="font-size:22px">Recent issues</h2><ul id="issues" class="alist"><li class="muted">Loading…</li></ul></div>
-<details class="panel stack" id="old-panel"><summary style="cursor:pointer;font-size:22px;font-weight:700;font-family:var(--serif)">Add old issues to the archive</summary>
+<div class="panel stack"><h2 style="font-size:22px">Fix something in a past issue</h2>
+<p class="muted">Search by issue number, date (e.g. 2025-04-24), guest or a word from the story. Open it with Edit, change the text, photo or caption, and save.</p>
+<form id="find-form" class="row" role="search"><label class="f" style="flex:1;min-width:220px"><span class="sr-only">Find an issue</span><input id="find-q" type="search" style="font-weight:400" placeholder="4048, 2025-04-24, Banaguas…" autocomplete="off"></label><button class="btn btn-blue" type="submit">Find</button></form>
+<ul id="find-list" class="alist" aria-live="polite"></ul></div>
+<details class="panel stack" id="tools-panel"><summary style="cursor:pointer;font-size:18px;font-weight:700;font-family:var(--serif)">Back-issue tools <span class="muted" style="font-weight:400;font-size:14px;font-family:var(--sans)">· rarely needed</span></summary>
+<p class="muted" style="margin-top:10px">Only for adding or rebuilding old issues. New weekly issues always go in the box at the top.</p>
+<details class="stack" id="old-panel" style="border-top:1px solid var(--line,#ddd);padding-top:12px"><summary style="cursor:pointer;font-size:17px;font-weight:700;font-family:var(--serif)">Add old issues to the archive</summary>
 <p class="muted" style="margin-top:10px">For back issues. Choose many PDFs at once. Each one is added with its cover, a page-by-page reader and searchable text, and goes live straight away. No AI, nothing to check, no cost. Issues already on the website are skipped.</p>
 <label class="btn btn-blue" style="align-self:flex-start">Choose old Balita PDFs<input id="old-files" type="file" accept="application/pdf" multiple class="hidden"></label>
 <div id="old-table" class="hidden stack">
@@ -116,7 +122,7 @@ main.wide{max-width:1760px}
 <div class="row"><button class="btn btn-blue" type="button" id="old-start">Add these issues</button><span id="old-msg" class="muted"></span></div>
 </div>
 </details>
-<details class="panel stack" id="split-panel"><summary style="cursor:pointer;font-size:22px;font-weight:700;font-family:var(--serif)">Split old issues into articles with photos</summary>
+<details class="stack" id="split-panel" style="border-top:1px solid var(--line,#ddd);padding-top:12px"><summary style="cursor:pointer;font-size:17px;font-weight:700;font-family:var(--serif)">Split old issues into articles with photos</summary>
 <p class="muted" style="margin-top:10px">Some back issues came from the old website as a PDF only, or as text without photos. This saves each one's pages, photos and text so it can be split into articles. Leave this page open while it runs; the issues stay online throughout.</p>
 <label class="row" style="gap:8px;font-size:15px"><input type="checkbox" id="split-ai"> Also write the articles with the website's AI now (about US$0.50–1 of API credit per issue). Leave unticked if the articles are being written in the Claude chat.</label>
 <div class="row"><button class="btn btn-line" style="color:var(--blue)" type="button" id="split-load">Show the issues that need it</button><span id="split-msg" class="muted" aria-live="polite"></span></div>
@@ -125,6 +131,7 @@ main.wide{max-width:1760px}
 <div class="row"><label class="btn btn-line" style="color:var(--blue)">Add PDFs from this computer<input id="split-files" type="file" accept="application/pdf" multiple class="hidden"></label><span class="muted" style="font-size:14px">Choose several at once; each is matched to its issue by number or date.</span></div>
 <div class="row"><button class="btn btn-blue" type="button" id="split-start">Start with the ticked issues</button><span id="split-sum" class="muted"></span></div>
 </div>
+</details>
 </details>
 </section>
 

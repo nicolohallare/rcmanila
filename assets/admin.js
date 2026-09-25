@@ -42,17 +42,39 @@
   async function openHomeList() {
     try {
       const { issues } = await call('issues');
-      $('issues').innerHTML = issues.length ? issues.map((i) => {
-        const s = STATUS[i.status] || [i.status, 'wait'];
-        const when = i.status === 'scheduled' && i.publish_at ? ' · goes live ' + new Date(i.publish_at).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Manila' }) : '';
-        return `<li>${i.cover_path ? `<img src="${imgUrl(i.cover_path, 140)}&v=${Date.parse(i.updated_at || 0)}" alt="" style="object-position:right top">` : '<img alt="">'}<div style="flex:1"><b>Issue ${i.issue_no}</b><br><span class="muted">${esc(i.issue_date || '')}${esc(when)}</span></div><span class="tag ${s[1]}">${s[0]}</span><button class="smallbtn" data-open="${i.id}" type="button">${i.status === 'published' ? 'Edit' : 'Check and publish'}</button>${i.status === 'published' || i.status === 'scheduled' ? `<a class="smallbtn" href="/balita/${i.issue_no}" target="_blank" rel="noopener">View</a>` : ''}</li>`;
-      }).join('') : '<li class="muted">No issues yet. Upload the first one above.</li>';
+      $('issues').innerHTML = issues.length ? issues.slice(0, 8).map(issueRow).join('') : '<li class="muted">No issues yet. Upload the first one above.</li>';
     } catch (err) {
       if (err.auth) return show('v-login');
       $('issues').innerHTML = `<li class="err">${esc(err.message)}</li>`;
     }
   }
-  $('issues').addEventListener('click', (e) => { const b = e.target.closest('[data-open]'); if (b) openReview(b.getAttribute('data-open')); });
+  function issueRow(i) {
+    const s = STATUS[i.status] || [i.status, 'wait'];
+    const when = i.status === 'scheduled' && i.publish_at ? ' · goes live ' + new Date(i.publish_at).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Manila' }) : '';
+    return `<li>${i.cover_path ? `<img src="${imgUrl(i.cover_path, 140)}&v=${Date.parse(i.updated_at || 0)}" alt="" style="object-position:right top">` : '<img alt="">'}<div style="flex:1"><b>Issue ${i.issue_no}</b><br><span class="muted">${esc(i.issue_date || '')}${esc(when)}${i.guest ? ' · ' + esc(i.guest.length > 70 ? i.guest.slice(0, 68) + '…' : i.guest) : ''}</span></div><span class="tag ${s[1]}">${s[0]}</span><button class="smallbtn" data-open="${i.id}" type="button">${i.status === 'published' ? 'Edit' : 'Check and publish'}</button>${i.status === 'published' || i.status === 'scheduled' ? `<a class="smallbtn" href="/balita/${i.issue_no}" target="_blank" rel="noopener">View</a>` : ''}</li>`;
+  }
+  ['issues', 'find-list'].forEach((id) => $(id).addEventListener('click', (e) => { const b = e.target.closest('[data-open]'); if (b) openReview(b.getAttribute('data-open')); }));
+  // Find any past issue: by number, date, guest, or a word in the issue or an article title.
+  $('find-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const q = $('find-q').value.trim(), out = $('find-list');
+    if (!q) { out.innerHTML = ''; return; }
+    out.innerHTML = '<li class="muted">Searching…</li>';
+    const cols = 'id,issue_no,issue_date,status,publish_at,cover_path,updated_at,guest';
+    const get = async (f) => { const r = await fetch(`${SB}/rest/v1/rcm_issues?select=${cols}&${f}&order=issue_no.desc&limit=30`, { headers: { apikey: PUB } }); if (!r.ok) throw new Error('Search did not work (' + r.status + ')'); return r.json(); };
+    try {
+      let list;
+      if (/^\d{3,5}$/.test(q)) list = await get(`issue_no=eq.${q}`);
+      else if (/^\d{4}-\d{2}(-\d{2})?$/.test(q)) list = await get(q.length === 10 ? `issue_date=eq.${q}` : `issue_date=gte.${q}-01&issue_date=lte.${q}-31`);
+      else {
+        const w = encodeURIComponent('*' + q.replace(/[(),*]/g, ' ') + '*');
+        const byArt = await (await fetch(`${SB}/rest/v1/rcm_articles?select=issue_id&title=ilike.${w}&limit=60`, { headers: { apikey: PUB } })).json().catch(() => []);
+        const ids = [...new Set((Array.isArray(byArt) ? byArt : []).map((a) => a.issue_id))];
+        list = await get(`or=(guest.ilike.${w},summary.ilike.${w},search_text.ilike.${w}${ids.length ? `,id.in.(${ids.join(',')})` : ''})`);
+      }
+      out.innerHTML = list.length ? list.map(issueRow).join('') : '<li class="muted">No issue found. Try the issue number or another word.</li>';
+    } catch (err) { out.innerHTML = `<li class="err">${esc(err.message)}</li>`; }
+  });
 
   const drop = $('drop');
   ['dragenter', 'dragover'].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.add('over'); }));
