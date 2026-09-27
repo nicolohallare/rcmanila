@@ -54,6 +54,14 @@
       "destination": "/api/page?r=partner"
     },
     {
+      "source": "/robots.txt",
+      "destination": "/api/page?r=robots"
+    },
+    {
+      "source": "/sitemap.xml",
+      "destination": "/api/page?r=sitemap"
+    },
+    {
       "source": "/:path*",
       "destination": "/api/page?r=legacy&p=:path*"
     }
@@ -68,5 +76,6 @@
         }
       ]
     }
-  ]
+  ],
+  "trailingSlash": false
 }

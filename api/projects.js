@@ -1,6 +1,6 @@
 // Service project stories. Every fact here comes from the Balita or the RY 2025–26 report of
 // IPP Raoul C. Creencia (107th anniversary souvenir program); sources are listed on each page.
-// Photos: '/assets/...' files ship with the site; other paths are Balita photos in Supabase storage.
+// Photos: '/assets/projects/...' are clean originals pulled from the Balita PDFs (no captions or crops baked in).
 // Photos of patients, infants and minors are deliberately left out until written consent is on file.
 module.exports = [
   {
@@ -8,7 +8,7 @@ module.exports = [
     card: 'Typhoon relief',
     title: 'Relief for families hit by Typhoon Crising',
     kicker: 'Disaster response · OPLAN CARE',
-    dek: 'In July and August 2025, members delivered sleeping mats, food, medicines and livelihood help to families in Tondo, Cavite and Bulacan, working alongside neighbouring Rotary clubs.',
+    dek: 'In July and August 2025, members delivered sleeping mats, food, medicines and livelihood help to families in Tondo, Cavite and Bulacan, working alongside neighboring Rotary clubs.',
     hero: { src: '/assets/home/poa-save-lives.jpg', alt: 'A Rotarian in a life vest hands a Rotary Club of Manila relief bag to a woman standing in floodwater. Text: Together, we save lives. Rotary, People of Action.', poa: true },
     facts: [
       ['When', 'July–August 2025'],
@@ -26,7 +26,7 @@ module.exports = [
       ['27 July 2025', 'Brgy. Calizon, Calumpit, Bulacan', 'Relief goods for 100 families, with RC Calumpit.'],
       ['2 August 2025', 'Brgy. Catanghalan, Obando, Bulacan', 'Essential medicines for affected families, with RC Obando Centro.'],
       ['3 August 2025', 'Brgy. Pinalagdan, Paombong, Bulacan', 'Relief packs for 100 families, with the Rotaract Club of Manila and ALC Media–DWIZ.'],
-      ['17 August 2025', 'Collegio de Calumpit, Bulacan', 'A second relief operation in Calumpit with RC Calumpit.'],
+      ['17 August 2025', 'Colegio de Calumpit, Bulacan', 'A second relief operation in Calumpit with RC Calumpit.'],
     ],
     result: [
       ['1,200', 'families supported by the Club’s typhoon and earthquake relief (OPLAN CARE) during RY 2025–26, in nine locations'],
@@ -36,7 +36,9 @@ module.exports = [
     partners: ['Rotary Club of Calumpit', 'Rotary Club of Obando Centro', 'Rotary Clubs of Cavite Export Processing Zone, Cavite Uptown, Dasmariñas, Rosario, Cavite Premier, Imus Independencia, Malate Prime and Tagaytay City', 'Rotaract Club of Manila', 'ALC Media–DWIZ'],
     next: 'The Club responds again whenever a disaster strikes. Gifts to the Club’s projects and members’ time make the next response possible.',
     gallery: [
-      { src: 'issues/4061/photos/p028-1-mug3aywm.jpg', w: 1198, h: 982, caption: 'Relief distribution by RC Manila and RC Calumpit at Collegio de Calumpit, 17 August 2025.' },
+      { src: '/assets/projects/relief-rosario-1.jpg', caption: 'Handing out relief packs to fishing families in Barangay Ligtong, Rosario, Cavite, 24 July 2025.' },
+      { src: '/assets/projects/relief-rosario-2.jpg', caption: '“Sagip Mangingisda”, the relief operation for fishing families in Rosario, Cavite, with neighboring Rotary clubs.' },
+      { src: '/assets/projects/relief-calumpit.jpg', caption: 'Manila and Calumpit Rotarians with relief goods at Colegio de Calumpit, Bulacan, August 2025.' },
     ],
     sources: [
       ['/balita/4059/typhoon-response-and-relief-efforts', 'Balita No. 4059: Typhoon response and relief efforts'],
@@ -51,7 +53,7 @@ module.exports = [
     title: 'Life-saving equipment for newborns at PGH',
     kicker: 'Maternal and child health · Rotary Global Grant',
     dek: 'With the Rotary Club of Kangjin-Tamjin in Korea, the Club equipped the Neonatal Intensive Care Unit of the Philippine General Hospital, the country’s largest public hospital, through a Rotary Foundation Global Grant.',
-    hero: { src: 'issues/4057/photos/p007-1-mug3hmo5.jpg', w: 1199, h: 640, alt: 'Officers of the Rotary Club of Manila and the Rotary Club of Kangjin-Tamjin at the signing of their Memorandum of Understanding, 12 July 2025' },
+    hero: { src: '/assets/projects/pgh-turnover-group.jpg', w: 780, h: 461, alt: 'Members of the Rotary Club of Manila and the Rotary Club of Kangjin-Tamjin at UP–PGH with a Rotary banner and a Global Grant GG2682583 banner, at the turnover of neonatal care equipment, September 2026' },
     facts: [
       ['Grant', 'Rotary Foundation Global Grant #2682583, “Strengthening Neonatal Care through Life-Saving Equipment Support”'],
       ['Where', 'Neonatal Intensive Care Unit, UP–Philippine General Hospital, Manila'],
@@ -66,7 +68,7 @@ module.exports = [
       ['13 July 2025', 'PGH Neonatal Intensive Care Unit', 'Both clubs toured the NICU and pediatric wards to confirm what equipment was needed.'],
       ['RY 2025–26', 'Club fundraising', 'The Club began raising its share of the grant. Members’ Paul Harris contributions to The Rotary Foundation could be directed to the project.'],
       ['June 2026', '36th Weekly Membership Meeting', 'The Club and UP–PGH signed the Memorandum of Agreement for Global Grant #2682583. Dr. Esterlita Uy, Chief of the Division of Newborn Medicine, signed for PGH and President Raoul Creencia for the Club, with President-elect Reggie Yu and Secretary Anton Mauricio as witnesses.'],
-      ['September 2026', 'UP–PGH Neonatal Intensive Care Unit', 'The neonatal intensive care equipment was formally turned over to PGH, with an 18-member delegation from the Rotary Club of Kangjin-Tamjin. A Global Grant and Four-Way Test marker was unveiled at the NICU ward.'],
+      ['4 September 2026', 'UP–PGH Neonatal Intensive Care Unit', 'The neonatal intensive care equipment was formally turned over to PGH, with an 18-member delegation from the Rotary Club of Kangjin-Tamjin. A Global Grant and Four-Way Test marker was unveiled at the NICU ward.'],
     ],
     result: [
       ['Delivered', 'neonatal intensive care equipment turned over to the PGH NICU'],
@@ -75,7 +77,13 @@ module.exports = [
     ],
     partners: ['Rotary Club of Kangjin-Tamjin (RI District 3610, Korea)', 'UP–Philippine General Hospital, Division of Newborn Medicine', 'Rotary Districts 3610 and 3810', 'The Rotary Foundation'],
     next: 'The equipment is now in use at the NICU. The Rotary Club of Kangjin-Tamjin hopes to make the partnership an annual effort.',
-    gallery: [],
+    gallery: [
+      { src: '/assets/projects/pgh-turnover-program.jpg', caption: 'The turnover program at UP–PGH, with two of the donated units at right, 4 September 2026.' },
+      { src: '/assets/projects/pgh-marker-unveiling.jpg', caption: 'Unveiling the Global Grant #2682583 and Four-Way Test marker at the NICU ward.' },
+      { src: '/assets/projects/pgh-marker.jpg', caption: 'The marker records the donation of neonatal care equipment through Global Grant #2682583.' },
+      { src: '/assets/projects/pgh-nicu-visit-2025.jpg', caption: 'The two clubs at the PGH Neonatal ICU on 13 July 2025, confirming what equipment was needed.' },
+      { src: '/assets/projects/pgh-mou-2025.jpg', caption: 'President Raoul Creencia and President Bang Jae Nam of RC Kangjin-Tamjin after signing the Memorandum of Understanding, 12 July 2025.' },
+    ],
     sources: [
       ['/balita/4057/visit-to-the-philippine-general-hospital', 'Balita No. 4057: Visit to the Philippine General Hospital'],
       ['/balita/4057/signing-of-mou-with-rc-gangjintamjin-for-a-global-grant-project', 'Balita No. 4057: Signing of the MOU with RC Kangjin-Tamjin'],
@@ -90,7 +98,7 @@ module.exports = [
     title: 'A safer school for the children of Bayanan',
     kicker: 'Basic education and literacy',
     dek: 'Some pupils of Bayanan Elementary School in Baco, Oriental Mindoro, walk up to three hours and cross a river on a bamboo bridge to reach two leaking classrooms. The Club has committed to rehabilitate the school.',
-    hero: { src: 'issues/4105/photos/p031-3-mukerdvd.jpg', w: 1712, h: 1712, alt: 'President Reginald Yu walking along the rocky slopes of the Bayanan River, the route many pupils take to school' },
+    hero: { src: '/assets/projects/bayanan-river.jpg', w: 1076, h: 717, alt: 'President Reginald Yu walking along the rocky slopes of the Bayanan River, the route many pupils take to school' },
     facts: [
       ['Where', 'Bayanan Elementary School, Baco, Oriental Mindoro, within the ancestral domain of the Mangyan people'],
       ['Pupils', 'About 197, Nursery to Grade 6, around 75 percent of them Mangyan children'],
@@ -113,9 +121,10 @@ module.exports = [
     partners: ['Bayanan Elementary School', 'Barangay Bayanan', 'The Valencia family, landowners', 'Department of Education'],
     next: 'The Deed of Donation is completed and submitted to the Department of Education, resources are mobilized, and the rehabilitation is carried out.',
     gallery: [
-      { src: 'issues/4105/photos/p033-1-mukerdvd.jpg', caption: 'President Reginald Yu listens as a Bayanan Elementary School teacher shares her list of much-needed improvements, while Director Nico Valencia looks on.' },
-      { src: 'issues/4105/photos/p037-1-mukerdvd.jpg', caption: 'Manila Rotarians with the teachers of Bayanan Elementary School.' },
-      { src: 'issues/4105/photos/p036-1-mukerdvd.jpg', caption: 'A briefing on Mindoro and the school’s community before the visit, at Filipiniana Hotel in Calapan City.' },
+      { src: '/assets/projects/bayanan-teacher.jpg', caption: 'President Reginald Yu listens as a Bayanan Elementary School teacher shares her list of much-needed improvements, while Director Nico Valencia looks on.' },
+      { src: '/assets/projects/bayanan-comfort-room.jpg', caption: 'Rotarians inspect the school’s comfort rooms, one of the repairs the Club has committed to.' },
+      { src: '/assets/projects/bayanan-teachers.jpg', caption: 'Manila Rotarians with the teachers of Bayanan Elementary School.' },
+      { src: '/assets/projects/bayanan-briefing.jpg', caption: 'A briefing on Mindoro and the school’s community before the visit, at Filipiniana Hotel in Calapan City.' },
     ],
     sources: [
       ['/balita/4105/a-long-walk-toward-hope-rotary-club-of-manila-visits-bayanan-elementary-school-i', 'Balita No. 4105: A Long Walk Toward Hope'],
