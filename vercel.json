@@ -38,6 +38,22 @@
       "destination": "/secretariat.html"
     },
     {
+      "source": "/projects",
+      "destination": "/api/page?r=projects"
+    },
+    {
+      "source": "/projects/:slug",
+      "destination": "/api/page?r=project&slug=:slug"
+    },
+    {
+      "source": "/join",
+      "destination": "/api/page?r=join"
+    },
+    {
+      "source": "/partner",
+      "destination": "/api/page?r=partner"
+    },
+    {
       "source": "/:path*",
       "destination": "/api/page?r=legacy&p=:path*"
     }

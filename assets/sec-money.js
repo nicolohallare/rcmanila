@@ -24,7 +24,7 @@
   document.querySelector('.sec-tabs').addEventListener('click', (e) => {
     const b = e.target.closest('[data-tab]'); if (!b) return;
     const t = b.getAttribute('data-tab');
-    if (t === 'v-list') S().openList(); else if (t === 'v-don') openDon(); else openCamp();
+    if (t === 'v-list') S().openList(); else if (t === 'v-don') openDon(); else if (t === 'v-camp') openCamp();
   });
 
   // ---------- donations ----------
