@@ -12,6 +12,9 @@ const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&':
 const img = (path, w) => path && path[0] === '/' ? path : path ? `${SB}/storage/v1/render/image/public/rcm/${path.split('/').map(encodeURIComponent).join('/')}?width=${w}&resize=contain&quality=78` : '';
 // Covers carry the issue's last-update time, so a re-uploaded issue never shows an old cached cover.
 const coverSrc = (i, w) => img(i.cover_path, w) + (i.updated_at ? '&v=' + Date.parse(i.updated_at) : '');
+// Issues before July 2024 are letter-size pages; newer ones use the tall 4:9 design. The onload check corrects any exception.
+const pgc = (i) => (i && i.issue_date && i.issue_date < '2024-07-01' ? ' pg' : '');
+const COVFIX = `onload="var r=this.naturalWidth/this.naturalHeight,b=this.closest('.yr-cover,.hx-cov,.wk-cover,.h-balita-cover')||this;b.classList.toggle('pg',r>.55)"`;
 const raw = (path) => path && path[0] === '/' ? path : path ? `${SB}/storage/v1/object/public/rcm/${path.split('/').map(encodeURIComponent).join('/')}` : '';
 const fmtDate = (d) => d ? new Date(d + 'T12:00:00+08:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Manila' }) : '';
 const fmtDay = (d) => d ? new Date(d + 'T12:00:00+08:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Manila' }) : '';
@@ -590,10 +593,10 @@ async function archive(origin, term) {
     for (const i of issues) { const y = rotaryYear(i.issue_date); let g = years.find((x) => x.y === y); if (!g) years.push(g = { y, list: [] }); g.list.push(i); }
     inner = issues.length ? `<nav class="yr-nav" aria-label="Rotary years">${years.map((g) => `<a href="#ry-${g.y.slice(0, 4)}">${g.y}</a>`).join('')}</nav>
 ${years.map((g) => `<section class="yr" id="ry-${g.y.slice(0, 4)}"><h2>Rotary Year ${g.y} <span>${g.list.length} issue${g.list.length === 1 ? '' : 's'}</span></h2>
-<div class="yr-grid">${g.list.map((i) => `<a class="yr-card" href="/balita/${i.issue_no}"><div class="yr-cover">${i.cover_path ? `<img src="${coverSrc(i, 300)}" alt="" loading="lazy">` : ''}</div><strong>No. ${i.issue_no}</strong><span>${esc(fmtDate(i.issue_date))}</span></a>`).join('')}</div></section>`).join('')}` : '<div class="empty">No issues published yet.</div>';
+<div class="yr-grid">${g.list.map((i) => `<a class="yr-card" href="/balita/${i.issue_no}"><div class="yr-cover${pgc(i)}">${i.cover_path ? `<img src="${coverSrc(i, 300)}" alt="" loading="lazy" ${COVFIX}>` : ''}</div><strong>No. ${i.issue_no}</strong><span>${esc(fmtDate(i.issue_date))}</span></a>`).join('')}</div></section>`).join('')}` : '<div class="empty">No issues published yet.</div>';
   }
   const body = `<section class="wrap section arch">
-<div><span class="eyebrow">The official publication of the Rotary Club of Manila</span><h1 style="font-size:48px">Balita</h1><p class="arch-lede">Issues of the Club’s weekly publication from 2023 onward, grouped by Rotary year. Search finds names, projects and topics inside every issue. Older issues, back to 1948, are in the <a href="/library/balita">Heritage Library</a>.</p></div>
+<div><span class="eyebrow">The official publication of the Rotary Club of Manila</span><h1 style="font-size:48px">Balita</h1><p class="arch-lede">Every issue of the Club’s weekly publication since 2015, grouped by Rotary year. Search finds names, projects and topics inside every issue. Older issues, back to 1948, are in the <a href="/library/balita">Heritage Library</a>.</p></div>
 ${searchBox}
 ${inner}
 </section>`;
@@ -610,7 +613,7 @@ async function issuePage(origin, no) {
   const pages = Array.isArray(issue.pages) ? issue.pages : [];
   const body = `
 <section class="issue-head"><div class="wrap">
-${issue.cover_path ? `<img class="cover" src="${coverSrc(issue, 520)}" alt="Cover of Balita issue ${issue.issue_no}">` : '<div></div>'}
+${issue.cover_path ? `<img class="cover${pgc(issue)}" src="${coverSrc(issue, 520)}" alt="Cover of Balita issue ${issue.issue_no}" ${COVFIX}>` : '<div></div>'}
 <div style="display:flex;flex-direction:column;gap:14px">
 <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Home</a> / <a href="/balita">Balita</a></nav>
 <span class="eyebrow" style="color:var(--gold)">The official publication of the Rotary Club of Manila</span>
@@ -678,7 +681,7 @@ ${a.byline ? `<span class="byline">${esc(a.byline)}</span>` : ''}
 ${lead ? figure(lead, lead.caption || a.title, 1400, false) : ''}
 <div class="share-row">${shareBar(url, a.title, true)}</div>
 <div class="body">${html}</div>
-<div class="from-issue">${issue.cover_path ? `<img src="${coverSrc(issue, 160)}" alt="">` : ''}<div><strong>From Balita Issue ${issue.issue_no}</strong>
+<div class="from-issue">${issue.cover_path ? `<img class="${pgc(issue).trim()}" src="${coverSrc(issue, 160)}" alt="" ${COVFIX}>` : ''}<div><strong>From Balita Issue ${issue.issue_no}</strong>
 ${Array.isArray(issue.pages) && issue.pages.length ? `<a href="/balita/${issue.issue_no}#layout">See this story as printed${a.printed_pages ? ', ' + esc(a.printed_pages) : ''}</a>` : (issue.pdf_url ? `<a href="${esc(issue.pdf_url)}">Download the printed issue (PDF)</a>` : '')}<a href="/balita/${issue.issue_no}">Read the whole issue</a></div></div>
 ${others.length ? `<h2 style="font-size:24px;margin-top:12px">More from this issue</h2><div style="display:flex;flex-direction:column;gap:14px">${others.map((o) => { const p = leadPhoto(o); return `<a class="mini" style="background:var(--tint)" href="/balita/${issue.issue_no}/${o.slug}">${p ? `<img src="${img(p.path, 200)}" alt="">` : ''}${esc(o.title)}</a>`; }).join('')}</div>` : ''}
 </article>`;
