@@ -408,7 +408,7 @@ const YEARS = [
 ];
 
 // Cover photo of the month: one action photo that tells the Club's story. The team sets it in the editor.
-const COVER_FALLBACK = { month: '2026-09-01', image_path: '/assets/home/poa-relief-2026.jpg', alt: 'Rotarians in life vests wade waist-deep through floodwater in Calumpit, Bulacan, carrying relief bags to residents. Text: Together, we save lives. Rotary, People of Action.', caption: 'Members of the Rotary Clubs of Manila and Calumpit wade through floodwater up to five feet deep to bring relief to three cut-off barangays in Calumpit, Bulacan.', link: '/projects/typhoon-relief-2025' };
+const COVER_FALLBACK = { month: '2026-09-01', tagline: 'Together, we save lives.', focus: 'center 30%', image_path: '/assets/home/cover-calumpit-08026.jpg', alt: 'Rotarians in life vests wade waist-deep through floodwater in Calumpit, Bulacan, carrying relief bags to residents. Text: Together, we save lives. Rotary, People of Action.', caption: 'Members of the Rotary Clubs of Manila and Calumpit wade through floodwater up to five feet deep to bring relief to three cut-off barangays in Calumpit, Bulacan.', link: '/projects/typhoon-relief-2025' };
 async function currentCover() {
   const today = new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10);
   const rows = await q(`rcm_cover?select=*&month=lte.${today}&order=month.desc&limit=1`);
@@ -465,14 +465,17 @@ ${lead ? `<a class="wk-lead" href="/balita/${issue.issue_no}/${lead.slug}">${esc
   const body = `
 <section class="hx" aria-label="Rotary Club of Manila">
 ${(() => { const cv = cover || COVER_FALLBACK; const mon = new Date(cv.month + 'T12:00:00+08:00').toLocaleDateString('en-GB', { timeZone: 'Asia/Manila', month: 'long', year: 'numeric' });
-  return `<figure class="cv"><div class="cv-bg" aria-hidden="true" style="background-image:url('${esc(pSrc(cv.image_path, 480))}')"></div>
-<img class="cv-img" src="${esc(pSrc(cv.image_path, 2000))}" alt="${esc(cv.alt)}" fetchpriority="high">
-<figcaption class="cv-cap"><div class="wrap cv-cap-in"><span class="cv-tag">People of Action · ${esc(mon)}</span>${cv.caption ? `<span class="cv-txt">${esc(cv.caption)}</span>` : ''}${cv.link ? `<a class="cv-go" href="${esc(cv.link)}">Read the story <span aria-hidden="true">→</span></a>` : ''}</div></figcaption></figure>`; })()}
-<div class="cv-intro"><div class="wrap cv-intro-in">
-<div><span class="hx-kicker">Est. 1919 · Rotary Charter No. 478</span><h1>Asia’s first Rotary club.</h1></div>
-<div class="cv-intro-r"><p>Founded at the Manila Hotel in 1919, the Club still meets every Thursday, bringing Manila’s business, professional and civic leaders together to serve.</p>
-<div class="h-cta"><a class="btn btn-gold" href="#action">See our service</a><a class="btn btn-ghost" href="#club">Discover the Club</a></div></div>
-</div></div>
+  const focus = /^[a-z0-9% .]{1,20}$/i.test(cv.focus || '') ? cv.focus : 'center';
+  return `<div class="cv2">
+<img class="cv2-img" src="${esc(pSrc(cv.image_path, 2400))}" alt="${esc(cv.alt)}" style="object-position:${focus}" fetchpriority="high">
+<div class="cv2-shade" aria-hidden="true"></div>
+<div class="wrap cv2-copy">
+<h1 class="cv2-club">Rotary Club of Manila <span>· Asia’s first Rotary club, est. 1919</span></h1>
+<p class="cv2-poa"><b>People of Action</b> · ${esc(mon)}</p>
+<p class="cv2-tag">${esc(cv.tagline || 'Together, we take action.')}</p>
+${cv.caption ? `<p class="cv2-cap">${esc(cv.caption)}</p>` : ''}
+<div class="h-cta">${cv.link ? `<a class="btn btn-gold" href="${esc(cv.link)}">Read the story</a>` : ''}<a class="btn btn-ghost" href="/meeting">Join us at a meeting</a></div>
+</div></div>`; })()}
 <div class="hx-week"><div class="wrap hx-week-in"><span class="hx-week-l">This week</span>${wkMeeting}${wkBalita}</div></div>
 </section>
 
