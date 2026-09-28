@@ -464,17 +464,15 @@ ${lead ? `<a class="wk-lead" href="/balita/${issue.issue_no}/${lead.slug}">${esc
   const POA_DID = 'In September 2026, members waded through floodwater and went by boat with the Rotary Club of Calumpit to bring 210 relief packs to three cut-off barangays, then rice for 70 more families in Pampanga. In 2025 they brought sleeping mats, food, medicines and livelihood help to families in Tondo, Cavite and Bulacan.';
   const body = `
 <section class="hx" aria-label="Rotary Club of Manila">
-<div class="hc">
-<div class="hc-copy"><div class="hc-copy-in">
-<span class="hx-kicker">Est. 1919 · Rotary Charter No. 478</span>
-<h1>Asia’s first<br>Rotary club.</h1>
-<p>Founded at the Manila Hotel in 1919, the Club still meets every Thursday, bringing Manila’s business, professional and civic leaders together to serve.</p>
-<div class="h-cta"><a class="btn btn-gold" href="#action">See our service</a><a class="btn btn-ghost" href="#club">Discover the Club</a></div>
-</div></div>
 ${(() => { const cv = cover || COVER_FALLBACK; const mon = new Date(cv.month + 'T12:00:00+08:00').toLocaleDateString('en-GB', { timeZone: 'Asia/Manila', month: 'long', year: 'numeric' });
-  return `<figure class="hc-fig"><img src="${esc(pSrc(cv.image_path, 1800))}" alt="${esc(cv.alt)}" fetchpriority="high">
-<figcaption><span class="hc-tag">People of Action · ${esc(mon)}</span>${cv.caption ? `<span class="hc-cap">${esc(cv.caption)}</span>` : ''}${cv.link ? `<a class="hc-go" href="${esc(cv.link)}">Read the story</a>` : ''}</figcaption></figure>`; })()}
-</div>
+  return `<figure class="cv"><div class="cv-bg" aria-hidden="true" style="background-image:url('${esc(pSrc(cv.image_path, 480))}')"></div>
+<img class="cv-img" src="${esc(pSrc(cv.image_path, 2000))}" alt="${esc(cv.alt)}" fetchpriority="high">
+<figcaption class="cv-cap"><div class="wrap cv-cap-in"><span class="cv-tag">People of Action · ${esc(mon)}</span>${cv.caption ? `<span class="cv-txt">${esc(cv.caption)}</span>` : ''}${cv.link ? `<a class="cv-go" href="${esc(cv.link)}">Read the story <span aria-hidden="true">→</span></a>` : ''}</div></figcaption></figure>`; })()}
+<div class="cv-intro"><div class="wrap cv-intro-in">
+<div><span class="hx-kicker">Est. 1919 · Rotary Charter No. 478</span><h1>Asia’s first Rotary club.</h1></div>
+<div class="cv-intro-r"><p>Founded at the Manila Hotel in 1919, the Club still meets every Thursday, bringing Manila’s business, professional and civic leaders together to serve.</p>
+<div class="h-cta"><a class="btn btn-gold" href="#action">See our service</a><a class="btn btn-ghost" href="#club">Discover the Club</a></div></div>
+</div></div>
 <div class="hx-week"><div class="wrap hx-week-in"><span class="hx-week-l">This week</span>${wkMeeting}${wkBalita}</div></div>
 </section>
 
@@ -554,7 +552,7 @@ ${guestName ? `<p class="h-balita-cover-note">On the cover: ${coverStory ? `<a h
 <div class="h-family-row">${FAMILY.map((f) => `<a href="${f.href}" target="_blank" rel="noopener"><b>${esc(f.name)}</b><span>${esc(f.note)}</span></a>`).join('')}</div>
 </div></section>
 
-${routesStrip()}`;
+`;
   return layout({
     title: 'Rotary Club of Manila',
     description: 'Asia’s first Rotary club, serving since 1919. See our projects, read the Balita and join us every Thursday.',
