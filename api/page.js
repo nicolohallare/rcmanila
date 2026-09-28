@@ -408,7 +408,7 @@ const YEARS = [
 ];
 
 // Cover photo of the month: one action photo that tells the Club's story. The team sets it in the editor.
-const COVER_FALLBACK = { month: '2026-09-01', tagline: 'Together, we save lives.', focus: 'center 30%', image_path: '/assets/home/cover-calumpit-07984.jpg', alt: 'Rotarians in life vests wade waist-deep through floodwater in Calumpit, Bulacan, carrying relief bags to residents. Text: Together, we save lives. Rotary, People of Action.', caption: 'Members of the Rotary Clubs of Manila and Calumpit wade through floodwater up to five feet deep to bring relief to three cut-off barangays in Calumpit, Bulacan.', link: '/projects/typhoon-relief-2025' };
+const COVER_FALLBACK = { month: '2026-09-01', tagline: 'Together, we save lives.', focus: '62% 38%', image_path: '/assets/home/cover-relief-campaign-2026.jpg', alt: 'People of Action campaign artwork: a Rotarian in a life vest hands a Rotary Club of Manila relief bag to a woman standing in floodwater beside boats.', caption: 'People of Action campaign artwork: when typhoons and floods cut families off, Rotarians bring relief to them by boat and on foot.', link: '/projects/typhoon-relief-2025' };
 async function currentCover() {
   const today = new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10);
   const rows = await q(`rcm_cover?select=*&month=lte.${today}&order=month.desc&limit=1`);
