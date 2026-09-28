@@ -181,6 +181,7 @@ async function searchBalita(term) {
 const PROJECTS = require('./projects.js');
 const PRES = require('./presidents.js');
 const pSrc = (src, w) => (src && src[0] === '/' ? src : img(src, w));
+const LIB = require('./library-view.js')({ layout: (o) => layout(o), esc, q, fmtDate, PRES, searchBalita });
 const INQ = `${SB}/functions/v1/rcm-inquiry`;
 
 // The five things a visitor can do, shown near the top of the homepage and at the end of key pages.
@@ -961,6 +962,7 @@ module.exports = async (req, res) => {
     else if (r === 'project') { html = projectPage(origin, u.searchParams.get('slug')); if (!html) { res.statusCode = 301; res.setHeader('Location', '/projects'); return res.end(); } }
     else if (r === 'join') html = joinPage(origin);
     else if (r === 'presidents') html = presidentsPage(origin);
+    else if (r === 'lib') html = await LIB.route(origin, u);
     else if (r === 'partner') html = partnerPage(origin, String(u.searchParams.get('i') || '').slice(0, 80));
   } catch (e) {
     res.statusCode = 500;
