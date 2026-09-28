@@ -12,7 +12,7 @@
   let state = { meeting: null, signups: [], posterPath: null, lastVenue: null };
 
   function show(v) {
-    for (const id of ['v-login', 'v-list', 'v-edit', 'v-don', 'v-camp', 'v-inq']) $(id).classList.toggle('hidden', id !== v);
+    for (const id of ['v-login', 'v-list', 'v-edit', 'v-att', 'v-don', 'v-camp', 'v-inq']) $(id).classList.toggle('hidden', id !== v);
     $('sec-tabs').classList.toggle('hidden', v === 'v-login');
     const tab = v === 'v-edit' ? 'v-list' : v;
     document.querySelectorAll('[data-tab]').forEach((b) => b.setAttribute('aria-current', String(b.getAttribute('data-tab') === tab)));
