@@ -17,7 +17,7 @@ const fmtDate = (d) => d ? new Date(d + 'T12:00:00+08:00').toLocaleDateString('e
 const fmtDay = (d) => d ? new Date(d + 'T12:00:00+08:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Manila' }) : '';
 const FN = `${SB}/functions/v1/rcm-admin`;
 const PUB = 'sb_publishable_zebFaErs-sjDwYWQUMfq3g_VuF2DTI6';
-const MAIL = 'rcmanila@rcmanila.org';
+const MAIL = 'rotaryclubofmanila@gmail.com';
 const mailto = (subject) => `mailto:${MAIL}?subject=${encodeURIComponent(subject)}`;
 const TEL = 'tel:+63285271885';
 const leadPhoto = (a) => (a.photos || []).find((p) => p.include !== false);
@@ -250,7 +250,7 @@ ${d.title ? `<p class="pres-dec"><b>${esc(d.label)}: ${esc(d.title)}.</b> ${esc(
 <nav class="pres-jump" aria-label="Jump to a decade">${PRES.decades.map((d) => `<a href="#d-${d.key}">${d.label.slice(0, 5)}${d.label.slice(7)}</a>`).join('')}</nav></section>
 ${PRES.decades.map((d) => `<section class="wrap pres-dec-sec" id="d-${d.key}"><div class="pres-dec-head"><span class="kicker">${esc(d.label)}</span><h2>${esc(d.title)}</h2><p>${esc(d.blurb)}</p></div>
 <div class="pres-grid">${list.map((x, i) => (x.decade === d.key ? card(x, i) : '')).join('')}</div></section>`).join('')}
-<section class="wrap" style="padding-bottom:64px"><p class="h-source">Portraits and names from “The Work That Endures: A Century of Service and Stewardship at the Rotary Club of Manila” by Reginald T. Yu, in the Club’s 107th anniversary program (2026). Term notes draw only on that history and the <a href="/balita">Balita archive</a>. Corrections are welcome: <a href="mailto:rcmanila@rcmanila.org?subject=Past%20presidents%20page">rcmanila@rcmanila.org</a>.</p></section>
+<section class="wrap" style="padding-bottom:64px"><p class="h-source">Portraits and names from “The Work That Endures: A Century of Service and Stewardship at the Rotary Club of Manila” by Reginald T. Yu, in the Club’s 107th anniversary program (2026). Term notes draw only on that history and the <a href="/balita">Balita archive</a>. Corrections are welcome: <a href="mailto:rotaryclubofmanila@gmail.com?subject=Past%20presidents%20page">rotaryclubofmanila@gmail.com</a>.</p></section>
 ${list.map(detail).join('')}
 <dialog class="pres-dlg" id="pres-dlg" aria-labelledby="pres-dlg-t"><button type="button" class="pres-x" aria-label="Close">×</button><div class="pres-body" id="pres-dlg-t"></div><div class="pres-nav"><button type="button" data-step="-1">← Previous</button><button type="button" data-step="1">Next →</button></div></dialog>
 <script>
@@ -309,7 +309,7 @@ b.disabled=true;msg.textContent='Sending…';
 try{var p={action:'send',page:location.pathname};fd.forEach(function(v,k){p[k]=v;});
 var r=await fetch('${INQ}',{method:'POST',headers:{'content-type':'application/json',apikey:'${PUB}'},body:JSON.stringify(p)});var d=await r.json().catch(function(){return{error:'The server did not answer. Please try again.'}});
 if(!r.ok||d.error)throw new Error(d.error||'Please try again.');
-f.hidden=true;var done=document.getElementById('inq-done');done.hidden=false;done.innerHTML='<strong>Thank you!</strong><p>The Secretariat has your message and will get in touch. You can also call (02) 8527-1885 or email rcmanila@rcmanila.org.</p>';}
+f.hidden=true;var done=document.getElementById('inq-done');done.hidden=false;done.innerHTML='<strong>Thank you!</strong><p>The Secretariat has your message and will get in touch. You can also call (02) 8527-1885 or email rotaryclubofmanila@gmail.com.</p>';}
 catch(err){msg.textContent=err.message;b.disabled=false;}});})();
 </script>`;
 }
