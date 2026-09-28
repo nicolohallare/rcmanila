@@ -112,6 +112,22 @@ main.wide{max-width:1760px}
 <p class="muted">Search by issue number, date (e.g. 2025-04-24), guest or a word from the story. Open it with Edit, change the text, photo or caption, and save.</p>
 <form id="find-form" class="row" role="search"><label class="f" style="flex:1;min-width:220px"><span class="sr-only">Find an issue</span><input id="find-q" type="search" style="font-weight:400" placeholder="4048, 2025-04-24, Banaguas…" autocomplete="off"></label><button class="btn btn-blue" type="submit">Find</button></form>
 <ul id="find-list" class="alist" aria-live="polite"></ul></div>
+<div class="panel stack" id="cover-panel"><h2 style="font-size:22px">Cover photo of the month</h2>
+<p class="muted">One People of Action photo on the top of the homepage, changed every month. Pick a photo of members doing the work, not a posed group. It goes live on the first day of the month you choose.</p>
+<div id="cover-now" class="muted">Loading…</div>
+<form id="cover-form" class="stack" novalidate>
+<div class="row" style="gap:12px;align-items:flex-end;flex-wrap:wrap">
+<label class="f" style="min-width:180px">Month<input id="cv-month" type="month" required></label>
+<label class="f" style="flex:1;min-width:240px">Photo (JPG or PNG)<input id="cv-file" type="file" accept="image/jpeg,image/png,image/webp"></label>
+</div>
+<img id="cv-preview" alt="" style="display:none;max-width:420px;width:100%;border-radius:6px;border:1px solid var(--line)">
+<label class="f">Caption: what members are doing, where, and when<textarea id="cv-caption" rows="2" maxlength="400" placeholder="Members of the Rotary Clubs of Manila and Calumpit wade through floodwater to bring relief to three cut-off barangays in Calumpit, Bulacan."></textarea></label>
+<label class="f">Describe the photo for people who cannot see it<textarea id="cv-alt" rows="2" maxlength="400" placeholder="Rotarians in life vests carry relief bags through waist-deep floodwater."></textarea></label>
+<label class="f">Link to the story (optional)<input id="cv-link" type="text" placeholder="/projects/typhoon-relief-2025 or /balita/4106/kalinga-sa-kalumpit"></label>
+<div class="row"><button class="btn btn-blue" type="submit" id="cv-save">Save cover</button><span id="cv-msg" class="muted" role="status"></span></div>
+</form>
+<details><summary style="cursor:pointer">Past and scheduled covers</summary><ul id="cover-list" class="alist"></ul></details>
+</div>
 <details class="panel stack" id="tools-panel"><summary style="cursor:pointer;font-size:18px;font-weight:700;font-family:var(--serif)">Back-issue tools <span class="muted" style="font-weight:400;font-size:14px;font-family:var(--sans)">· rarely needed</span></summary>
 <p class="muted" style="margin-top:10px">Only for adding or rebuilding old issues. New weekly issues always go in the box at the top.</p>
 <details class="stack" id="old-panel" style="border-top:1px solid var(--line,#ddd);padding-top:12px"><summary style="cursor:pointer;font-size:17px;font-weight:700;font-family:var(--serif)">Add old issues to the archive</summary>
@@ -185,5 +201,6 @@ main.wide{max-width:1760px}
 </main>
 <script src="/assets/extract.js"></script>
 <script src="/assets/admin.js"></script>
+<script src="/assets/admin-cover.js"></script>
 </body>
 </html>

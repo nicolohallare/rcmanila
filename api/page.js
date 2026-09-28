@@ -71,6 +71,14 @@ function calLink(m) {
   return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(text)}&dates=${f(st)}/${f(en)}&ctz=Asia/Manila&location=${encodeURIComponent(m.venue || '')}&details=${encodeURIComponent(details)}`;
 }
 
+// Mutual links with the wider Rotary family (District, Zone, RI, the Philippine Rotary Magazine, the Club's foundation).
+const FAMILY = [
+  { name: 'Rotary International', href: 'https://www.rotary.org/', note: 'The worldwide network of Rotary clubs' },
+  { name: 'Rotary Zone 10A', href: 'https://www.facebook.com/Zone10ARotaryVoice/', note: 'Rotary districts of the Philippines' },
+  { name: 'Rotary District 3810', href: 'https://www.facebook.com/district3810/', note: 'The Club’s district in Metro Manila' },
+  { name: 'Philippine Rotary Magazine', href: 'https://www.philippinerotarymagazine.com/', note: 'Rotary’s regional magazine for the Philippines' },
+  { name: 'Rotary Club of Manila Foundation, Inc.', href: 'https://rcmanilafoundation.com/', note: 'The Club’s foundation for its service projects' },
+];
 let SITE = 'https://rcmanila.vercel.app';
 function layout({ title, description, image, url, body, nav = '', type = 'article' }) {
   if (!image) image = '/assets/home/people-of-action.jpg';
@@ -104,7 +112,7 @@ ${url ? `<meta property="og:url" content="${esc(url)}">` : ''}
 <a href="/#club">Our Club</a><a href="/projects" class="${nav === 'projects' ? 'on' : ''}">Projects</a><a href="/meeting" class="${nav === 'meeting' ? 'on' : ''}">Meetings</a><a href="/balita" class="${nav === 'balita' ? 'on' : ''}">Balita</a><a href="/join" class="${nav === 'join' ? 'on' : ''}">Join</a><a href="/partner" class="${nav === 'partner' ? 'on' : ''}">Partner</a>
 </nav>
 <details class="menu"><summary>Menu</summary><div class="menu-panel">
-<a href="/#club">Our Club</a><a href="/projects">Service projects</a><a href="/meeting">Meetings</a><a href="/balita">Balita</a><a href="/join">Join the Club</a><a href="/partner">Partner or volunteer</a><a href="/donate">Donate</a><a href="#contact">Contact</a>
+<a href="/#club">Our Club</a><a href="/past-presidents">Past presidents</a><a href="/projects">Service projects</a><a href="/meeting">Meetings</a><a href="/balita">Balita</a><a href="/join">Join the Club</a><a href="/partner">Partner or volunteer</a><a href="/donate">Donate</a><a href="#contact">Contact</a>
 </div></details>
 <a class="btn btn-gold head-cta" href="/meeting">Attend a meeting</a>
 </div></header>
@@ -112,8 +120,8 @@ ${url ? `<meta property="og:url" content="${esc(url)}">` : ''}
 <footer class="foot" id="contact"><div class="wrap">
 <div style="display:flex;flex-direction:column;gap:14px"><span class="foot-lockup"><img class="lk-club" src="/assets/club-logo-white.png" alt="Rotary Club of Manila" width="803" height="286"><span class="lk-rule" aria-hidden="true"></span><img class="lk-msg" src="/assets/msg-2026-white.png" alt="Create Lasting Impact" width="918" height="509"></span><span>The first Rotary club in Asia. Service above self since 1919.</span></div>
 <address style="font-style:normal"><strong>Secretariat</strong>RCM Office, 543 Arquiza St. cor. Grey St.<br>Ermita, Manila<br><a href="${TEL}">(02) 8527-1885</a><br><a href="mailto:${MAIL}">${MAIL}</a></address>
-<div><strong>Explore</strong><a href="/projects">Service projects</a><br><a href="/meeting">Weekly meeting</a><br><a href="/balita">Balita archive</a><br><a href="/join">Join</a> · <a href="/partner">Partner</a> · <a href="/donate">Donate</a><br><a href="https://www.facebook.com/RotaryClubofManila" target="_blank" rel="noopener">Facebook</a> · <a href="https://www.linkedin.com/company/rotary-club-of-manila/" target="_blank" rel="noopener">LinkedIn</a></div>
-<div><strong>Rotary family</strong><a href="https://rcmanilafoundation.com/" target="_blank" rel="noopener">Rotary Club of Manila Foundation, Inc.</a><br><a href="https://www.rotary.org/" target="_blank" rel="noopener">Rotary International</a><br>Rotary District 3810</div>
+<div><strong>Explore</strong><a href="/projects">Service projects</a><br><a href="/past-presidents">Past presidents</a><br><a href="/meeting">Weekly meeting</a><br><a href="/balita">Balita archive</a><br><a href="/join">Join</a> · <a href="/partner">Partner</a> · <a href="/donate">Donate</a><br><a href="https://www.facebook.com/RotaryClubofManila" target="_blank" rel="noopener">Facebook</a> · <a href="https://www.linkedin.com/company/rotary-club-of-manila/" target="_blank" rel="noopener">LinkedIn</a></div>
+<div><strong>Rotary family</strong>${FAMILY.map((f) => `<a href="${f.href}" target="_blank" rel="noopener">${esc(f.name)}</a>`).join('<br>')}</div>
 <div class="copy">© ${new Date().getFullYear()} Rotary Club of Manila</div>
 </div></footer>
 <script>document.addEventListener('click',function(e){var a=e.target.closest('.menu-panel a');if(a){var d=a.closest('details');if(d)d.open=false;}});</script>
@@ -171,6 +179,7 @@ async function searchBalita(term) {
 
 // ---------- Service projects, visitor routes, Join and Partner ----------
 const PROJECTS = require('./projects.js');
+const PRES = require('./presidents.js');
 const pSrc = (src, w) => (src && src[0] === '/' ? src : img(src, w));
 const INQ = `${SB}/functions/v1/rcm-inquiry`;
 
@@ -197,7 +206,7 @@ function projectPage(origin, slug) {
   const others = PROJECTS.filter((x) => x !== p).slice(0, 3);
   const url = `${origin}/projects/${p.slug}`;
   const hero = p.hero.poa
-    ? `<figure class="pj-hero-img is-poa"><img src="${esc(pSrc(p.hero.src, 1800))}" alt="${esc(p.hero.alt)}" width="1792" height="1252" fetchpriority="high"></figure>`
+    ? `<figure class="pj-hero-img is-poa"><img src="${esc(pSrc(p.hero.src, 1800))}" alt="${esc(p.hero.alt)}" width="${p.hero.w || 1792}" height="${p.hero.h || 1252}" fetchpriority="high"></figure>`
     : `<figure class="pj-hero-img"${p.hero.w && p.hero.w < 1200 ? ` style="max-width:${p.hero.w}px"` : ''}><img src="${esc(pSrc(p.hero.src, 1800))}" alt="${esc(p.hero.alt)}"${p.hero.w ? ` width="${p.hero.w}" height="${p.hero.h}"` : ''} fetchpriority="high"></figure>`;
   const body = `<article class="pj">
 <header class="wrap pj-head"><a class="pj-back" href="/projects">← All service projects</a><span class="kicker">${esc(p.kicker)}</span><h1>${esc(p.title)}</h1><p class="pj-dek">${esc(p.dek)}</p></header>
@@ -220,6 +229,39 @@ ${p.gallery.length ? `<section class="pj-gallery">${p.gallery.map((g) => `<figur
 </article>
 ${routesStrip()}`;
   return layout({ title: `${p.title} · Rotary Club of Manila`, description: p.dek, image: p.hero.src[0] === '/' ? origin + p.hero.src : img(p.hero.src, 1200), url, body, nav: 'projects' });
+}
+
+
+const presId = (x) => 'p-' + x.years.slice(0, 4) + (x.years === '1945–1946' ? 'b' : '');
+function presidentsPage(origin) {
+  const list = PRES.presidents;
+  const current = list[list.length - 1];
+  const card = (x, i) => `<button type="button" class="pres-card" id="${presId(x)}" data-p="${i}" aria-haspopup="dialog"><img src="${x.img}" alt="" width="320" height="320" loading="lazy"><b>${esc(x.name)}</b><span>${esc(x.years)}${x === current ? ' · Current' : ''}</span></button>`;
+  const detail = (x, i) => {
+    const d = PRES.decades.find((k) => k.key === x.decade) || {};
+    const src = [x.book || !x.summary ? '“The Work That Endures”, the Club’s 107th anniversary history (2026)' : '', ...x.balita.map(([u, t]) => `<a href="${esc(u)}">Balita: ${esc(t)}</a>`)].filter(Boolean);
+    return `<template id="pt-${i}"><img src="${x.img}" alt="Portrait of ${esc(x.name)}" width="320" height="320"><div><span class="kicker">${x === current ? 'President, ' : ''}${esc(x.years)}</span><h2>${esc(x.name)}</h2>
+${x.summary ? `<p>${esc(x.summary)}</p>` : `<p class="muted-p">The Club’s centennial history lists ${esc(x.name)} as president for ${esc(x.years)} but does not describe his term in detail.</p>`}
+${d.title ? `<p class="pres-dec"><b>${esc(d.label)}: ${esc(d.title)}.</b> ${esc(d.blurb)}</p>` : ''}
+<p class="pres-src">Source: ${src.join(' · ')}</p></div></template>`;
+  };
+  const body = `<section class="wrap pj-index-head"><span class="kicker">107 years of leadership</span><h1>Presidents of the Rotary Club of Manila</h1>
+<p class="lead-p">${list.length} terms since Leon J. Lambert called the first meeting of Asia’s first Rotary club in 1919. Select a portrait to read about that president’s year.</p>
+<nav class="pres-jump" aria-label="Jump to a decade">${PRES.decades.map((d) => `<a href="#d-${d.key}">${d.label.slice(0, 5)}${d.label.slice(7)}</a>`).join('')}</nav></section>
+${PRES.decades.map((d) => `<section class="wrap pres-dec-sec" id="d-${d.key}"><div class="pres-dec-head"><span class="kicker">${esc(d.label)}</span><h2>${esc(d.title)}</h2><p>${esc(d.blurb)}</p></div>
+<div class="pres-grid">${list.map((x, i) => (x.decade === d.key ? card(x, i) : '')).join('')}</div></section>`).join('')}
+<section class="wrap" style="padding-bottom:64px"><p class="h-source">Portraits and names from “The Work That Endures: A Century of Service and Stewardship at the Rotary Club of Manila” by Reginald T. Yu, in the Club’s 107th anniversary program (2026). Term notes draw only on that history and the <a href="/balita">Balita archive</a>. Corrections are welcome: <a href="mailto:rcmanila@rcmanila.org?subject=Past%20presidents%20page">rcmanila@rcmanila.org</a>.</p></section>
+${list.map(detail).join('')}
+<dialog class="pres-dlg" id="pres-dlg" aria-labelledby="pres-dlg-t"><button type="button" class="pres-x" aria-label="Close">×</button><div class="pres-body" id="pres-dlg-t"></div><div class="pres-nav"><button type="button" data-step="-1">← Previous</button><button type="button" data-step="1">Next →</button></div></dialog>
+<script>
+(function(){var dlg=document.getElementById('pres-dlg'),bd=dlg.querySelector('.pres-body'),cur=-1,n=${list.length},ids=${JSON.stringify(list.map(presId))};
+function show(i){if(i<0||i>=n)return;cur=i;bd.innerHTML='';bd.appendChild(document.getElementById('pt-'+i).content.cloneNode(true));dlg.querySelector('[data-step="-1"]').disabled=i===0;dlg.querySelector('[data-step="1"]').disabled=i===n-1;if(!dlg.open){dlg.showModal?dlg.showModal():dlg.setAttribute('open','')}try{history.replaceState(null,'','#'+ids[i])}catch(e){}}
+document.addEventListener('click',function(e){var b=e.target.closest('.pres-card');if(b){show(+b.getAttribute('data-p'));return;}var s=e.target.closest('[data-step]');if(s){show(cur+ +s.getAttribute('data-step'));return;}if(e.target.closest('.pres-x')||e.target===dlg){dlg.close();}});
+dlg.addEventListener('close',function(){try{history.replaceState(null,'',location.pathname)}catch(e){}var b=document.getElementById(ids[cur]);if(b)b.focus();});
+document.addEventListener('keydown',function(e){if(!dlg.open)return;if(e.key==='ArrowRight')show(cur+1);if(e.key==='ArrowLeft')show(cur-1);});
+var h=location.hash.slice(1),k=ids.indexOf(h);if(k>=0)show(k);})();
+</script>`;
+  return layout({ title: 'Past presidents · Rotary Club of Manila', description: `The ${list.length} presidents of the Rotary Club of Manila since 1919, with portraits and notes on each term.`, image: origin + current.img, url: `${origin}/past-presidents`, body, type: 'website' });
 }
 
 function projectsIndex(origin) {
@@ -332,19 +374,19 @@ function partnerPage(origin, interest) {
 <div>${inquiryForm({ kind: 'partner', kinds: [['partner', 'Partner or sponsor as an organization'], ['volunteer', 'Volunteer'], ['other', 'Something else']], interest })}</div>
 </div></section>
 ${routesStrip('More ways to take part')}`;
-  return layout({ title: 'Partner with us · Rotary Club of Manila', description: 'Co-fund a project, build a program with the Club, or volunteer with the Rotary Club of Manila.', image: origin + H('poa-save-lives'), url: origin + '/partner', body, nav: 'partner' });
+  return layout({ title: 'Partner with us · Rotary Club of Manila', description: 'Co-fund a project, build a program with the Club, or volunteer with the Rotary Club of Manila.', image: origin + H('poa-relief-handoff-2026'), url: origin + '/partner', body, nav: 'partner' });
 }
 
 // Homepage. Everything except the "This week" cards and the Balita block is fixed content from the
 // 107th anniversary souvenir program, with photos prepared at full resolution in /assets/home.
 // Weekly content (meeting, Balita) sits in fixed-size frames so a new upload can never distort the page.
 const H = (name) => `/assets/home/${name}.jpg`;
-const FEATURE = { img: 'river', title: 'Project R.I.V.E.R. at Hospicio de San Jose',
+const FEATURE = { img: 'river-marker', title: 'Project R.I.V.E.R. at Hospicio de San Jose',
   text: 'A P1 million high-capacity water pump drains floodwater at Hospicio de San Jose, the home on the Pasig River for elderly, abandoned and medically fragile residents, so care can continue even during severe weather.',
   quote: 'More than a flood control measure, it is a response to the fundamental determinants of dignity.',
   tags: ['Water, sanitation & hygiene', 'P1 million pump system'] };
 const FLAGSHIP = [
-  { img: 'aral', tag: 'Education', link: '/projects/aral-scholarships', title: 'A.R.A.L. scholarships', text: 'A study-now, pay-later program funded through the Leon Lambert Fellows Fund: P1 million for 15 scholars at DUALTECH Training Center, who repay once employed so the next students can train too.' },
+  { img: 'aral-scholars', tag: 'Education', link: '/projects/aral-scholarships', title: 'A.R.A.L. scholarships', text: 'A study-now, pay-later program funded through the Leon Lambert Fellows Fund: P1 million for 15 scholars at DUALTECH Training Center, who repay once employed so the next students can train too.' },
   { img: 'leap', tag: 'Peace', title: 'LEAP Awards', text: 'Leaders Excelling in ADR and Peacemaking honors people who resolve disputes, from barangay justice to arbitration, with the DOJ Office for Alternative Dispute Resolution and the Philippine Institute of Arbitrators.' },
 ];
 const SIGNATURE = [
@@ -353,10 +395,10 @@ const SIGNATURE = [
   { img: 'journalism', title: 'Journalism Awards', text: 'Recognizing a free, ethical and responsible press. The latest awards were held on 11 June 2026.' },
 ];
 const COMMUNITY = [
-  { img: 'medical', title: 'Surgical outreach', text: '36 major surgeries worth P3.6 million, funded by a P450,000 contribution.' },
-  { img: 'relief', title: 'OPLAN CARE relief', text: 'Typhoon and earthquake relief for 1,200 families in nine locations.' },
-  { img: 'reading', title: 'Rotary Quill reading hub', text: 'A school library in Sta. Ana, Manila, for more than 600 young readers.' },
-  { img: 'trees', title: 'Tree planting', text: 'Reforestation with the Dumagat community in Antipolo, alongside Rotaract.' },
+  { img: 'caravan-action', title: 'Health outreach', text: '36 major surgeries worth P3.6 million from a P450,000 contribution, and the Kalinga kay Maria women’s health caravan.' },
+  { img: 'relief-action', title: 'OPLAN CARE relief', text: 'Typhoon and earthquake relief for 1,200 families in nine locations.' },
+  { img: 'reading-training', title: 'Reading literacy', text: 'Training public school teachers to teach reading with Reading Specialists, Inc., and the Rotary Quill reading hub in Sta. Ana, Manila.' },
+  { img: 'trees-planting', title: 'Tree planting', text: 'Reforestation with the Dumagat community in Antipolo, alongside Rotaract.' },
 ];
 const YEARS = [
   { img: 'y1946', year: '1946', text: 'Club President Gil Puyat with then Vice President Elpidio Quirino: a moment of postwar leadership and national rebuilding.' },
@@ -365,6 +407,13 @@ const YEARS = [
   { img: 'y2024', year: '2024', text: 'Members gather at the Manila Hotel to celebrate 105 years of service and fellowship.' },
 ];
 
+// Cover photo of the month: one action photo that tells the Club's story. The team sets it in the editor.
+const COVER_FALLBACK = { month: '2026-09-01', image_path: '/assets/home/poa-relief-2026.jpg', alt: 'Rotarians in life vests wade waist-deep through floodwater in Calumpit, Bulacan, carrying relief bags to residents. Text: Together, we save lives. Rotary, People of Action.', caption: 'Members of the Rotary Clubs of Manila and Calumpit wade through floodwater up to five feet deep to bring relief to three cut-off barangays in Calumpit, Bulacan.', link: '/projects/typhoon-relief-2025' };
+async function currentCover() {
+  const today = new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10);
+  const rows = await q(`rcm_cover?select=*&month=lte.${today}&order=month.desc&limit=1`);
+  return rows[0] || COVER_FALLBACK;
+}
 async function home(origin) {
   const issues = await liveIssues(1).catch(() => []);
   const issue = issues[0];
@@ -378,6 +427,7 @@ async function home(origin) {
   const firstStory = coverStory || lead;
   const stories = firstStory ? [firstStory, ...arts.filter((a) => a !== firstStory)].slice(0, 6) : [];
   const mt = await nextMeeting().catch(() => null);
+  const cover = await currentCover().catch(() => null);
   const mtCount = mt ? await signupCount(mt.id) : 0;
   const nextThu = (() => { const d = new Date(Date.now() + 8 * 3600 * 1000); const add = (4 - d.getUTCDay() + 7) % 7; d.setUTCDate(d.getUTCDate() + add); return d.toISOString().slice(0, 10); })();
   const dBlock = (iso) => { const d = new Date(iso + 'T12:00:00+08:00'); const o = { timeZone: 'Asia/Manila' };
@@ -411,20 +461,19 @@ ${lead ? `<a class="wk-lead" href="/balita/${issue.issue_no}/${lead.slug}">${esc
     : `<a class="hx-item" href="/balita"><span class="hx-txt"><small>Balita</small><strong>The Club's weekly publication</strong></span><span class="hx-go">Read →</span></a>`;
 
   const POA = PROJECTS[0];
-  const POA_DID = 'From 23 July to 17 August 2025, members and neighboring clubs brought sleeping mats, food, medicines and livelihood help to evacuees and families in Tondo, Rosario in Cavite, and Calumpit, Obando and Paombong in Bulacan.';
+  const POA_DID = 'In September 2026, members waded through floodwater and went by boat with the Rotary Club of Calumpit to bring 210 relief packs to three cut-off barangays, then rice for 70 more families in Pampanga. In 2025 they brought sleeping mats, food, medicines and livelihood help to families in Tondo, Cavite and Bulacan.';
   const body = `
 <section class="hx" aria-label="Rotary Club of Manila">
-<div class="hx-stage">
-<img class="hx-img hx-then" src="${H('hero-1919')}" alt="The lobby of the Manila Hotel in 1919, where the Club was founded" fetchpriority="high">
-<img class="hx-img hx-now" src="${H('hero-helipad')}" alt="The Club's Board of Directors and Officers in barong on the Manila Hotel helipad in 2026">
-<div class="hx-shade" aria-hidden="true"></div>
-<div class="wrap hx-copy">
+<div class="hc">
+<div class="hc-copy"><div class="hc-copy-in">
 <span class="hx-kicker">Est. 1919 · Rotary Charter No. 478</span>
 <h1>Asia’s first<br>Rotary club.</h1>
 <p>Founded at the Manila Hotel in 1919, the Club still meets every Thursday, bringing Manila’s business, professional and civic leaders together to serve.</p>
 <div class="h-cta"><a class="btn btn-gold" href="#action">See our service</a><a class="btn btn-ghost" href="#club">Discover the Club</a></div>
-</div>
-<div class="hx-cap" aria-hidden="true"><span class="hx-cap-then">1919 · The Manila Hotel, where the Club was founded</span><span class="hx-cap-now">2026 · The Board on the Manila Hotel helipad</span></div>
+</div></div>
+${(() => { const cv = cover || COVER_FALLBACK; const mon = new Date(cv.month + 'T12:00:00+08:00').toLocaleDateString('en-GB', { timeZone: 'Asia/Manila', month: 'long', year: 'numeric' });
+  return `<figure class="hc-fig"><img src="${esc(pSrc(cv.image_path, 1800))}" alt="${esc(cv.alt)}" fetchpriority="high">
+<figcaption><span class="hc-tag">People of Action · ${esc(mon)}</span>${cv.caption ? `<span class="hc-cap">${esc(cv.caption)}</span>` : ''}${cv.link ? `<a class="hc-go" href="${esc(cv.link)}">Read the story</a>` : ''}</figcaption></figure>`; })()}
 </div>
 <div class="hx-week"><div class="wrap hx-week-in"><span class="hx-week-l">This week</span>${wkMeeting}${wkBalita}</div></div>
 </section>
@@ -432,7 +481,7 @@ ${lead ? `<a class="wk-lead" href="/balita/${issue.issue_no}/${lead.slug}">${esc
 
 <section class="poa" id="action"><div class="wrap">
 <div class="poa-lead">
-<a class="poa-img" href="/projects/${POA.slug}"><img src="${POA.hero.src}" alt="${esc(POA.hero.alt)}" width="1792" height="1252"></a>
+<a class="poa-img" href="/projects/${POA.slug}"><img src="${POA.hero.src}" alt="${esc(POA.hero.alt)}" width="${POA.hero.w || 1792}" height="${POA.hero.h || 1252}"></a>
 <div class="poa-body"><span class="kicker">People of Action · ${esc(POA.kicker.split(' · ')[0])}</span>
 <h2>${esc(POA.title)}</h2>
 <dl class="poa-steps"><div><dt>The need</dt><dd>${esc(POA.need[0])}</dd></div>
@@ -469,7 +518,7 @@ ${routesStrip()}
 
 <section class="h-sec" id="projects"><div class="wrap">
 <div class="h-head"><div><span class="kicker">Flagship projects</span><h2 class="h-theme"><img src="/assets/cli-h-blue.png" alt="Create Lasting Impact" width="1470" height="88"></h2><p>Rotary’s message for 2026–27 encourages all of us, as people of action, to work together to make a meaningful difference in our communities and around the world. These are the long-term projects the Club funds and runs with trusted partners.</p></div><a class="btn btn-gold" href="/donate">Support a project</a></div>
-<article class="h-feature"><img src="${H(FEATURE.img)}" alt="Rotarians and the sisters of Hospicio de San Jose at the Project R.I.V.E.R. turnover" loading="lazy">
+<article class="h-feature"><img src="${H(FEATURE.img)}" alt="Rotarians steady a ladder as a member mounts the Four-Way Test marker at Hospicio de San Jose, at the Project R.I.V.E.R. turnover in December 2025" loading="lazy">
 <div class="h-feature-body"><span class="kicker">Water &amp; health</span><h3>${esc(FEATURE.title)}</h3><p>${esc(FEATURE.text)}</p><blockquote class="h-quote">${esc(FEATURE.quote)}</blockquote><ul class="tags">${FEATURE.tags.map((t) => `<li>${esc(t)}</li>`).join('')}</ul><a class="link-arrow" href="/projects/project-river">Read the story</a></div></article>
 <div class="h-cards c2">${FLAGSHIP.map((p) => `<article class="h-card"><div class="im"><img src="${H(p.img)}" alt="" loading="lazy"></div><span class="kicker">${esc(p.tag)}</span><h3>${esc(p.title)}</h3><p>${esc(p.text)}</p>${p.link ? `<a class="link-arrow" href="${p.link}">Read the story</a>` : ''}</article>`).join('')}</div>
 
@@ -481,6 +530,8 @@ ${routesStrip()}
 <section class="h-heritage" id="history"><div class="wrap">
 <div class="h-head"><div><span class="kicker">107 years</span><h2>A century of service</h2><p>Through war, reconstruction and renewal, the Club has kept meeting and kept serving.</p></div></div>
 <div class="h-years">${YEARS.map((y) => `<figure class="h-year" style="margin:0"><img src="${H(y.img)}" alt="" loading="lazy"><b>${y.year}</b><p>${esc(y.text)}</p></figure>`).join('')}</div>
+<div class="h-pres"><div class="h-pres-head"><h3>${PRES.presidents.length} presidents since 1919</h3><a class="link-arrow" href="/past-presidents">See every president and his term</a></div>
+<div class="h-pres-row">${PRES.presidents.slice(-8).reverse().map((x) => `<a href="/past-presidents#${presId(x)}"><img src="${x.img}" alt="" width="320" height="320" loading="lazy"><b>${esc(x.name)}</b><span>${esc(x.years)}</span></a>`).join('')}</div></div>
 </div></section>
 
 ${issue ? `<section class="h-sec alt" id="balita"><div class="wrap h-balita">
@@ -497,6 +548,10 @@ ${guestName ? `<p class="h-balita-cover-note">On the cover: ${coverStory ? `<a h
 <h2>Leadership becomes more meaningful in the service of others.</h2>
 <p>Join business, professional and civic leaders working for a stronger Manila. Start by joining us at a Thursday meeting as a guest.</p>
 <div class="h-cta"><a class="btn btn-gold" href="/meeting">Attend as a guest</a><a class="btn btn-ghost" href="/join">How to join</a></div>
+</div></section>
+<section class="h-family" aria-label="The Rotary family"><div class="wrap">
+<span class="kicker">Part of the Rotary family</span>
+<div class="h-family-row">${FAMILY.map((f) => `<a href="${f.href}" target="_blank" rel="noopener"><b>${esc(f.name)}</b><span>${esc(f.note)}</span></a>`).join('')}</div>
 </div></section>
 
 ${routesStrip()}`;
@@ -892,6 +947,7 @@ module.exports = async (req, res) => {
     else if (r === 'projects') html = projectsIndex(origin);
     else if (r === 'project') { html = projectPage(origin, u.searchParams.get('slug')); if (!html) { res.statusCode = 301; res.setHeader('Location', '/projects'); return res.end(); } }
     else if (r === 'join') html = joinPage(origin);
+    else if (r === 'presidents') html = presidentsPage(origin);
     else if (r === 'partner') html = partnerPage(origin, String(u.searchParams.get('i') || '').slice(0, 80));
   } catch (e) {
     res.statusCode = 500;

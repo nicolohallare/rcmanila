@@ -46,6 +46,10 @@
       "destination": "/api/page?r=project&slug=:slug"
     },
     {
+      "source": "/past-presidents",
+      "destination": "/api/page?r=presidents"
+    },
+    {
       "source": "/join",
       "destination": "/api/page?r=join"
     },

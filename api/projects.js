@@ -5,19 +5,19 @@
 module.exports = [
   {
     slug: 'typhoon-relief-2025',
-    card: 'Typhoon relief',
-    title: 'Relief for families hit by Typhoon Crising',
+    card: 'Typhoon and flood relief',
+    title: 'Relief for families hit by typhoons and floods',
     kicker: 'Disaster response · OPLAN CARE',
-    dek: 'In July and August 2025, members delivered sleeping mats, food, medicines and livelihood help to families in Tondo, Cavite and Bulacan, working alongside neighboring Rotary clubs.',
-    hero: { src: '/assets/home/poa-save-lives.jpg', alt: 'A Rotarian in a life vest hands a Rotary Club of Manila relief bag to a woman standing in floodwater. Text: Together, we save lives. Rotary, People of Action.', poa: true },
+    dek: 'From Typhoon Crising in 2025 to the floods of September 2026, members have waded in with sleeping mats, food, medicines and livelihood help for families in Tondo, Cavite, Bulacan and Pampanga, working alongside neighboring Rotary clubs.',
+    hero: { src: '/assets/projects/relief-van-handoff-2026.jpg', w: 1800, h: 1200, alt: 'President Reginald Yu, in a life vest, passes relief bags from a van to volunteers who load them onto boats for flood-hit barangays in Calumpit, Bulacan, September 2026' },
     facts: [
-      ['When', 'July–August 2025'],
-      ['Where', 'Tondo, Manila · Rosario, Cavite · Calumpit, Obando and Paombong, Bulacan'],
-      ['Led by', 'President Raoul C. Creencia (RY 2025–26) and Atty. Mylene Creencia'],
+      ['When', 'July 2025 – September 2026'],
+      ['Where', 'Tondo, Manila · Rosario, Cavite · Calumpit, Obando and Paombong, Bulacan · Macabebe and Masantol, Pampanga'],
+      ['Led by', 'President Raoul C. Creencia (RY 2025–26) and President Reginald T. Yu (RY 2026–27)'],
       ['Cause', 'Disaster response'],
     ],
     need: [
-      'Typhoon Crising and the rains that followed displaced families in Tondo, hurt the livelihoods of fishing families in Rosario, Cavite, and left towns in Bulacan with damaged homes and disrupted livelihoods long after the skies cleared.',
+      'Floods keep returning to the same low-lying communities. In 2025, Typhoon Crising displaced families in Tondo and hurt the livelihoods of fishing families in Rosario, Cavite. In September 2026, floodwater up to five feet deep cut off Barangays Gugo, Santa Lucia and Bulusan in Calumpit, Bulacan, where ordinary relief vehicles could not reach.',
     ],
     did: [
       ['23 July 2025', 'Brgy. 128, Balut, Tondo', '400 plastic sleeping mats for evacuees at the Tondo Evacuation Center.'],
@@ -27,23 +27,28 @@ module.exports = [
       ['2 August 2025', 'Brgy. Catanghalan, Obando, Bulacan', 'Essential medicines for affected families, with RC Obando Centro.'],
       ['3 August 2025', 'Brgy. Pinalagdan, Paombong, Bulacan', 'Relief packs for 100 families, with the Rotaract Club of Manila and ALC Media–DWIZ.'],
       ['17 August 2025', 'Colegio de Calumpit, Bulacan', 'A second relief operation in Calumpit with RC Calumpit.'],
+      ['September 2026', 'Calumpit, Bulacan and Macabebe and Masantol, Pampanga', '“Kalinga sa Kalumpit”: with RC Calumpit, members led by President Reginald T. Yu went by boat and on foot through floodwater up to five feet deep to deliver 210 relief packs in Barangays Gugo, Santa Lucia and Bulusan, then rice packs for 70 more families in Pampanga.'],
     ],
     result: [
       ['1,200', 'families supported by the Club’s typhoon and earthquake relief (OPLAN CARE) during RY 2025–26, in nine locations'],
       ['400', 'sleeping mats for evacuees in Tondo'],
-      ['300', 'families in Cavite and Bulacan given relief packs, relief goods or livelihood help'],
+      ['280', 'families reached in the September 2026 flood relief in Bulacan and Pampanga'],
     ],
     partners: ['Rotary Club of Calumpit', 'Rotary Club of Obando Centro', 'Rotary Clubs of Cavite Export Processing Zone, Cavite Uptown, Dasmariñas, Rosario, Cavite Premier, Imus Independencia, Malate Prime and Tagaytay City', 'Rotaract Club of Manila', 'ALC Media–DWIZ'],
     next: 'The Club responds again whenever a disaster strikes. Gifts to the Club’s projects and members’ time make the next response possible.',
     gallery: [
-      { src: '/assets/projects/relief-rosario-1.jpg', caption: 'Handing out relief packs to fishing families in Barangay Ligtong, Rosario, Cavite, 24 July 2025.' },
-      { src: '/assets/projects/relief-rosario-2.jpg', caption: '“Sagip Mangingisda”, the relief operation for fishing families in Rosario, Cavite, with neighboring Rotary clubs.' },
-      { src: '/assets/projects/relief-calumpit.jpg', caption: 'Manila and Calumpit Rotarians with relief goods at Colegio de Calumpit, Bulacan, August 2025.' },
+      { src: '/assets/projects/relief-bancas-2026.jpg', caption: 'Volunteers load relief bags onto boats, the only way to reach Barangays Gugo, Santa Lucia and Bulusan while floodwater cut them off, September 2026.' },
+      { src: '/assets/projects/relief-lifevests-2026.jpg', caption: 'Members of the Rotary Clubs of Manila and Calumpit put on life vests before heading out by boat to the flooded barangays.' },
+      { src: '/assets/projects/relief-bulusan-2026.jpg', caption: 'President Reginald Yu hands relief goods to a resident of Barangay Bulusan, where floodwater still surrounded homes.' },
+      { src: '/assets/projects/relief-unloading-2026.jpg', caption: 'Members unload relief goods straight into the flooded community and carry each bag by hand.' },
+      { src: '/assets/projects/relief-raft-2026.jpg', caption: 'A resident of Barangay Bulusan tows his relief goods home on a raft of used plastic containers.' },
+      { src: '/assets/projects/relief-rosario-2.jpg', caption: '“Sagip Mangingisda”: rice and relief goods for fishing families in Barangay Ligtong, Rosario, Cavite, 24 July 2025.' },
     ],
     sources: [
       ['/balita/4059/typhoon-response-and-relief-efforts', 'Balita No. 4059: Typhoon response and relief efforts'],
       ['/balita/4061/rc-manila-continues-its-relief-operations-in-calumpit-bulacan', 'Balita No. 4061: RC Manila continues its relief operations in Calumpit'],
       ['/balita/4061/disaster-relief-operation-in-calumpit-featured-on-dwiz-news', 'Balita No. 4061: The Calumpit operation on DWIZ News'],
+      ['/balita/4106/kalinga-sa-kalumpit', 'Balita No. 4106: Kalinga sa Kalumpit'],
       [null, 'RY 2025–26 report of IPP Raoul C. Creencia'],
     ],
   },
@@ -53,7 +58,7 @@ module.exports = [
     title: 'Life-saving equipment for newborns at PGH',
     kicker: 'Maternal and child health · Rotary Global Grant',
     dek: 'With the Rotary Club of Kangjin-Tamjin in Korea, the Club equipped the Neonatal Intensive Care Unit of the Philippine General Hospital, the country’s largest public hospital, through a Rotary Foundation Global Grant.',
-    hero: { src: '/assets/projects/pgh-turnover-group.jpg', w: 780, h: 461, alt: 'Members of the Rotary Club of Manila and the Rotary Club of Kangjin-Tamjin at UP–PGH with a Rotary banner and a Global Grant GG2682583 banner, at the turnover of neonatal care equipment, September 2026' },
+    hero: { src: '/assets/projects/pgh-program.jpg', w: 964, h: 557, alt: 'IPP Raoul Creencia presents the background of Global Grant #2682583 to Rotarians from Manila and Kangjin-Tamjin at UP–PGH, with the donated neonatal care units lined up at the side, 4 September 2026' },
     facts: [
       ['Grant', 'Rotary Foundation Global Grant #2682583, “Strengthening Neonatal Care through Life-Saving Equipment Support”'],
       ['Where', 'Neonatal Intensive Care Unit, UP–Philippine General Hospital, Manila'],
@@ -78,11 +83,10 @@ module.exports = [
     partners: ['Rotary Club of Kangjin-Tamjin (RI District 3610, Korea)', 'UP–Philippine General Hospital, Division of Newborn Medicine', 'Rotary Districts 3610 and 3810', 'The Rotary Foundation'],
     next: 'The equipment is now in use at the NICU. The Rotary Club of Kangjin-Tamjin hopes to make the partnership an annual effort.',
     gallery: [
-      { src: '/assets/projects/pgh-turnover-program.jpg', caption: 'The turnover program at UP–PGH, with two of the donated units at right, 4 September 2026.' },
-      { src: '/assets/projects/pgh-marker-unveiling.jpg', caption: 'Unveiling the Global Grant #2682583 and Four-Way Test marker at the NICU ward.' },
-      { src: '/assets/projects/pgh-marker.jpg', caption: 'The marker records the donation of neonatal care equipment through Global Grant #2682583.' },
-      { src: '/assets/projects/pgh-nicu-visit-2025.jpg', caption: 'The two clubs at the PGH Neonatal ICU on 13 July 2025, confirming what equipment was needed.' },
-      { src: '/assets/projects/pgh-mou-2025.jpg', caption: 'President Raoul Creencia and President Bang Jae Nam of RC Kangjin-Tamjin after signing the Memorandum of Understanding, 12 July 2025.' },
+      { src: '/assets/projects/pgh-presenting-units.jpg', caption: 'A speaker points out the donated neonatal care units during the turnover ceremony at UP–PGH, 4 September 2026.' },
+      { src: '/assets/projects/pgh-unveiling.jpg', caption: 'Unveiling the Global Grant #2682583 and Four-Way Test marker at the NICU ward.' },
+      { src: '/assets/projects/pgh-translating.jpg', caption: 'Rotarian Ingil Ra translates for IPP Raoul Creencia so the Korean delegation can follow the program.' },
+      { src: '/assets/projects/pgh-nicu-tour-2025.jpg', caption: 'Rotarians and NICU staff tour the PGH Neonatal ICU on 13 July 2025 to confirm what equipment was needed.' },
     ],
     sources: [
       ['/balita/4057/visit-to-the-philippine-general-hospital', 'Balita No. 4057: Visit to the Philippine General Hospital'],
@@ -121,10 +125,10 @@ module.exports = [
     partners: ['Bayanan Elementary School', 'Barangay Bayanan', 'The Valencia family, landowners', 'Department of Education'],
     next: 'The Deed of Donation is completed and submitted to the Department of Education, resources are mobilized, and the rehabilitation is carried out.',
     gallery: [
-      { src: '/assets/projects/bayanan-teacher.jpg', caption: 'President Reginald Yu listens as a Bayanan Elementary School teacher shares her list of much-needed improvements, while Director Nico Valencia looks on.' },
+      { src: '/assets/projects/bayanan-surveying.jpg', caption: 'Director Nico Valencia and his engineer survey the school grounds with the School Head to assess the repairs needed.' },
+      { src: '/assets/projects/bayanan-teacher.jpg', caption: 'President Reginald Yu listens as a teacher goes through her list of much-needed improvements, while Director Nico Valencia looks on.' },
       { src: '/assets/projects/bayanan-comfort-room.jpg', caption: 'Rotarians inspect the school’s comfort rooms, one of the repairs the Club has committed to.' },
-      { src: '/assets/projects/bayanan-teachers.jpg', caption: 'Manila Rotarians with the teachers of Bayanan Elementary School.' },
-      { src: '/assets/projects/bayanan-briefing.jpg', caption: 'A briefing on Mindoro and the school’s community before the visit, at Filipiniana Hotel in Calapan City.' },
+      { src: '/assets/projects/bayanan-school-head.jpg', caption: 'President Reginald Yu and the School Head walk the grounds and discuss the school’s most urgent needs.' },
     ],
     sources: [
       ['/balita/4105/a-long-walk-toward-hope-rotary-club-of-manila-visits-bayanan-elementary-school-i', 'Balita No. 4105: A Long Walk Toward Hope'],
@@ -136,7 +140,7 @@ module.exports = [
     title: 'Project R.I.V.E.R. at Hospicio de San Jose',
     kicker: 'Water, sanitation and hygiene',
     dek: 'Rotary Initiative for Vulnerability Elimination and Resilience: a high-capacity pump system so the Pasig River home for elderly, abandoned and medically fragile residents can keep caring for them through floods.',
-    hero: { src: '/assets/home/river.jpg', alt: 'Rotarians and the sisters of Hospicio de San Jose at the Project R.I.V.E.R. turnover' },
+    hero: { src: '/assets/projects/river-marker-2025.jpg', w: 640, h: 523, alt: 'Rotarians steady a ladder as a member mounts the Club’s Four-Way Test marker at Hospicio de San Jose, 9 December 2025' },
     facts: [
       ['Where', 'Hospicio de San Jose, on the Pasig River, Manila'],
       ['Budget', 'P1 million allocated for the pump system'],
@@ -147,7 +151,7 @@ module.exports = [
     ],
     did: [
       ['RY 2025–26', 'Flagship project', 'The Club launched Project R.I.V.E.R. as a flagship project and allocated P1 million to buy and install a high-capacity water pump system.'],
-      ['RY 2025–26', 'Hospicio de San Jose', 'Rotarians turned the project over to the sisters of Hospicio de San Jose.'],
+      ['9 December 2025', 'Hospicio de San Jose', 'The Club turned over the project check to Hospicio de San Jose and installed its sixth Four-Way Test marker there.'],
     ],
     result: [
       ['P1M', 'for a high-capacity water pump system'],
@@ -160,6 +164,7 @@ module.exports = [
     sources: [
       [null, 'RY 2025–26 report of IPP Raoul C. Creencia'],
       ['/balita/4056/new-rotary-year-kick-off-activity-at-hospicio-de-san-jose', 'Balita No. 4056: New Rotary Year kick-off at Hospicio de San Jose'],
+      ['/balita/4073/project-river-building-resilience-through-safer-water-management', 'Balita No. 4073: Project R.I.V.E.R. turnover'],
     ],
   },
   {
@@ -168,7 +173,7 @@ module.exports = [
     title: 'A.R.A.L.: study now, pay later',
     kicker: 'Basic education and livelihood',
     dek: 'Advancing Resources for Accessible Learning funds technical training for young people at DUALTECH Training Center. Graduates repay once they are employed, so the next students can train too.',
-    hero: { src: '/assets/home/poa-empower.jpg', alt: 'Rotarians watch DUALTECH trainees at work on a lathe. Text: Together, we empower. Rotary, People of Action.', poa: true },
+    hero: { src: '/assets/home/poa-empower-2026.jpg', w: 1800, h: 1350, alt: 'Rotarians watch Dualtech scholars at work on a precision machine during the Club’s visit in September 2026. Text: Together, we empower. Rotary, People of Action.', poa: true },
     facts: [
       ['Scholars', '15 at DUALTECH Training Center'],
       ['Funding', 'P1 million from the Leon Lambert Fellows Fund'],
@@ -180,6 +185,8 @@ module.exports = [
     did: [
       ['4 March 2025', 'Planning with DUALTECH', 'Club and Rotary Club of Manila Foundation officers met DUALTECH’s leadership to set up the scholarship program.'],
       ['RY 2025–26', 'Leon Lambert Fellows Fund', 'The Club allocated P1 million to the education and technical training of 15 scholars.'],
+      ['December 2025', 'Memorandum of Agreement', 'The Club signed a Memorandum of Agreement with Dualtech Training Center and launched the A.R.A.L. program.'],
+      ['September 2026', 'Dualtech Excellence Center, Canlubang, Laguna', 'President Reginald T. Yu, IPP Raoul Creencia and Project Chair Anton Mauricio visited the workshops, watched scholars at work and discussed how to extend the scholarships to more students.'],
     ],
     result: [
       ['15', 'scholars in technical-vocational training'],
@@ -188,10 +195,17 @@ module.exports = [
     resultText: 'DUALTECH’s German-inspired dual training model combines classroom instruction with supervised on-the-job training in partner industries, so scholars graduate ready for work.',
     partners: ['DUALTECH Training Center', 'Leon Lambert Fellows', 'Rotary Club of Manila Foundation, Inc.'],
     next: 'As scholars find work and repay, the fund supports new students.',
-    gallery: [{ src: '/assets/home/aral.jpg', caption: 'At DUALTECH Training Center.' }],
+    gallery: [
+      { src: '/assets/projects/aral-machining-2026.jpg', caption: 'Members of the Rotary Club of Manila watch Dualtech scholars in hands-on precision machining training, September 2026.' },
+      { src: '/assets/projects/aral-workshop-2026.jpg', caption: 'President Reginald Yu and the Club delegation tour the Dualtech workshops, where trainees operate machinery and install electrical systems.' },
+      { src: '/assets/projects/aral-trainee-explains-2026.jpg', caption: 'A trainee walks the Rotarians through an industrial training rig.' },
+      { src: '/assets/projects/aral-demo-2026.jpg', caption: 'A Dualtech trainee explains how a digitally powered elevator system works, applying classroom principles to real-world technology.' },
+    ],
     sources: [
       [null, 'RY 2025–26 report of IPP Raoul C. Creencia'],
       ['/balita/4042/rcmfi-dualtech-scholarship-program', 'Balita No. 4042: RCMFI DualTech Scholarship Program'],
+      ['/balita/4073/moa-signing-with-dualtech-and-launch-of-aral-program', 'Balita No. 4073: MOA signing with Dualtech and launch of A.R.A.L.'],
+      ['/balita/4106/where-skill-becomes-hope', 'Balita No. 4106: Where Skill Becomes Hope'],
     ],
   },
 ];
