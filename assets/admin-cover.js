@@ -36,12 +36,12 @@
   $('cv-file').addEventListener('change', async () => {
     const f = $('cv-file').files[0]; photo = null; if (!f) return;
     try { photo = await resize(f); $('cv-preview').src = photo.data; $('cv-preview').style.display = 'block';
-      $('cv-msg').textContent = photo.w < 1200 ? 'This photo is small and may look soft on large screens. A photo at least 1600 pixels wide is best.' : ''; }
+      $('cv-msg').textContent = photo.w < 1800 ? 'This photo is small and will look soft across a large screen. Use one at least 2000 pixels wide if you can.' : ''; }
     catch (e) { $('cv-msg').textContent = e.message; }
   });
   $('cover-form').addEventListener('submit', async (e) => {
     e.preventDefault(); const b = $('cv-save');
-    const payload = { month: $('cv-month').value, caption: $('cv-caption').value, alt: $('cv-alt').value, link: $('cv-link').value };
+    const payload = { month: $('cv-month').value, caption: $('cv-caption').value, alt: $('cv-alt').value, link: $('cv-link').value, tagline: $('cv-tagline').value, focus: $('cv-focus').value };
     if (!payload.month) { $('cv-msg').textContent = 'Choose the month.'; return; }
     if (photo) payload.image = photo.data.split(',')[1];
     b.disabled = true; $('cv-msg').textContent = 'Saving…';
@@ -52,7 +52,7 @@
   $('cover-list').addEventListener('click', async (e) => {
     const ed = e.target.closest('[data-edit]'); const del = e.target.closest('[data-del]');
     if (ed) { const c = covers.find((x) => x.id === ed.getAttribute('data-edit')); if (!c) return;
-      $('cv-month').value = c.month.slice(0, 7); $('cv-caption').value = c.caption || ''; $('cv-alt').value = c.alt || ''; $('cv-link').value = c.link || '';
+      $('cv-month').value = c.month.slice(0, 7); $('cv-caption').value = c.caption || ''; $('cv-alt').value = c.alt || ''; $('cv-link').value = c.link || ''; $('cv-tagline').value = c.tagline || ''; $('cv-focus').value = ['center', 'center 25%', 'center 75%'].includes(c.focus) ? c.focus : 'center';
       $('cv-msg').textContent = 'Editing ' + monthName(c.month) + '. Choose a new photo only if you want to replace it.'; $('cover-form').scrollIntoView({ behavior: 'smooth', block: 'center' }); }
     if (del) { const c = covers.find((x) => x.id === del.getAttribute('data-del')); if (!c) return;
       if (!window.confirm('Remove the cover for ' + monthName(c.month) + '? The previous month’s cover will show instead.')) return;
