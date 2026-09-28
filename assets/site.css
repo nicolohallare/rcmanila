@@ -871,3 +871,10 @@ mark{background:#fce39b;color:inherit;padding:0 1px}
 }
 
 .lib-growing{margin:18px 0 0;font-size:14px;color:rgba(255,255,255,.75)}
+
+/* Letter-size Balita covers (2015 to mid-2024): show the whole front page instead of the tall 4:9 strip */
+.yr-cover.pg{aspect-ratio:3/4}
+.yr-cover.pg img,.issue-head .cover.pg,.from-issue img.pg,.hx-cov.pg img,.wk-cover.pg img,.h-balita-cover.pg img{object-position:center top}
+.issue-head .cover.pg{aspect-ratio:3/4}
+.from-issue img.pg{aspect-ratio:3/4}
+.yr-grid{align-items:start}

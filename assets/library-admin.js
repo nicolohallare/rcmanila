@@ -276,7 +276,7 @@
   }
 
   // ---------- digital Balita 2015–2025 → the regular Balita archive ----------
-  let DIG = [], digStop = false;
+  let DIG = [], digStop = false, ISS = [];
   const MON = { jan: 1, feb: 2, mar: 3, apr: 4, arp: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
   const MONRX = '(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|a(?:pr|rp)(?:il)?|may|june?|july?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)';
   const iso = (y, m, d) => (y >= 2014 && y <= 2027 && m >= 1 && m <= 12 && d >= 1 && d <= 31) ? `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}` : '';
@@ -328,7 +328,7 @@
       const [raw, legacy, wp] = await Promise.all([rawIndex(), listAll('legacy-pdf/'), listAll('wordpress/meeting-photos/-A/rcmanila.org/wp-content/uploads/')]);
       const cands = raw.all.concat(legacy, wp).filter((k) => /\.pdf$/i.test(k.key) && !accOf(k.key.split('/').pop()) && /balita|newsletter/i.test(k.key.split('/').pop()));
       let have = new Map();
-      try { const r = await fetch(`${SB}/rest/v1/rcm_issues?select=issue_no,issue_date&limit=5000`, { headers: { apikey: PUB } }); if (r.ok) have = new Map((await r.json()).filter((x) => x.issue_date).map((x) => [x.issue_date, x.issue_no])); } catch (e) {}
+      try { const r = await fetch(`${SB}/rest/v1/rcm_issues?select=issue_no,issue_date&limit=5000`, { headers: { apikey: PUB } }); if (r.ok) { ISS = (await r.json()).filter((x) => x.issue_date); have = new Map(ISS.map((x) => [x.issue_date, x.issue_no])); } } catch (e) {}
       const byDate = new Map(), undated = [], seen = new Set();
       for (const k of cands) {
         const name = k.key.split('/').pop().replace(/^[0-9a-f]{32}_/, '');
@@ -349,42 +349,69 @@
       $('dig-start').disabled = !todo;
     } catch (err) { if (err.auth) return show('login'); $('dig-msg').textContent = err.message; }
   };
-  function drawDig() { $('dig-rows').innerHTML = DIG.map((d, k) => `<tr><td>${esc(d.name)}<br><span class="muted">${(d.size / 1048576).toFixed(1)} MB</span></td><td id="dn-${k}">${d.no || ''}</td><td id="dd-${k}">${esc(d.date)}${d.copies > 1 ? `<br><span class="muted">${d.copies} copies</span>` : ''}</td><td id="dst-${k}">${stTag(d.state)}</td></tr>`).join(''); }
+  // For an issue whose number could not be read: the numbers missing between its neighbours tell which one it is.
+  function suggestNo(date) {
+    if (!date) return null;
+    const L = ISS.slice().sort((x, y) => x.issue_date.localeCompare(y.issue_date));
+    const prev = [...L].reverse().find((x) => x.issue_date < date), next = L.find((x) => x.issue_date > date);
+    if (!prev || !next) return null;
+    const nos = new Set(L.map((x) => x.issue_no)), miss = [];
+    for (let n = prev.issue_no + 1; n < next.issue_no; n++) if (!nos.has(n)) miss.push(n);
+    if (!miss.length) return null; if (miss.length === 1) return miss[0];
+    const g = prev.issue_no + Math.round((Date.parse(date) - Date.parse(prev.issue_date)) / 6048e5);
+    return miss.includes(g) ? g : null;
+  }
+  const noCell = (d, k) => /^failed/.test(d.state || '') && d.date
+    ? `<input type="number" data-dn="${k}" value="${d.no || suggestNo(d.date) || ''}" style="width:78px;font-size:14px;padding:4px 6px"><br><button class="smallbtn" type="button" data-retry="${k}">Retry</button> <a href="#" data-view="${k}">front page</a>${!d.no && suggestNo(d.date) ? '<br><span class="muted">suggested from the neighbouring issues</span>' : ''}`
+    : (d.no || '');
+  function drawDig() { $('dig-rows').innerHTML = DIG.map((d, k) => `<tr><td>${esc(d.name)}<br><span class="muted">${(d.size / 1048576).toFixed(1)} MB</span></td><td id="dn-${k}">${noCell(d, k)}</td><td id="dd-${k}">${esc(d.date)}${d.copies > 1 ? `<br><span class="muted">${d.copies} copies</span>` : ''}</td><td id="dst-${k}">${stTag(d.state)}</td></tr>`).join(''); }
+  $('dig-rows').onclick = async (e) => {
+    const v = e.target.closest('[data-view]');
+    if (v) { e.preventDefault(); const [url] = await getUrls([DIG[+v.dataset.view].key]); window.open(url, '_blank', 'noopener'); return; }
+    const r = e.target.closest('[data-retry]');
+    if (r) { const k = +r.dataset.retry; const n = Number(($('dig-rows').querySelector(`[data-dn="${k}"]`) || {}).value); if (!(n >= 3300 && n < 4200)) { alert('Type the issue number printed on the front page.'); return; } r.disabled = true; await addOne(k, n); drawDig(); }
+  };
   const setDig = (k, s) => { DIG[k].state = s; const c = $('dst-' + k); if (c) c.innerHTML = stTag(s); };
   $('dig-stop').onclick = () => { digStop = true; };
+  async function addOne(k, forcedNo) {
+    const d = DIG[k];
+    try {
+      setDig(k, 'Downloading…');
+      const [url] = await getUrls([d.key]); const blob = await (await fetch(url)).blob(); const f = new File([blob], d.name, { type: 'application/pdf' });
+      const pk = await window.BalitaExtract.peek(f);
+      if ((pk.text || '').replace(/\s/g, '').length < 60) { setDig(k, 'Reading the front page…'); pk.text = (await frontOcr(f)) + '\n' + (pk.text || ''); }
+      const td = mastDate(pk.text || '', d.date); if (td) d.date = td;
+      d.no = forcedNo || issueNo(pk.text || '', d.date);
+      $('dn-' + k).textContent = d.no || '?'; $('dd-' + k).textContent = d.date || '';
+      if (!d.no) { setDig(k, 'failed: no issue number on the front page'); return false; }
+      const chk = await admin('check-issue', { issue_no: d.no });
+      const addPagesOnly = chk.exists && chk.source === 'legacy' && !chk.has_pages;
+      if (chk.exists && !addPagesOnly) { setDig(k, 'Already on the website'); return false; }
+      setDig(k, 'Reading pages…');
+      const pages = await window.BalitaExtract.extractPdf(f, ({ n, total }) => setDig(k, `Reading page ${n} of ${total}…`), { pagesOnly: true });
+      const { issue } = await admin('start', { issue_no: d.no, issue_date: d.date || null, page_count: pages.length, source: 'legacy', keep: addPagesOnly });
+      const v = Date.now().toString(36);
+      const files = pages.map((p) => ({ name: `pages/page-${String(p.n).padStart(3, '0')}-${v}.jpg`, blob: p.thumbBlob, kind: 'page' }));
+      files.push({ name: `cover-${v}.jpg`, blob: await window.BalitaExtract.coverFrom(pages[0]), kind: 'cover' });
+      if (f.size <= 19.5 * 1048576) files.push({ name: `balita-${d.no}-${v}.pdf`, blob: f, kind: 'pdf' });
+      const signed = []; for (let i = 0; i < files.length; i += 100) signed.push(...(await admin('sign', { issue_no: d.no, names: files.slice(i, i + 100).map((x) => x.name) })).uploads);
+      const byName = new Map(signed.map((s) => [s.name, s])); let up = 0;
+      await pool(files, 5, async (x) => { const s = byName.get(x.name); const fd = new FormData(); fd.append('cacheControl', '31536000'); fd.append('', x.blob, x.name.split('/').pop()); await retry(async () => { const r = await fetch(s.signedUrl, { method: 'PUT', headers: { 'x-upsert': 'true' }, body: fd }); if (!r.ok) throw new Error('upload ' + r.status); }); x.path = s.path; setDig(k, `Saving ${++up} of ${files.length}…`); }, () => false);
+      const text = pages.map((p) => p.text || '').join('\n\n').slice(0, 400000); const pdf = files.find((x) => x.kind === 'pdf');
+      await admin('legacy-finish', { issue_id: issue.id, fields: { issue_date: d.date || null, cover_path: files.find((x) => x.kind === 'cover').path, pages: files.filter((x) => x.kind === 'page').map((x) => x.path), page_count: pages.length, search_text: text, pdf_url: pdf ? `${SB}/storage/v1/object/public/rcm/${pdf.path}` : null } });
+      setDig(k, 'Added ✓'); ISS.push({ issue_no: d.no, issue_date: d.date }); return true;
+    } catch (err) { if (err.auth) { show('login'); return false; } setDig(k, 'failed: ' + err.message.slice(0, 60)); }
+    return false;
+  }
   $('dig-start').onclick = async () => {
     digStop = false; $('dig-start').disabled = true; $('dig-stop').disabled = false; let added = 0;
     for (let k = 0; k < DIG.length && !digStop; k++) {
       const d = DIG[k]; if (/^(Added|Already)/.test(d.state)) { $('dig-bar').style.width = Math.round((k + 1) / DIG.length * 100) + '%'; continue; }
-      try {
-        setDig(k, 'Downloading…');
-        const [url] = await getUrls([d.key]); const blob = await (await fetch(url)).blob(); const f = new File([blob], d.name, { type: 'application/pdf' });
-        const pk = await window.BalitaExtract.peek(f);
-        if ((pk.text || '').replace(/\s/g, '').length < 60) { setDig(k, 'Reading the front page…'); pk.text = (await frontOcr(f)) + '\n' + (pk.text || ''); }
-        const td = mastDate(pk.text || '', d.date); if (td) d.date = td;
-        d.no = issueNo(pk.text || '', d.date);
-        $('dn-' + k).textContent = d.no || '?'; $('dd-' + k).textContent = d.date || '';
-        if (!d.no) { setDig(k, 'failed: no issue number on the front page'); continue; }
-        const chk = await admin('check-issue', { issue_no: d.no });
-        const addPagesOnly = chk.exists && chk.source === 'legacy' && !chk.has_pages;
-        if (chk.exists && !addPagesOnly) { setDig(k, 'Already on the website'); continue; }
-        setDig(k, 'Reading pages…');
-        const pages = await window.BalitaExtract.extractPdf(f, ({ n, total }) => setDig(k, `Reading page ${n} of ${total}…`), { pagesOnly: true });
-        const { issue } = await admin('start', { issue_no: d.no, issue_date: d.date || null, page_count: pages.length, source: 'legacy', keep: addPagesOnly });
-        const v = Date.now().toString(36);
-        const files = pages.map((p) => ({ name: `pages/page-${String(p.n).padStart(3, '0')}-${v}.jpg`, blob: p.thumbBlob, kind: 'page' }));
-        files.push({ name: `cover-${v}.jpg`, blob: await window.BalitaExtract.coverFrom(pages[0]), kind: 'cover' });
-        if (f.size <= 19.5 * 1048576) files.push({ name: `balita-${d.no}-${v}.pdf`, blob: f, kind: 'pdf' });
-        const signed = []; for (let i = 0; i < files.length; i += 100) signed.push(...(await admin('sign', { issue_no: d.no, names: files.slice(i, i + 100).map((x) => x.name) })).uploads);
-        const byName = new Map(signed.map((s) => [s.name, s])); let up = 0;
-        await pool(files, 5, async (x) => { const s = byName.get(x.name); const fd = new FormData(); fd.append('cacheControl', '31536000'); fd.append('', x.blob, x.name.split('/').pop()); await retry(async () => { const r = await fetch(s.signedUrl, { method: 'PUT', headers: { 'x-upsert': 'true' }, body: fd }); if (!r.ok) throw new Error('upload ' + r.status); }); x.path = s.path; setDig(k, `Saving ${++up} of ${files.length}…`); }, () => false);
-        const text = pages.map((p) => p.text || '').join('\n\n').slice(0, 400000); const pdf = files.find((x) => x.kind === 'pdf');
-        await admin('legacy-finish', { issue_id: issue.id, fields: { issue_date: d.date || null, cover_path: files.find((x) => x.kind === 'cover').path, pages: files.filter((x) => x.kind === 'page').map((x) => x.path), page_count: pages.length, search_text: text, pdf_url: pdf ? `${SB}/storage/v1/object/public/rcm/${pdf.path}` : null } });
-        setDig(k, 'Added ✓'); added++;
-      } catch (err) { if (err.auth) return show('login'); setDig(k, 'failed: ' + err.message.slice(0, 60)); }
+      if (await addOne(k)) added++;
+
       $('dig-bar').style.width = Math.round((k + 1) / DIG.length * 100) + '%';
     }
-    $('dig-msg').textContent = `${added} issues added.`; $('dig-start').disabled = false; $('dig-stop').disabled = true;
+    drawDig(); $('dig-msg').textContent = `${added} issues added.` + (DIG.some((d) => /^failed/.test(d.state || '')) ? ' Rows that failed now have a box for the issue number: check the front page, then Retry.' : ''); $('dig-start').disabled = false; $('dig-stop').disabled = true;
   };
 
   // ---------- photo galleries (from the old website's crawl) ----------
