@@ -109,10 +109,10 @@ ${url ? `<meta property="og:url" content="${esc(url)}">` : ''}
 <header class="site-head"><div class="wrap">
 <a class="logo lockup" href="/" aria-label="Rotary Club of Manila home"><img class="lk-club" src="/assets/club-logo.png" alt="Rotary Club of Manila" width="803" height="286"><span class="lk-rule" aria-hidden="true"></span><img class="lk-msg" src="/assets/msg-2026.png" alt="Create Lasting Impact" width="918" height="509"></a>
 <nav class="nav" aria-label="Main">
-<a href="/#club">Our Club</a><a href="/projects" class="${nav === 'projects' ? 'on' : ''}">Projects</a><a href="/meeting" class="${nav === 'meeting' ? 'on' : ''}">Meetings</a><a href="/balita" class="${nav === 'balita' ? 'on' : ''}">Balita</a><a href="/join" class="${nav === 'join' ? 'on' : ''}">Join</a><a href="/partner" class="${nav === 'partner' ? 'on' : ''}">Partner</a>
+<a href="/#club">Our Club</a><a href="/projects" class="${nav === 'projects' ? 'on' : ''}">Projects</a><a href="/meeting" class="${nav === 'meeting' ? 'on' : ''}">Meetings</a><a href="/balita" class="${nav === 'balita' ? 'on' : ''}">Balita</a><a href="/library" class="${nav === 'library' ? 'on' : ''}">Library</a><a href="/join" class="${nav === 'join' ? 'on' : ''}">Join</a><a href="/partner" class="${nav === 'partner' ? 'on' : ''}">Partner</a>
 </nav>
 <details class="menu"><summary>Menu</summary><div class="menu-panel">
-<a href="/#club">Our Club</a><a href="/past-presidents">Past presidents</a><a href="/projects">Service projects</a><a href="/meeting">Meetings</a><a href="/balita">Balita</a><a href="/join">Join the Club</a><a href="/partner">Partner or volunteer</a><a href="/donate">Donate</a><a href="#contact">Contact</a>
+<a href="/#club">Our Club</a><a href="/past-presidents">Past presidents</a><a href="/projects">Service projects</a><a href="/meeting">Meetings</a><a href="/balita">Balita</a><a href="/library">Heritage Library</a><a href="/join">Join the Club</a><a href="/partner">Partner or volunteer</a><a href="/donate">Donate</a><a href="#contact">Contact</a>
 </div></details>
 <a class="btn btn-gold head-cta" href="/meeting">Attend a meeting</a>
 </div></header>
@@ -120,7 +120,7 @@ ${url ? `<meta property="og:url" content="${esc(url)}">` : ''}
 <footer class="foot" id="contact"><div class="wrap">
 <div style="display:flex;flex-direction:column;gap:14px"><span class="foot-lockup"><img class="lk-club" src="/assets/club-logo-white.png" alt="Rotary Club of Manila" width="803" height="286"><span class="lk-rule" aria-hidden="true"></span><img class="lk-msg" src="/assets/msg-2026-white.png" alt="Create Lasting Impact" width="918" height="509"></span><span>The first Rotary club in Asia. Service above self since 1919.</span></div>
 <address style="font-style:normal"><strong>Secretariat</strong>RCM Office, 543 Arquiza St. cor. Grey St.<br>Ermita, Manila<br><a href="${TEL}">(02) 8527-1885</a><br><a href="mailto:${MAIL}">${MAIL}</a></address>
-<div><strong>Explore</strong><a href="/projects">Service projects</a><br><a href="/past-presidents">Past presidents</a><br><a href="/meeting">Weekly meeting</a><br><a href="/balita">Balita archive</a><br><a href="/join">Join</a> · <a href="/partner">Partner</a> · <a href="/donate">Donate</a><br><a href="https://www.facebook.com/RotaryClubofManila" target="_blank" rel="noopener">Facebook</a> · <a href="https://www.linkedin.com/company/rotary-club-of-manila/" target="_blank" rel="noopener">LinkedIn</a></div>
+<div><strong>Explore</strong><a href="/projects">Service projects</a><br><a href="/past-presidents">Past presidents</a><br><a href="/meeting">Weekly meeting</a><br><a href="/balita">Balita archive</a><br><a href="/library">Heritage Library</a><br><a href="/join">Join</a> · <a href="/partner">Partner</a> · <a href="/donate">Donate</a><br><a href="https://www.facebook.com/RotaryClubofManila" target="_blank" rel="noopener">Facebook</a> · <a href="https://www.linkedin.com/company/rotary-club-of-manila/" target="_blank" rel="noopener">LinkedIn</a></div>
 <div><strong>Rotary family</strong>${FAMILY.map((f) => `<a href="${f.href}" target="_blank" rel="noopener">${esc(f.name)}</a>`).join('<br>')}</div>
 <div class="copy">© ${new Date().getFullYear()} Rotary Club of Manila</div>
 </div></footer>
@@ -593,7 +593,7 @@ ${years.map((g) => `<section class="yr" id="ry-${g.y.slice(0, 4)}"><h2>Rotary Ye
 <div class="yr-grid">${g.list.map((i) => `<a class="yr-card" href="/balita/${i.issue_no}"><div class="yr-cover">${i.cover_path ? `<img src="${coverSrc(i, 300)}" alt="" loading="lazy">` : ''}</div><strong>No. ${i.issue_no}</strong><span>${esc(fmtDate(i.issue_date))}</span></a>`).join('')}</div></section>`).join('')}` : '<div class="empty">No issues published yet.</div>';
   }
   const body = `<section class="wrap section arch">
-<div><span class="eyebrow">The official publication of the Rotary Club of Manila</span><h1 style="font-size:48px">Balita</h1><p class="arch-lede">Issues of the Club’s weekly publication from 2023 onward, grouped by Rotary year. Search finds names, projects and topics inside every issue.</p></div>
+<div><span class="eyebrow">The official publication of the Rotary Club of Manila</span><h1 style="font-size:48px">Balita</h1><p class="arch-lede">Issues of the Club’s weekly publication from 2023 onward, grouped by Rotary year. Search finds names, projects and topics inside every issue. Older issues, back to 1948, are in the <a href="/library/balita">Heritage Library</a>.</p></div>
 ${searchBox}
 ${inner}
 </section>`;

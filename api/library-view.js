@@ -4,7 +4,7 @@
 const CATALOGUE = require('./library-catalogue.json');
 
 const ARCH = 'https://archive.rcmanila.org';
-const LAUNCHED = false; // until the President signs off: not linked from the menu and hidden from search engines
+const LAUNCHED = true; // linked from the menu and open to search engines (set false to hide it again)
 
 module.exports = function libraryModule(ctx) {
   const { layout, esc, q, fmtDate, PRES, searchBalita } = ctx;
@@ -63,6 +63,7 @@ module.exports = function libraryModule(ctx) {
 <p>The Balita as members read it, week by week since 1948. The photographs of their projects and fellowship. The plaques, trophies and books the Club gathered in more than a hundred years as Asia’s first Rotary club.</p>
 <form action="/library/search" method="get" role="search" class="lib-search"><input name="q" type="search" placeholder="Search a name, a project, a year: “Quirino”, “Pinatubo”, “polio”" aria-label="Search the Heritage Library"><button class="btn btn-gold" type="submit">Search</button></form>
 <div class="lib-stats">${stats.map(([n, l]) => `<div><b>${n}</b><span>${l}</span></div>`).join('')}</div>
+<p class="lib-growing">The library is growing: volumes, issues and albums are being added from the Club’s archive every week.</p>
 </div></section>
 ${wk ? `<section class="lib-week"><div class="wrap lib-week-in">
 <a class="lib-week-cover" href="/library/balita/${volSlug(wk.vol)}/${wk.issue_no}"><img src="${esc(aSrc(wk.cover))}" alt="Cover of Balita No. ${wk.issue_no}" loading="lazy"></a>
