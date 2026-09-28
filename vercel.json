@@ -50,6 +50,26 @@
       "destination": "/api/page?r=presidents"
     },
     {
+      "source": "/library-admin",
+      "destination": "/library-admin.html"
+    },
+    {
+      "source": "/library",
+      "destination": "/api/page?r=lib&p="
+    },
+    {
+      "source": "/library/:a",
+      "destination": "/api/page?r=lib&p=:a"
+    },
+    {
+      "source": "/library/:a/:b",
+      "destination": "/api/page?r=lib&p=:a/:b"
+    },
+    {
+      "source": "/library/:a/:b/:c",
+      "destination": "/api/page?r=lib&p=:a/:b/:c"
+    },
+    {
       "source": "/join",
       "destination": "/api/page?r=join"
     },
