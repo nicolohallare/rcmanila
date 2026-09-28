@@ -416,7 +416,7 @@ async function currentCover() {
 }
 // People of Action campaign banners made for the Club, shown as they were designed.
 const POA_WALL = [
-  { img: '/assets/home/poa-relief-handoff-2026.jpg', link: '/projects/typhoon-relief-2025', label: 'Flood relief in Calumpit, Bulacan · September 2026', alt: 'President Reginald Yu, in a life vest, hands a Rotary Club of Manila relief bag to a woman in floodwater. Text: Together, we save lives. Rotary, People of Action.' },
+  { img: '/assets/home/poa-campaign-relief-2026.jpg', link: '/projects/typhoon-relief-2025', label: 'Campaign artwork · Flood relief', alt: 'People of Action campaign artwork: a Rotarian in a life vest hands a Rotary Club of Manila relief bag to a woman standing in floodwater. Text: Together, we save lives. Rotary, People of Action.' },
   { img: '/assets/home/poa-empower-2026.jpg', link: '/projects/aral-scholarships', label: 'Dualtech scholars in training · September 2026', alt: 'Rotarians watch a Dualtech scholar at a precision machine. Text: Together, we empower. Rotary, People of Action.' },
   { img: '/assets/home/poa-relief-2026.jpg', link: '/projects/typhoon-relief-2025', label: 'Wading in with relief · September 2026', alt: 'Rotarians in life vests wade waist-deep through floodwater carrying relief bags. Text: Together, we save lives. Rotary, People of Action.' },
   { img: '/assets/home/poa-empower-lab-2026.jpg', link: '/projects/aral-scholarships', label: 'Inside the Dualtech workshops · September 2026', alt: 'A trainee shows Rotarians an industrial training rig at Dualtech. Text: Together, we empower. Rotary, People of Action.' },
