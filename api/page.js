@@ -408,12 +408,19 @@ const YEARS = [
 ];
 
 // Cover photo of the month: one action photo that tells the Club's story. The team sets it in the editor.
-const COVER_FALLBACK = { month: '2026-09-01', tagline: 'Together, we save lives.', focus: 'center 30%', image_path: '/assets/home/cover-calumpit-08026.jpg', alt: 'Rotarians in life vests wade waist-deep through floodwater in Calumpit, Bulacan, carrying relief bags to residents. Text: Together, we save lives. Rotary, People of Action.', caption: 'Members of the Rotary Clubs of Manila and Calumpit wade through floodwater up to five feet deep to bring relief to three cut-off barangays in Calumpit, Bulacan.', link: '/projects/typhoon-relief-2025' };
+const COVER_FALLBACK = { month: '2026-09-01', tagline: 'Together, we save lives.', focus: 'center 30%', image_path: '/assets/home/cover-calumpit-07984.jpg', alt: 'Rotarians in life vests wade waist-deep through floodwater in Calumpit, Bulacan, carrying relief bags to residents. Text: Together, we save lives. Rotary, People of Action.', caption: 'Members of the Rotary Clubs of Manila and Calumpit wade through floodwater up to five feet deep to bring relief to three cut-off barangays in Calumpit, Bulacan.', link: '/projects/typhoon-relief-2025' };
 async function currentCover() {
   const today = new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10);
   const rows = await q(`rcm_cover?select=*&month=lte.${today}&order=month.desc&limit=1`);
   return rows[0] || COVER_FALLBACK;
 }
+// People of Action campaign banners made for the Club, shown as they were designed.
+const POA_WALL = [
+  { img: '/assets/home/poa-relief-handoff-2026.jpg', link: '/projects/typhoon-relief-2025', label: 'Flood relief in Calumpit, Bulacan · September 2026', alt: 'President Reginald Yu, in a life vest, hands a Rotary Club of Manila relief bag to a woman in floodwater. Text: Together, we save lives. Rotary, People of Action.' },
+  { img: '/assets/home/poa-empower-2026.jpg', link: '/projects/aral-scholarships', label: 'Dualtech scholars in training · September 2026', alt: 'Rotarians watch a Dualtech scholar at a precision machine. Text: Together, we empower. Rotary, People of Action.' },
+  { img: '/assets/home/poa-relief-2026.jpg', link: '/projects/typhoon-relief-2025', label: 'Wading in with relief · September 2026', alt: 'Rotarians in life vests wade waist-deep through floodwater carrying relief bags. Text: Together, we save lives. Rotary, People of Action.' },
+  { img: '/assets/home/poa-empower-lab-2026.jpg', link: '/projects/aral-scholarships', label: 'Inside the Dualtech workshops · September 2026', alt: 'A trainee shows Rotarians an industrial training rig at Dualtech. Text: Together, we empower. Rotary, People of Action.' },
+];
 async function home(origin) {
   const issues = await liveIssues(1).catch(() => []);
   const issue = issues[0];
@@ -466,16 +473,17 @@ ${lead ? `<a class="wk-lead" href="/balita/${issue.issue_no}/${lead.slug}">${esc
 <section class="hx" aria-label="Rotary Club of Manila">
 ${(() => { const cv = cover || COVER_FALLBACK; const mon = new Date(cv.month + 'T12:00:00+08:00').toLocaleDateString('en-GB', { timeZone: 'Asia/Manila', month: 'long', year: 'numeric' });
   const focus = /^[a-z0-9% .]{1,20}$/i.test(cv.focus || '') ? cv.focus : 'center';
-  return `<div class="cv2">
-<img class="cv2-img" src="${esc(pSrc(cv.image_path, 2400))}" alt="${esc(cv.alt)}" style="object-position:${focus}" fetchpriority="high">
-<div class="cv2-shade" aria-hidden="true"></div>
-<div class="wrap cv2-copy">
-<h1 class="cv2-club">Rotary Club of Manila <span>· Asia’s first Rotary club, est. 1919</span></h1>
-<p class="cv2-poa"><b>People of Action</b> · ${esc(mon)}</p>
-<p class="cv2-tag">${esc(cv.tagline || 'Together, we take action.')}</p>
-${cv.caption ? `<p class="cv2-cap">${esc(cv.caption)}</p>` : ''}
-<div class="h-cta">${cv.link ? `<a class="btn btn-gold" href="${esc(cv.link)}">Read the story</a>` : ''}<a class="btn btn-ghost" href="/meeting">Join us at a meeting</a></div>
-</div></div>`; })()}
+  const verb = String(cv.tagline || 'Together, we take action.').replace(/^together,?\s*we\s*/i, '').replace(/[.!]+$/, '') || 'take action';
+  return `<div class="poa-cover">
+<img class="poa-cover-img" src="${esc(pSrc(cv.image_path, 2400))}" alt="${esc(cv.alt)}" style="object-position:${focus}" fetchpriority="high">
+<div class="poa-cover-shade" aria-hidden="true"></div>
+<h1 class="poa-cover-club">Rotary Club of Manila <span>· Asia’s first Rotary club, est. 1919</span></h1>
+<div class="poa-mark" role="img" aria-label="Together, we ${esc(verb)}. Rotary Club of Manila, People of Action.">
+<span class="poa-mark-kick" aria-hidden="true">Together, we</span>
+<span class="poa-mark-verb" aria-hidden="true">${esc(verb)}</span>
+<span class="poa-mark-lock" aria-hidden="true"><img src="/assets/club-logo-white.png" alt="" width="803" height="286"><i></i><b>People <small>of</small> Action</b></span>
+</div></div>
+<div class="poa-cover-cap"><div class="wrap poa-cover-cap-in"><span class="poa-cover-tag">People of Action · ${esc(mon)}</span>${cv.caption ? `<span class="poa-cover-txt">${esc(cv.caption)}</span>` : ''}${cv.link ? `<a class="poa-cover-go" href="${esc(cv.link)}">Read the story <span aria-hidden="true">→</span></a>` : ''}</div></div>`; })()}
 <div class="hx-week"><div class="wrap hx-week-in"><span class="hx-week-l">This week</span>${wkMeeting}${wkBalita}</div></div>
 </section>
 
@@ -491,6 +499,10 @@ ${cv.caption ? `<p class="cv2-cap">${esc(cv.caption)}</p>` : ''}
 <div class="h-cta"><a class="btn btn-navy" href="/projects/${POA.slug}">Read the story</a><a class="btn btn-line" style="color:var(--navy)" href="/projects">All service projects</a></div></div>
 </div>
 <div class="pj-cards">${PROJECTS.filter((x) => x !== POA).slice(0, 3).map((x) => projectCard(x)).join('')}</div>
+</div></section>
+<section class="poa-wall"><div class="wrap">
+<div class="section-head"><div><span class="kicker">Rotary · People of Action</span><h2>Together, we act</h2></div><a class="link-arrow" href="/projects">All service projects</a></div>
+<div class="poa-wall-grid">${POA_WALL.map((b) => `<a href="${b.link}"><img src="${b.img}" alt="${esc(b.alt)}" loading="lazy"><span>${esc(b.label)}</span></a>`).join('')}</div>
 </div></section>
 ${routesStrip()}
 
