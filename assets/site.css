@@ -869,3 +869,5 @@ mark{background:#fce39b;color:inherit;padding:0 1px}
   .lib-lightbox figure{max-width:calc(100vw - 20px)}.lib-lightbox .nv{position:fixed;bottom:16px}.lib-lightbox .nv[data-s="-1"]{left:16px}.lib-lightbox .nv[data-s="1"]{right:16px}
   .lib-nav-s{display:none}
 }
+
+.lib-growing{margin:18px 0 0;font-size:14px;color:rgba(255,255,255,.75)}
