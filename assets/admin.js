@@ -490,6 +490,7 @@
       renderReview();
       if (d.issue.status === 'scheduled' || d.issue.status === 'published') showPublished();
       else $('published').classList.add('hidden');
+      cardFor = ''; loadHeyzine();
     } catch (err) { if (err.auth) return show('v-login'); $('editor').innerHTML = `<p class="err">${esc(err.message)}</p>`; }
   }
   // Turn internal photo ids (p004-1) in the AI's note into "Photo 2", matching the numbers on the photo tiles.
@@ -505,6 +506,7 @@
   function isLive() { return R.issue && R.issue.status === 'published'; }
   function statusOf(a) { if (!a.included) return ['Left out', 'off']; if (a.checked) return ['Checked', 'ok']; if (a.flag) return ['Needs a look', 'flag']; return ['To check', 'wait']; }
   function renderReview() {
+    if (R.issue) setTimeout(() => { try { $('msg').textContent = shareMessage(); } catch (e) {} }, 0);
     const { issue, articles } = R;
     $('rv-sub').textContent = `Issue ${issue.issue_no} · ${issue.issue_date || ''}`;
     const checked = articles.filter((a) => a.checked || !a.included).length;
@@ -602,19 +604,95 @@ ${a.flag ? `<div class="note stack" role="note" style="gap:8px"><div><strong>The
   $('btn-schedule').onclick = () => { const v = $('pub-at').value; if (!v) return; publish(new Date(v + ':00+08:00').toISOString()); };
   $('btn-now').onclick = () => publish(null);
   function showPublished() {
-    const i = R.issue, base = location.origin;
+    const i = R.issue;
     const live = i.status === 'published';
     const when = new Date(i.publish_at).toLocaleString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Manila' });
-    const top = R.articles.filter((a) => a.included).sort((a, b) => (b.lead - a.lead) || (a.sort - b.sort)).slice(0, 4);
-    const msg = `Balita Issue ${i.issue_no} is out. Read it online:\n${base}/balita/${i.issue_no}\n\nIn this issue:\n` + top.map((a) => `• ${a.title}: ${base}/balita/${i.issue_no}/${a.slug}`).join('\n');
     const p = $('published'); p.classList.remove('hidden');
     p.innerHTML = `<strong style="color:#1d7a46;text-transform:uppercase;letter-spacing:.08em;font-size:14px">${live ? 'Live now' : 'Scheduled'}</strong>
 <h2 style="font-size:24px">${live ? `Issue ${i.issue_no} is live on the website` : `Issue ${i.issue_no} goes live ${esc(when)}`}</h2>
-<div class="sharemsg" id="msg">${esc(msg)}</div>
-<div class="row"><button class="btn btn-gold" type="button" id="copy-msg">Copy message for Viber and Facebook</button>${live ? `<a class="btn btn-line" style="color:var(--blue)" href="/balita/${i.issue_no}" target="_blank" rel="noopener">Open the issue page</a>` : ''}<button class="smallbtn" type="button" id="unpub">${live ? 'Take offline' : 'Cancel schedule'}</button></div>`;
-    $('copy-msg').onclick = async () => { try { await navigator.clipboard.writeText(msg); $('copy-msg').textContent = 'Copied'; } catch (e) { const r = document.createRange(); r.selectNodeContents($('msg')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); } };
-    $('unpub').onclick = async () => { try { const { issue } = await call('unpublish', { issue_id: i.id }); R.issue = issue; $('published').classList.add('hidden'); } catch (e) { alertBox(e.message); } };
+<p class="muted" style="margin:0">The message and picture for Viber are just below.</p>
+<div class="row">${live ? `<a class="btn btn-line" style="color:var(--blue)" href="/balita/${i.issue_no}" target="_blank" rel="noopener">Open the issue page</a>` : ''}<button class="smallbtn" type="button" id="unpub">${live ? 'Take offline' : 'Cancel schedule'}</button></div>`;
+    $('unpub').onclick = async () => { try { const { issue } = await call('unpublish', { issue_id: i.id }); R.issue = issue; $('published').classList.add('hidden'); renderShare(); } catch (e) { alertBox(e.message); } };
+    renderShare();
   }
+
+  // ---------- share on Viber: the Heyzine link, a ready message, and a picture of the cover ----------
+  const SITE = 'https://rcmanila.org';
+  const LIB = SB + '/functions/v1/rcm-library';
+  async function libCall(action, payload) {
+    const r = await fetch(LIB, { method: 'POST', headers: { 'content-type': 'application/json', 'x-editor-code': code, apikey: PUB }, body: JSON.stringify(Object.assign({ action }, payload || {})) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || d.error) throw new Error(d.error || ('Error ' + r.status));
+    return d;
+  }
+  function shareMessage() {
+    const i = R.issue; if (!i) return '';
+    const day = i.issue_date ? new Date(i.issue_date + 'T12:00:00+08:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Manila' }) : '';
+    const top = R.articles.filter((a) => a.included).sort((a, b) => (b.lead - a.lead) || (a.sort - b.sort)).slice(0, 4);
+    const lines = [`📰 *Balita No. ${i.issue_no}*${day ? ' · ' + day : ''} is out!`];
+    if (i.guest) lines.push(`Guest speaker: ${i.guest}`);
+    lines.push('', 'Read the full issue online:', `${SITE}/balita/${i.issue_no}`);
+    if (top.length) { lines.push('', 'In this issue:'); for (const a of top) lines.push(`• ${a.title}`, `${SITE}/balita/${i.issue_no}/${a.slug}`); }
+    if (R.hz) lines.push('', '📖 Flip through the magazine:', R.hz);
+    lines.push('', '📅 Sign up for Thursday’s meeting:', `${SITE}/meeting`);
+    return lines.join('\n');
+  }
+  let cardBlob = null, cardFor = '';
+  function loadImg(src) { return new Promise((res, rej) => { const im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => res(im); im.onerror = rej; im.src = src; }); }
+  function wrapLines(ctx, text, maxW) { const out = []; let line = ''; for (const w of String(text).split(/\s+/)) { const t = line ? line + ' ' + w : w; if (ctx.measureText(t).width > maxW && line) { out.push(line); line = w; } else line = t; } if (line) out.push(line); return out; }
+  async function drawCard() {
+    const i = R.issue; if (!i) return;
+    const key = i.id + '|' + (i.cover_path || '') + '|' + (i.updated_at || '') + '|' + (i.guest || '');
+    if (key === cardFor && cardBlob) return;
+    const c = $('card'), x = c.getContext('2d'), W = 1080, H = 1350;
+    x.fillStyle = '#17458f'; x.fillRect(0, 0, W, H);
+    x.fillStyle = '#f7a81b'; x.fillRect(0, H - 330, W, 8);
+    try { const logo = await loadImg('/assets/club-logo-white.png'); const lh = 70, lw = logo.width * lh / logo.height; x.drawImage(logo, 60, 50, lw, lh); } catch (e) {}
+    x.fillStyle = '#f7a81b'; x.font = '800 26px "Open Sans", Arial, sans-serif'; x.textAlign = 'right'; x.fillText('NEW ISSUE', W - 60, 96); x.textAlign = 'left';
+    if (i.cover_path) {
+      try {
+        const im = await loadImg(imgUrl(i.cover_path, 1200) + '&v=' + Date.parse(i.updated_at || 0));
+        const boxT = 160, boxH = H - 330 - 40 - boxT, boxW = W - 120;
+        const sc = Math.min(boxW / im.width, boxH / im.height), dw = im.width * sc, dh = im.height * sc, dx = (W - dw) / 2, dy = boxT + (boxH - dh) / 2;
+        x.save(); x.shadowColor = 'rgba(0,0,0,.45)'; x.shadowBlur = 40; x.shadowOffsetY = 16; x.fillStyle = '#fff'; x.fillRect(dx, dy, dw, dh); x.restore();
+        x.drawImage(im, dx, dy, dw, dh);
+      } catch (e) {}
+    }
+    const day = i.issue_date ? new Date(i.issue_date + 'T12:00:00+08:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Manila' }) : '';
+    x.fillStyle = '#fff'; x.font = '700 64px Georgia, "Times New Roman", serif'; x.fillText(`Balita No. ${i.issue_no}`, 60, H - 230);
+    x.fillStyle = '#f7a81b'; x.font = '700 32px "Open Sans", Arial, sans-serif'; x.fillText(day + (i.guest ? '  ·  ' + i.guest : ''), 60, H - 175, W - 120);
+    x.fillStyle = '#dbe8f5'; x.font = '600 30px "Open Sans", Arial, sans-serif'; x.fillText(`Read it at rcmanila.org/balita/${i.issue_no}`, 60, H - 100, W - 120);
+    cardBlob = await new Promise((res) => c.toBlob(res, 'image/jpeg', 0.9)); cardFor = key;
+  }
+  function renderShare() {
+    const i = R.issue; if (!i) return;
+    const live = i.status === 'published';
+    $('share-note').textContent = live ? '' : 'The links work once the issue is live.';
+    $('msg').textContent = shareMessage();
+    drawCard().catch(() => {});
+  }
+  async function loadHeyzine() {
+    R.hz = null; $('hz').value = ''; $('hz-msg').textContent = '';
+    try { const d = await libCall('issue-heyzine', { issue_id: R.issue.id }); R.hz = d.heyzine_url; $('hz').value = R.hz || ''; } catch (e) { $('hz-msg').textContent = e.message; }
+    renderShare();
+  }
+  $('hz-save').onclick = async () => {
+    $('hz-msg').textContent = 'Saving…';
+    try { const d = await libCall('issue-heyzine', { issue_id: R.issue.id, url: $('hz').value.trim() }); R.hz = d.heyzine_url; $('hz').value = R.hz || ''; $('hz-msg').textContent = R.hz ? 'Saved. The issue page now shows a “Flip through the magazine” button.' : 'Removed.'; renderShare(); }
+    catch (e) { $('hz-msg').textContent = e.message; }
+  };
+  async function copyText(t) { try { await navigator.clipboard.writeText(t); return true; } catch (e) { const r = document.createRange(); r.selectNodeContents($('msg')); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); return false; } }
+  $('copy-msg').onclick = async () => { const ok = await copyText(shareMessage()); $('copy-msg').textContent = ok ? 'Copied' : 'Selected: press copy'; setTimeout(() => { $('copy-msg').textContent = 'Copy message'; }, 2500); };
+  $('dl-card').onclick = async () => { await drawCard(); if (!cardBlob) return; const a = document.createElement('a'); a.href = URL.createObjectURL(cardBlob); a.download = `balita-${R.issue.issue_no}.jpg`; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000); };
+  $('share-go').onclick = async () => {
+    const msg = shareMessage(); await copyText(msg); await drawCard();
+    const file = cardBlob ? new File([cardBlob], `balita-${R.issue.issue_no}.jpg`, { type: 'image/jpeg' }) : null;
+    try {
+      if (file && navigator.canShare && navigator.canShare({ files: [file] })) await navigator.share({ files: [file], text: msg });
+      else if (navigator.share) await navigator.share({ text: msg });
+      else { $('share-go').textContent = 'Message copied: download the picture and paste in Viber'; setTimeout(() => { $('share-go').textContent = 'Share picture and message…'; }, 4000); }
+    } catch (e) { /* the person closed the share menu */ }
+  };
   $('back-home').onclick = openHome;
   $('del-issue').onclick = async () => {
     if (!R.issue) return;
