@@ -238,25 +238,23 @@ ${routesStrip()}`;
 }
 
 
-const presId = (x) => 'p-' + x.years.slice(0, 4) + (x.years === '1945–1946' ? 'b' : '');
+const presId = (x) => x.id || 'p-' + x.years.slice(0, 4) + (x.years === '1945–1946' ? 'b' : '');
 function presidentsPage(origin) {
   const list = PRES.presidents;
   const current = list[list.length - 1];
   const card = (x, i) => `<button type="button" class="pres-card" id="${presId(x)}" data-p="${i}" aria-haspopup="dialog"><img src="${x.img}" alt="" width="320" height="320" loading="lazy"><b>${esc(x.name)}</b><span>${esc(x.years)}${x === current ? ' · Current' : ''}</span></button>`;
   const detail = (x, i) => {
-    const d = PRES.decades.find((k) => k.key === x.decade) || {};
-    const src = [x.book || !x.summary ? '“The Work That Endures”, the Club’s 107th anniversary history (2026)' : '', ...x.balita.map(([u, t]) => `<a href="${esc(u)}">Balita: ${esc(t)}</a>`)].filter(Boolean);
+    const src = [x.profile ? 'Presidential profiles, Rotary Club of Manila (2026)' : x.book || !x.summary ? '“The Work That Endures”, the Club’s 107th anniversary history (2026)' : '', ...x.balita.map(([u, t]) => `<a href="${esc(u)}">Balita: ${esc(t)}</a>`)].filter(Boolean);
     return `<template id="pt-${i}"><img src="${x.img}" alt="Portrait of ${esc(x.name)}" width="320" height="320"><div><span class="kicker">${x === current ? 'President, ' : ''}${esc(x.years)}</span><h2>${esc(x.name)}</h2>
 ${x.summary ? `<p>${esc(x.summary)}</p>` : `<p class="muted-p">The Club’s centennial history lists ${esc(x.name)} as president for ${esc(x.years)} but does not describe his term in detail.</p>`}
-${d.title ? `<p class="pres-dec"><b>${esc(d.label)}: ${esc(d.title)}.</b> ${esc(d.blurb)}</p>` : ''}
 <p class="pres-src">Source: ${src.join(' · ')}</p></div></template>`;
   };
   const body = `<section class="wrap pj-index-head"><span class="kicker">107 years of leadership</span><h1>Presidents of the Rotary Club of Manila</h1>
 <p class="lead-p">${list.length} terms since Leon J. Lambert called the first meeting of Asia’s first Rotary club in 1919. Select a portrait to read about that president’s year.</p>
 <nav class="pres-jump" aria-label="Jump to a decade">${PRES.decades.map((d) => `<a href="#d-${d.key}">${d.label.slice(0, 5)}${d.label.slice(7)}</a>`).join('')}</nav></section>
 ${PRES.decades.map((d) => `<section class="wrap pres-dec-sec" id="d-${d.key}"><div class="pres-dec-head"><span class="kicker">${esc(d.label)}</span><h2>${esc(d.title)}</h2><p>${esc(d.blurb)}</p></div>
-<div class="pres-grid">${list.map((x, i) => (x.decade === d.key ? card(x, i) : '')).join('')}</div></section>`).join('')}
-<section class="wrap" style="padding-bottom:64px"><p class="h-source">Portraits and names from “The Work That Endures: A Century of Service and Stewardship at the Rotary Club of Manila” by Reginald T. Yu, in the Club’s 107th anniversary program (2026). Term notes draw only on that history and the <a href="/balita">Balita archive</a>. Corrections are welcome: <a href="mailto:rotaryclubofmanila@gmail.com?subject=Past%20presidents%20page">rotaryclubofmanila@gmail.com</a>.</p></section>
+<div class="pres-grid">${list.map((x, i) => (x.decade === d.key ? card(x, i) + (PRES.interludes || []).filter((g) => g.after === x.years).map((g) => `<div class="pres-gap"><span class="kicker">${esc(g.years)}</span><b>${esc(g.title)}</b><p>${esc(g.text)}</p></div>`).join('') : '')).join('')}</div></section>`).join('')}
+<section class="wrap" style="padding-bottom:64px"><p class="h-source">Names and term descriptions from the Club’s presidential profiles, “Roster of Presidents 1919–2027” (2026). Portraits from “The Work That Endures: A Century of Service and Stewardship at the Rotary Club of Manila” by Reginald T. Yu, in the Club’s 107th anniversary program (2026). Corrections are welcome: <a href="mailto:rotaryclubofmanila@gmail.com?subject=Past%20presidents%20page">rotaryclubofmanila@gmail.com</a>.</p></section>
 ${list.map(detail).join('')}
 <dialog class="pres-dlg" id="pres-dlg" aria-labelledby="pres-dlg-t"><button type="button" class="pres-x" aria-label="Close">×</button><div class="pres-body" id="pres-dlg-t"></div><div class="pres-nav"><button type="button" data-step="-1">← Previous</button><button type="button" data-step="1">Next →</button></div></dialog>
 <script>
@@ -267,7 +265,7 @@ dlg.addEventListener('close',function(){try{history.replaceState(null,'',locatio
 document.addEventListener('keydown',function(e){if(!dlg.open)return;if(e.key==='ArrowRight')show(cur+1);if(e.key==='ArrowLeft')show(cur-1);});
 var h=location.hash.slice(1),k=ids.indexOf(h);if(k>=0)show(k);})();
 </script>`;
-  return layout({ title: 'Past presidents · Rotary Club of Manila', description: `The ${list.length} presidents of the Rotary Club of Manila since 1919, with portraits and notes on each term.`, image: origin + current.img, url: `${origin}/past-presidents`, body, type: 'website' });
+  return layout({ title: 'Past presidents · Rotary Club of Manila', description: `The ${list.length} presidential terms of the Rotary Club of Manila since 1919, with portraits and a profile of each president.`, image: origin + current.img, url: `${origin}/past-presidents`, body, type: 'website' });
 }
 
 function projectsIndex(origin) {
@@ -549,7 +547,7 @@ ${routesStrip()}
 <section class="h-heritage" id="history"><div class="wrap">
 <div class="h-head"><div><span class="kicker">107 years</span><h2>A century of service</h2><p>Through war, reconstruction and renewal, the Club has kept meeting and kept serving.</p></div></div>
 <div class="h-years">${YEARS.map((y) => `<figure class="h-year" style="margin:0"><img src="${H(y.img)}" alt="" loading="lazy"><b>${y.year}</b><p>${esc(y.text)}</p></figure>`).join('')}</div>
-<div class="h-pres"><div class="h-pres-head"><h3>${PRES.presidents.length} presidents since 1919</h3><a class="link-arrow" href="/past-presidents">See every president and his term</a></div>
+<div class="h-pres"><div class="h-pres-head"><h3>${PRES.presidents.length} presidential terms since 1919</h3><a class="link-arrow" href="/past-presidents">See every president and his term</a></div>
 <div class="h-pres-row">${PRES.presidents.slice(-8).reverse().map((x) => `<a href="/past-presidents#${presId(x)}"><img src="${x.img}" alt="" width="320" height="320" loading="lazy"><b>${esc(x.name)}</b><span>${esc(x.years)}</span></a>`).join('')}</div></div>
 </div></section>
 
@@ -918,7 +916,12 @@ function notFoundPage() {
 
 module.exports = async (req, res) => {
   const u = new URL(req.url, `https://${req.headers.host}`);
-  const origin = `https://${req.headers['x-forwarded-host'] || req.headers.host}`;
+  const host = String(req.headers['x-forwarded-host'] || req.headers.host || '');
+  // Once the club's own domain is live, SITE_URL (a Vercel environment variable, e.g. https://rcmanila.org)
+  // makes every canonical link, sitemap entry and share card point there, and the old vercel.app address
+  // stops being indexed by search engines.
+  const origin = (process.env.SITE_URL || '').replace(/\/$/, '') || `https://${host}`;
+  if (process.env.SITE_URL && /\.vercel\.app$/.test(host)) res.setHeader('X-Robots-Tag', 'noindex');
   SITE = origin;
   const r = u.searchParams.get('r') || 'home';
   if (r === 'preview') {
@@ -933,7 +936,7 @@ module.exports = async (req, res) => {
   }
   if (r === 'robots') {
     res.setHeader('Content-Type', 'text/plain; charset=utf-8'); res.setHeader('Cache-Control', 'public, s-maxage=86400');
-    return res.end(`User-agent: *\nDisallow: /admin\nDisallow: /secretariat\nDisallow: /api/\nSitemap: ${origin}/sitemap.xml\n`);
+    return res.end(`User-agent: *\nDisallow: /admin\nDisallow: /secretariat\nDisallow: /library-admin\nDisallow: /api/\nSitemap: ${origin}/sitemap.xml\n`);
   }
   if (r === 'sitemap') {
     try {

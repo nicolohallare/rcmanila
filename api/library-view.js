@@ -14,8 +14,8 @@ module.exports = function libraryModule(ctx) {
   const pad = (n) => String(n).padStart(4, '0');
   const eraOf = (y) => PRES.decades.find((d) => { const [a, b] = d.label.split('–').map(Number); return y >= a && y < b; }) || PRES.decades[PRES.decades.length - 1];
   const eraYear = (d) => Number(d.label.slice(0, 4));
-  const presStart = (p) => Number(p.years.slice(0, 4));
-  const presId = (x) => 'p-' + x.years.slice(0, 4) + (x.years === '1945–1946' ? 'b' : '');
+  const presStart = (p) => p.start || Number(p.years.slice(0, 4));
+  const presId = (x) => x.id || 'p-' + x.years.slice(0, 4) + (x.years === '1945–1946' ? 'b' : '');
   const volSlug = (v) => (v.acc || v.id).toLowerCase();
   const catCount = (pred) => CATALOGUE.filter(pred).length;
 
