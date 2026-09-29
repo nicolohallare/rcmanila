@@ -58,17 +58,39 @@ async function signupCount(id) {
     return r.ok ? Number(await r.json()) || 0 : 0;
   } catch { return 0; }
 }
+// Every published meeting as a calendar feed members can subscribe to once (/meetings.ics); updates itself.
+async function meetingsIcs(origin) {
+  const since = new Date(Date.now() - 60 * 864e5).toISOString().slice(0, 10);
+  const ms = await q(`rcm_meetings?select=id,meeting_date,label,topic,speaker,speaker_title,time_text,venue,notes,updated_at&status=eq.published&meeting_date=gte.${since}&order=meeting_date&limit=200`).catch(() => []);
+  const escI = (t) => String(t || '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+  const fold = (line) => { const out = []; let l = line; while (l.length > 73) { out.push(l.slice(0, 73)); l = ' ' + l.slice(73); } out.push(l); return out.join('\r\n'); };
+  const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Rotary Club of Manila//Meetings//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'X-WR-CALNAME:Rotary Club of Manila meetings', 'X-WR-TIMEZONE:Asia/Manila', 'REFRESH-INTERVAL;VALUE=DURATION:PT12H', 'X-PUBLISHED-TTL:PT12H',
+    'BEGIN:VTIMEZONE', 'TZID:Asia/Manila', 'BEGIN:STANDARD', 'DTSTART:19700101T000000', 'TZOFFSETFROM:+0800', 'TZOFFSETTO:+0800', 'TZNAME:PHT', 'END:STANDARD', 'END:VTIMEZONE'];
+  for (const m of ms) {
+    const [st, en] = mtTimes(m); const d = m.meeting_date.replace(/-/g, '');
+    const f = (t) => `${d}T${String(t[0]).padStart(2, '0')}${String(t[1]).padStart(2, '0')}00`;
+    const desc = [m.label, m.speaker ? `Guest speaker: ${m.speaker}${m.speaker_title ? ', ' + m.speaker_title : ''}` : '', m.notes, `Sign up: ${origin}/meetings/${m.meeting_date}`].filter(Boolean).join('\n');
+    lines.push('BEGIN:VEVENT', `UID:${m.id}@rcmanila.org`, `DTSTAMP:${stamp}`, `DTSTART;TZID=Asia/Manila:${f(st)}`, `DTEND;TZID=Asia/Manila:${f(en)}`,
+      fold(`SUMMARY:${escI('RCM: ' + (m.topic || m.label || 'Weekly meeting'))}`), fold(`LOCATION:${escI(m.venue)}`), fold(`DESCRIPTION:${escI(desc)}`), `URL:${origin}/meetings/${m.meeting_date}`, 'END:VEVENT');
+  }
+  lines.push('END:VCALENDAR');
+  return lines.join('\r\n') + '\r\n';
+}
 function dateChip(iso) {
   const d = new Date(iso + 'T12:00:00+08:00');
   return `<div class="date-chip"><span>${d.toLocaleDateString('en-GB', { month: 'short', timeZone: 'Asia/Manila' }).toUpperCase()}</span><b>${d.toLocaleDateString('en-GB', { day: 'numeric', timeZone: 'Asia/Manila' })}</b><small>${d.toLocaleDateString('en-GB', { weekday: 'long', timeZone: 'Asia/Manila' })}</small></div>`;
 }
-function calLink(m) {
+function mtTimes(m) {
   const times = [...String(m.time_text || '').matchAll(/(\d{1,2})(?::(\d{2}))?\s*(AM|PM|NN|noon)?/gi)].map((x) => {
     const mer = (x[3] || 'PM').toUpperCase(); let h = Number(x[1]) % 12; if (mer === 'PM' || mer === 'NN' || mer === 'NOON') h += 12;
     return [h, Number(x[2] || 0)];
   });
   const st = times[0] || [12, 15];
-  const en = times[1] || [Math.min(st[0] + 2, 23), st[1]];
+  return [st, times[1] || [Math.min(st[0] + 2, 23), st[1]]];
+}
+function calLink(m) {
+  const [st, en] = mtTimes(m);
   const d = m.meeting_date.replace(/-/g, '');
   const f = (t) => `${d}T${String(t[0]).padStart(2, '0')}${String(t[1]).padStart(2, '0')}00`;
   const text = `RCM: ${m.topic || m.label || 'Weekly meeting'}`;
@@ -117,7 +139,7 @@ ${url ? `<meta property="og:url" content="${esc(url)}">` : ''}
 <a href="/#club">Our Club</a><a href="/projects" class="${nav === 'projects' ? 'on' : ''}">Projects</a><a href="/meeting" class="${nav === 'meeting' ? 'on' : ''}">Meetings</a><a href="/balita" class="${nav === 'balita' ? 'on' : ''}">Balita</a><a href="/library" class="${nav === 'library' ? 'on' : ''}">Library</a><a href="/join" class="${nav === 'join' ? 'on' : ''}">Join</a><a href="/partner" class="${nav === 'partner' ? 'on' : ''}">Partner</a>
 </nav>
 <details class="menu"><summary>Menu</summary><div class="menu-panel">
-<a href="/#club">Our Club</a><a href="/past-presidents">Past presidents</a><a href="/projects">Service projects</a><a href="/meeting">Meetings</a><a href="/balita">Balita</a><a href="/library">Heritage Library</a><a href="/join">Join the Club</a><a href="/partner">Partner or volunteer</a><a href="/donate">Donate</a><a href="#contact">Contact</a>
+<a href="/#club">Our Club</a><a href="/past-presidents">Past presidents</a><a href="/speakers">Guest speakers</a><a href="/projects">Service projects</a><a href="/meeting">Meetings</a><a href="/balita">Balita</a><a href="/library">Heritage Library</a><a href="/join">Join the Club</a><a href="/partner">Partner or volunteer</a><a href="/donate">Donate</a><a href="#contact">Contact</a>
 </div></details>
 <a class="btn btn-gold head-cta" href="/meeting">Attend a meeting</a>
 </div></header>
@@ -125,7 +147,7 @@ ${url ? `<meta property="og:url" content="${esc(url)}">` : ''}
 <footer class="foot" id="contact"><div class="wrap">
 <div style="display:flex;flex-direction:column;gap:14px"><span class="foot-lockup"><img class="lk-club" src="/assets/club-logo-white.png" alt="Rotary Club of Manila" width="803" height="286"><span class="lk-rule" aria-hidden="true"></span><img class="lk-msg" src="/assets/msg-2026-white.png" alt="Create Lasting Impact" width="918" height="509"></span><span>The first Rotary club in Asia. Service above self since 1919.</span></div>
 <address style="font-style:normal"><strong>Secretariat</strong>RCM Office, 543 Arquiza St. cor. Grey St.<br>Ermita, Manila<br><a href="${TEL}">(02) 8527-1885</a><br><a href="mailto:${MAIL}">${MAIL}</a></address>
-<div><strong>Explore</strong><a href="/projects">Service projects</a><br><a href="/past-presidents">Past presidents</a><br><a href="/meeting">Weekly meeting</a><br><a href="/balita">Balita archive</a><br><a href="/library">Heritage Library</a><br><a href="/join">Join</a> · <a href="/partner">Partner</a> · <a href="/donate">Donate</a><br><a href="https://www.facebook.com/RotaryClubofManila" target="_blank" rel="noopener">Facebook</a> · <a href="https://www.linkedin.com/company/rotary-club-of-manila/" target="_blank" rel="noopener">LinkedIn</a></div>
+<div><strong>Explore</strong><a href="/projects">Service projects</a><br><a href="/past-presidents">Past presidents</a><br><a href="/meeting">Weekly meeting</a> · <a href="/speakers">Guest speakers</a><br><a href="/balita">Balita archive</a><br><a href="/library">Heritage Library</a><br><a href="/join">Join</a> · <a href="/partner">Partner</a> · <a href="/donate">Donate</a><br><a href="https://www.facebook.com/RotaryClubofManila" target="_blank" rel="noopener">Facebook</a> · <a href="https://www.linkedin.com/company/rotary-club-of-manila/" target="_blank" rel="noopener">LinkedIn</a></div>
 <div><strong>Rotary family</strong>${FAMILY.map((f) => `<a href="${f.href}" target="_blank" rel="noopener">${esc(f.name)}</a>`).join('<br>')}</div>
 <div class="copy">© ${new Date().getFullYear()} Rotary Club of Manila</div>
 </div></footer>
@@ -239,6 +261,43 @@ ${routesStrip()}`;
 
 
 const presId = (x) => x.id || 'p-' + x.years.slice(0, 4) + (x.years === '1945–1946' ? 'b' : '');
+// ---------- Guest speakers: who has addressed the Club's Thursday meetings, from the Balita and the meeting list ----------
+async function speakersPage(origin) {
+  const [rows, guests, arts, upcoming, pastMt] = await Promise.all([
+    q('rcm_speakers?select=issue_id,issue_no,issue_date,name,title,topic&hidden=is.false&order=issue_date.desc&limit=3000').catch(() => []),
+    q('rcm_issues?select=id,issue_no,issue_date,guest&status=eq.published&guest=not.is.null&order=issue_date.desc&limit=2000').catch(() => []),
+    q('rcm_articles?select=issue_id,slug,title&kicker=eq.Guest%20speaker&limit=2000').catch(() => []),
+    q(`rcm_meetings?select=meeting_date,label,speaker,speaker_title,topic&status=eq.published&speaker=not.is.null&meeting_date=gte.${new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10)}&order=meeting_date&limit=6`).catch(() => []),
+    q('rcm_meetings?select=meeting_date,speaker,speaker_title,topic&status=eq.published&speaker=not.is.null&order=meeting_date.desc&limit=500').catch(() => []),
+  ]);
+  const artBy = new Map(); for (const a of arts) if (!artBy.has(a.issue_id)) artBy.set(a.issue_id, a);
+  const list = rows.slice();
+  const have = new Set(rows.map((r) => r.issue_id));
+  for (const g of guests) if (!have.has(g.id)) { const [name, ...rest] = String(g.guest).split(','); list.push({ issue_id: g.id, issue_no: g.issue_no, issue_date: g.issue_date, name: name.trim(), title: rest.join(',').trim() || null, topic: null }); }
+  // Meetings entered by the Secretariat fill in weeks the Balita list does not cover (for example, this year's meetings before their issue is read).
+  const norm = (t) => String(t || '').toLowerCase().replace(/[^a-z]/g, '');
+  const today = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
+  for (const m of pastMt) {
+    if (!m.speaker || m.meeting_date >= today) continue;
+    const t = Date.parse(m.meeting_date), last = norm(m.speaker.split(/\s+/).pop());
+    if (list.some((x) => x.issue_date && Math.abs(Date.parse(x.issue_date) - t) < 11 * 864e5 && norm(x.name).includes(last))) continue;
+    list.push({ issue_id: null, issue_no: null, issue_date: m.meeting_date, name: m.speaker, title: m.speaker_title, topic: m.topic, meeting: true });
+  }
+  list.sort((a, b) => String(b.issue_date).localeCompare(String(a.issue_date)));
+  const ry = (d) => { const y = Number(d.slice(0, 4)), m = Number(d.slice(5, 7)); const s = m >= 7 ? y : y - 1; return `${s}–${String(s + 1).slice(2)}`; };
+  const groups = new Map(); for (const x of list) { if (!x.issue_date) continue; const k = ry(x.issue_date); (groups.get(k) || groups.set(k, []).get(k)).push(x); }
+  const row = (x) => { const a = artBy.get(x.issue_id); const hay = [x.name, x.title, x.topic].filter(Boolean).join(' ').toLowerCase();
+    return `<li class="spk" data-q="${esc(hay)}"><span class="spk-d">${esc(fmtDate(x.issue_date))}</span><div><strong>${esc(x.name)}</strong>${x.title ? `<span class="spk-t">${esc(x.title)}</span>` : ''}${x.topic ? `<em>“${esc(x.topic)}”</em>` : ''}</div><span class="spk-l">${x.issue_no ? `<a href="/balita/${x.issue_no}">Balita No. ${x.issue_no}</a>` : `<a href="/meetings/${x.issue_date}">Meeting page</a>`}${a ? `<a href="/balita/${x.issue_no}/${esc(a.slug)}">Read about the talk</a>` : ''}</span></li>`; };
+  const up = upcoming.length ? `<section class="wrap spk-up"><span class="kicker">Coming up</span><ul class="spk-list">${upcoming.map((m) => `<li class="spk"><span class="spk-d">${esc(fmtDate(m.meeting_date))}</span><div><strong>${esc(m.speaker)}</strong>${m.speaker_title ? `<span class="spk-t">${esc(m.speaker_title)}</span>` : ''}${m.topic ? `<em>“${esc(m.topic)}”</em>` : ''}</div><span class="spk-l"><a href="/meetings/${m.meeting_date}">Sign up to attend</a></span></li>`).join('')}</ul></section>` : '';
+  const body = `<section class="wrap pj-index-head"><span class="kicker">Thursday meetings</span><h1>Guest speakers</h1>
+<p class="lead-p">Leaders from government, business, the professions and Rotary who have addressed the Club at its weekly meetings since 2015, as reported in the Balita. ${list.length} talks so far.</p>
+<label class="spk-search"><span>Find a speaker, office or topic</span><input type="search" id="spk-q" placeholder="e.g. Senator, Bangko Sentral, climate" autocomplete="off"></label></section>
+${up}
+<section class="wrap" style="padding-bottom:64px">${[...groups.entries()].map(([k, xs]) => `<div class="spk-yr"><h2>Rotary year ${esc(k)} <small>${xs.length}</small></h2><ul class="spk-list">${xs.map(row).join('')}</ul></div>`).join('') || '<p class="muted-p">The list is being prepared.</p>'}
+<p class="h-source">Names, positions and topics as printed in the Balita at the time. Corrections are welcome: <a href="mailto:${MAIL}?subject=Guest%20speakers%20page">${MAIL}</a>.</p></section>
+<script>(function(){var q=document.getElementById('spk-q');if(!q)return;q.addEventListener('input',function(){var v=q.value.trim().toLowerCase();document.querySelectorAll('.spk-yr .spk').forEach(function(li){li.hidden=!!v&&li.getAttribute('data-q').indexOf(v)<0});document.querySelectorAll('.spk-yr').forEach(function(g){g.hidden=!g.querySelector('.spk:not([hidden])')})})})();</script>`;
+  return layout({ title: 'Guest speakers · Rotary Club of Manila', description: `${list.length} guest speakers who have addressed the Rotary Club of Manila's weekly meetings since 2015.`, url: origin + '/speakers', body, nav: 'meeting' });
+}
 function presidentsPage(origin) {
   const list = PRES.presidents;
   const current = list[list.length - 1];
@@ -425,6 +484,28 @@ const POA_WALL = [
   { img: '/assets/home/poa-relief-2026.jpg', link: '/projects/typhoon-relief-2025', label: 'Wading in with relief · September 2026', alt: 'Rotarians in life vests wade waist-deep through floodwater carrying relief bags. Text: Together, we save lives. Rotary, People of Action.' },
   { img: '/assets/home/poa-empower-lab-2026.jpg', link: '/projects/aral-scholarships', label: 'Inside the Dualtech workshops · September 2026', alt: 'A trainee shows Rotarians an industrial training rig at Dualtech. Text: Together, we empower. Rotary, People of Action.' },
 ];
+// "This week in Club history": up to three things from this same week in past years (old Balita, event albums, recent Balita).
+function historyWeek(items) {
+  if (!Array.isArray(items) || !items.length) return '';
+  const round = (y) => (y % 25 === 0 ? 3 : y % 10 === 0 ? 2 : y % 5 === 0 ? 1 : 0);
+  const best = (list) => list.slice().sort((a, b) => (round(b.years_ago) - round(a.years_ago)) || (!!b.blurb - !!a.blurb) || (b.years_ago - a.years_ago))[0];
+  const picks = [];
+  const old = items.filter((x) => x.kind === 'old').sort((a, b) => (!!b.blurb - !!a.blurb) || (b.years_ago - a.years_ago))[0];
+  if (old) picks.push(old);
+  const gal = best(items.filter((x) => x.kind === 'gallery')); if (gal) picks.push(gal);
+  const bal = best(items.filter((x) => x.kind === 'balita' && !picks.some((p) => p.years_ago === x.years_ago))); if (bal) picks.push(bal);
+  for (const x of items.slice().sort((a, b) => b.years_ago - a.years_ago)) { if (picks.length >= 3) break; if (!picks.includes(x) && !picks.some((p) => p.years_ago === x.years_ago && p.kind === x.kind)) picks.push(x); }
+  const ARCH = 'https://archive.rcmanila.org/';
+  const pic = (x) => !x.image_path ? '' : x.kind === 'gallery' ? ARCH + x.image_path.replace(/(\.[a-z]+)$/i, '-t$1').split('/').map(encodeURIComponent).join('/') : img(x.image_path, 480);
+  const day = (iso) => new Date(iso + 'T12:00:00+08:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Manila' });
+  const card = (x) => {
+    const im = pic(x);
+    const face = im ? `<img src="${esc(im)}" alt="" loading="lazy"${x.kind === 'balita' ? ' class="cov"' : ''}>` : `<span class="h-wk-tile"><b>${esc(String(x.item_date).slice(0, 4))}</b><small>${esc(x.title)}</small></span>`;
+    const what = x.kind === 'gallery' ? 'Photographs' : 'The Balita';
+    return `<a class="h-wk" href="${esc(x.link)}"><span class="im">${face}</span><span class="t"><span class="yrs">${x.years_ago} year${x.years_ago === 1 ? '' : 's'} ago this week</span><strong>${esc(x.kind === 'gallery' ? x.title : x.blurb || x.title)}</strong><small>${what} · ${esc(day(x.item_date))}${x.kind !== 'gallery' && x.blurb ? ' · ' + esc(x.title) : ''}</small></span></a>`;
+  };
+  return `<div class="h-week"><h3>This week in Club history</h3><div class="h-week-row">${picks.slice(0, 3).map(card).join('')}</div></div>`;
+}
 async function home(origin) {
   const issues = await liveIssues(1).catch(() => []);
   const issue = issues[0];
@@ -439,6 +520,7 @@ async function home(origin) {
   const stories = firstStory ? [firstStory, ...arts.filter((a) => a !== firstStory)].slice(0, 6) : [];
   const mt = await nextMeeting().catch(() => null);
   const cover = await currentCover().catch(() => null);
+  const hist = await q('rpc/rcm_history_week').catch(() => []);
   const mtCount = mt ? await signupCount(mt.id) : 0;
   const nextThu = (() => { const d = new Date(Date.now() + 8 * 3600 * 1000); const add = (4 - d.getUTCDay() + 7) % 7; d.setUTCDate(d.getUTCDate() + add); return d.toISOString().slice(0, 10); })();
   const dBlock = (iso) => { const d = new Date(iso + 'T12:00:00+08:00'); const o = { timeZone: 'Asia/Manila' };
@@ -546,6 +628,7 @@ ${routesStrip()}
 
 <section class="h-heritage" id="history"><div class="wrap">
 <div class="h-head"><div><span class="kicker">107 years</span><h2>A century of service</h2><p>Through war, reconstruction and renewal, the Club has kept meeting and kept serving.</p></div></div>
+${historyWeek(hist)}
 <div class="h-years">${YEARS.map((y) => `<figure class="h-year" style="margin:0"><img src="${H(y.img)}" alt="" loading="lazy"><b>${y.year}</b><p>${esc(y.text)}</p></figure>`).join('')}</div>
 <div class="h-pres"><div class="h-pres-head"><h3>${PRES.presidents.length} presidential terms since 1919</h3><a class="link-arrow" href="/past-presidents">See every president and his term</a></div>
 <div class="h-pres-row">${PRES.presidents.slice(-8).reverse().map((x) => `<a href="/past-presidents#${presId(x)}"><img src="${x.img}" alt="" width="320" height="320" loading="lazy"><b>${esc(x.name)}</b><span>${esc(x.years)}</span></a>`).join('')}</div></div>
@@ -720,7 +803,7 @@ ${dateChip(m.meeting_date)}
 <span class="eyebrow" style="color:var(--gold)">${esc(m.label || 'Weekly membership meeting')}</span>
 <h1>${esc(m.topic || m.label || 'Weekly meeting')}</h1>
 ${m.speaker ? `<p style="font-size:20px;color:#fff"><strong>${esc(m.speaker)}</strong>${m.speaker_title ? `<br><span style="color:var(--sky)">${esc(m.speaker_title)}</span>` : ''}</p>` : ''}
-${past ? '<p><strong style="color:var(--gold)">This meeting has already taken place.</strong></p>' : `<div class="hero-cta"><a class="btn btn-gold" href="#rsvp">Sign up to attend</a><a class="btn btn-line" style="color:#fff" href="${calLink(m)}" target="_blank" rel="noopener">Add to calendar</a></div>`}
+${past ? '<p><strong style="color:var(--gold)">This meeting has already taken place.</strong></p>' : `<div class="hero-cta"><a class="btn btn-gold" href="#rsvp">Sign up to attend</a><a class="btn btn-line" style="color:#fff" href="${calLink(m)}" target="_blank" rel="noopener">Add to calendar</a></div><p class="cal-sub">Get every Thursday meeting in your phone’s calendar, kept up to date: <a href="webcal://${origin.replace(/^https?:\/\//, '')}/meetings.ics">iPhone or Outlook</a> · <a href="https://calendar.google.com/calendar/r?cid=${encodeURIComponent('webcal://' + origin.replace(/^https?:\/\//, '') + '/meetings.ics')}" target="_blank" rel="noopener">Google Calendar (Android)</a></p>`}
 </div></div></section>
 <div class="wrap meet-grid">
 <div class="meet-main">
@@ -936,6 +1019,13 @@ module.exports = async (req, res) => {
       return res.end(out.html);
     } catch (e) { res.statusCode = 500; return res.end('Preview failed: ' + esc(e.message)); }
   }
+  if (r === 'ics') {
+    res.statusCode = 200;
+    res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+    res.setHeader('Content-Disposition', 'inline; filename="rcm-meetings.ics"');
+    res.setHeader('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=3600');
+    return res.end(await meetingsIcs(origin));
+  }
   if (r === 'robots') {
     res.setHeader('Content-Type', 'text/plain; charset=utf-8'); res.setHeader('Cache-Control', 'public, s-maxage=86400');
     return res.end(`User-agent: *\nDisallow: /admin\nDisallow: /secretariat\nDisallow: /library-admin\nDisallow: /api/\nSitemap: ${origin}/sitemap.xml\n`);
@@ -972,6 +1062,7 @@ module.exports = async (req, res) => {
     else if (r === 'project') { html = projectPage(origin, u.searchParams.get('slug')); if (!html) { res.statusCode = 301; res.setHeader('Location', '/projects'); return res.end(); } }
     else if (r === 'join') html = joinPage(origin);
     else if (r === 'presidents') html = presidentsPage(origin);
+    else if (r === 'speakers') html = await speakersPage(origin);
     else if (r === 'lib') html = await LIB.route(origin, u);
     else if (r === 'partner') html = partnerPage(origin, String(u.searchParams.get('i') || '').slice(0, 80));
   } catch (e) {
