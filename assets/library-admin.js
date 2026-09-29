@@ -130,6 +130,67 @@
     } catch (err) { if (err.auth) return show('login'); $('obj-msg').textContent = err.message; }
     $('obj-start').disabled = false; $('obj-stop').disabled = true;
   };
+  // ---------- trophy room: polish photos and read labels ----------
+  let BGR = null;
+  async function cutout(url) {
+    if (!BGR) BGR = await import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.5.5/+esm');
+    return createImageBitmap(await BGR.removeBackground(url, { output: { format: 'image/png' } }));
+  }
+  function bbox(src, alphaMode) {
+    const c = document.createElement('canvas'); c.width = src.width; c.height = src.height; const x = c.getContext('2d'); x.drawImage(src, 0, 0);
+    const d = x.getImageData(0, 0, c.width, c.height).data, W = c.width, H = c.height;
+    let x0 = W, y0 = H, x1 = 0, y1 = 0, n = 0;
+    for (let j = 0; j < H; j += 2) for (let i = 0; i < W; i += 2) { if (d[(j * W + i) * 4 + 3] > 40) { n++; if (i < x0) x0 = i; if (i > x1) x1 = i; if (j < y0) y0 = j; if (j > y1) y1 = j; } }
+    return { c, x0, y0, x1, y1, share: n / (W * H / 4) };
+  }
+  // The gallery backdrop: warm off-white with a soft floor shadow, the object standing on it.
+  function stage(src, b, S) {
+    const o = document.createElement('canvas'); o.width = S; o.height = S; const q = o.getContext('2d');
+    const g = q.createRadialGradient(S / 2, S * 0.4, S * 0.05, S / 2, S / 2, S * 0.75); g.addColorStop(0, '#fbfaf7'); g.addColorStop(1, '#e2ded5'); q.fillStyle = g; q.fillRect(0, 0, S, S);
+    const pad = 0.09, sc = Math.min(S * (1 - 2 * pad) / (b.x1 - b.x0), S * (1 - 2 * pad - 0.03) / (b.y1 - b.y0));
+    const dw = (b.x1 - b.x0) * sc, dh = (b.y1 - b.y0) * sc, dx = (S - dw) / 2, dy = S * (1 - pad) - dh;
+    q.save(); q.fillStyle = 'rgba(0,0,0,.18)'; q.filter = 'blur(' + Math.round(S / 100) + 'px)'; q.beginPath(); q.ellipse(S / 2, dy + dh, dw * 0.42, S * 0.018, 0, 0, Math.PI * 2); q.fill(); q.restore();
+    q.save(); q.shadowColor = 'rgba(0,0,0,.22)'; q.shadowBlur = S * 0.03; q.shadowOffsetY = S * 0.01; q.drawImage(src, b.x0, b.y0, b.x1 - b.x0, b.y1 - b.y0, dx, dy, dw, dh); q.restore();
+    return o;
+  }
+  const KIND = { Plaque: 'Plaque', Trophy: 'Trophy', Medal: 'Medal', Certificate: 'Certificate', Banner: 'Banner', Flag: 'Flag', Gavel: 'Gavel', Bell: 'Bell', Plate: 'Plate', Figurine: 'Figurine', Book: 'Book', Object: 'Object' };
+  const tidyCat = (t) => String(t || '').replace(/\[[^\]]*\]/g, '').replace(/—\s*\d+\s+(plaque|trophy|trophies|medal|banner|gavel|woodblock|certificate)s?\b/gi, '').replace(/\s+—\s*$/, '').replace(/\s{2,}/g, ' ').replace(/^[\s—-]+|[\s—-]+$/g, '').trim();
+  $('obj-polish').onclick = async () => {
+    objStop = false; $('obj-polish').disabled = true; $('obj-start').disabled = true; $('obj-stop').disabled = false;
+    try {
+      const [{ objects }, cat] = await Promise.all([call('objects-list'), catalogue()]);
+      const todo = objects.filter((o) => !o.polished);
+      let done = 0, failed = 0;
+      $('obj-msg').textContent = `${todo.length} to polish. The first one takes longer while the cut-out tool loads.`;
+      for (const o of todo) {
+        if (objStop) break;
+        const cell = $('os-' + o.acc); if (cell) cell.innerHTML = stTag('Polishing…');
+        try {
+          const orig = o.original_path || o.image_path;
+          const url = `${ARCH}/${orig}`;
+          const readP = retry(() => call('object-read', { image_path: orig, hint: (cat.get(o.acc) || {}).d || o.title })).catch(() => null);
+          let src, b;
+          try { src = await cutout(url); b = bbox(src); if (b.share < 0.04 || b.x1 - b.x0 < 20) throw new Error('mask'); }
+          catch (e) { src = await createImageBitmap(await (await fetch(url)).blob()); b = { x0: 0, y0: 0, x1: src.width, y1: src.height }; }
+          const big = stage(src, b, 1200), th = stage(src, b, 480);
+          const key = `obj/${o.acc.toLowerCase()}-p.jpg`;
+          const [bb, tb] = await Promise.all([toBlob(big, 0.86), toBlob(th, 0.82)]);
+          await putFiles([{ key, blob: bb }, { key: key.replace(/\.jpg$/, '-t.jpg'), blob: tb }]);
+          preview($('obj-prev'), tb);
+          const r = (await readP) || {};
+          const kind = KIND[r.kind] || o.kind || 'Object';
+          const giver = r.giver || o.giver || null;
+          const title = (r.legible && r.title) ? r.title : (giver ? `${kind} from ${giver}` : (tidyCat(o.catalogue_title || o.title) || kind));
+          await retry(() => call('objects-save', { objects: [{ acc: o.acc, status: o.status, image_path: key, width: 1200, height: 1200, original_path: orig, catalogue_title: o.catalogue_title || o.title, polished: true, title, giver, kind, year: r.year || o.year || null, recipient: r.recipient || null, inscription: r.inscription || null, note: o.note || null, read_at: !!r.kind }] }));
+          done++; if (cell) cell.innerHTML = stTag('done');
+        } catch (err) { if (err.auth) return show('login'); failed++; if (cell) cell.innerHTML = stTag('failed: ' + String(err.message).slice(0, 60)); }
+        $('obj-bar').style.width = Math.round((done + failed) / todo.length * 100) + '%';
+        $('obj-msg').textContent = `Polished ${done} of ${todo.length}${failed ? ` (${failed} failed)` : ''}.`;
+      }
+      $('obj-msg').textContent = objStop ? 'Stopped. Click again to carry on.' : `Finished: ${done} polished${failed ? `, ${failed} failed` : ''}. Check the trophy room, then click “Publish all”.`;
+    } catch (err) { if (err.auth) return show('login'); $('obj-msg').textContent = err.message; }
+    $('obj-polish').disabled = false; $('obj-start').disabled = false; $('obj-stop').disabled = true;
+  };
   $('obj-stop').onclick = () => { objStop = true; $('obj-msg').textContent = 'Stopping after the current items…'; };
   $('obj-pub').onclick = async () => { try { await call('objects-publish', {}); $('obj-msg').textContent = 'Published. The trophy room now shows them.'; } catch (err) { $('obj-msg').textContent = err.message; } };
 
