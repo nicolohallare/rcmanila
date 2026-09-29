@@ -43,6 +43,14 @@
     try {
       const { issues } = await call('issues');
       $('issues').innerHTML = issues.length ? issues.slice(0, 8).map(issueRow).join('') : '<li class="muted">No issues yet. Upload the first one above.</li>';
+      // The list call has no guest names; read them from the public issue list so each row says who was on the cover.
+      const top = issues.slice(0, 8);
+      if (top.length && top.some((i) => !i.guest)) {
+        try {
+          const r = await fetch(`${SB}/rest/v1/rcm_issues?select=issue_no,guest&issue_no=in.(${top.map((i) => i.issue_no).join(',')})`, { headers: { apikey: PUB } });
+          if (r.ok) { const g = new Map((await r.json()).map((x) => [x.issue_no, x.guest])); top.forEach((i) => { if (!i.guest && g.get(i.issue_no)) i.guest = g.get(i.issue_no); }); $('issues').innerHTML = top.map(issueRow).join(''); }
+        } catch (e) {}
+      }
     } catch (err) {
       if (err.auth) return show('v-login');
       $('issues').innerHTML = `<li class="err">${esc(err.message)}</li>`;
@@ -51,7 +59,7 @@
   function issueRow(i) {
     const s = STATUS[i.status] || [i.status, 'wait'];
     const when = i.status === 'scheduled' && i.publish_at ? ' · goes live ' + new Date(i.publish_at).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Manila' }) : '';
-    return `<li>${i.cover_path ? `<img src="${imgUrl(i.cover_path, 140)}&v=${Date.parse(i.updated_at || 0)}" alt="" style="object-position:right top">` : '<img alt="">'}<div style="flex:1"><b>Issue ${i.issue_no}</b><br><span class="muted">${esc(i.issue_date || '')}${esc(when)}${i.guest ? ' · ' + esc(i.guest.length > 70 ? i.guest.slice(0, 68) + '…' : i.guest) : ''}</span></div><span class="tag ${s[1]}">${s[0]}</span><button class="smallbtn" data-open="${i.id}" type="button">${i.status === 'published' ? 'Edit' : 'Check and publish'}</button>${i.status === 'published' || i.status === 'scheduled' ? `<a class="smallbtn" href="/balita/${i.issue_no}" target="_blank" rel="noopener">View</a>` : ''}</li>`;
+    return `<li>${i.cover_path ? `<img class="icov${i.issue_date && i.issue_date < '2024-07-01' ? ' pg' : ''}" src="${imgUrl(i.cover_path, 200)}&v=${Date.parse(i.updated_at || 0)}" alt="">` : '<img class="icov" alt="">'}<div style="flex:1"><b>Issue ${i.issue_no}</b><br><span class="muted">${esc(i.issue_date || '')}${esc(when)}${i.guest ? ' · ' + esc(i.guest.length > 70 ? i.guest.slice(0, 68) + '…' : i.guest) : ''}</span></div><span class="tag ${s[1]}">${s[0]}</span><button class="smallbtn" data-open="${i.id}" type="button">${i.status === 'published' ? 'Edit' : 'Check and publish'}</button>${i.status === 'published' || i.status === 'scheduled' ? `<a class="smallbtn" href="/balita/${i.issue_no}" target="_blank" rel="noopener">View</a>` : ''}</li>`;
   }
   ['issues', 'find-list'].forEach((id) => $(id).addEventListener('click', (e) => { const b = e.target.closest('[data-open]'); if (b) openReview(b.getAttribute('data-open')); }));
   // Find any past issue: by number, date, guest, or a word in the issue or an article title.
