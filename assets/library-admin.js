@@ -10,8 +10,11 @@
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   let code = ''; try { code = localStorage.getItem('rcm-editor-code') || ''; } catch (e) {}
 
+  // Text from old PDFs can hold null characters and broken surrogates, which the database refuses; strip them before sending.
+  const pgSafe = (v) => typeof v === 'string' ? v.replace(/\u0000/g, '').replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '')
+    : Array.isArray(v) ? v.map(pgSafe) : v && typeof v === 'object' && !(v instanceof Blob) ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, pgSafe(x)])) : v;
   async function post(url, action, payload) {
-    const r = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', 'x-editor-code': code, apikey: PUB }, body: JSON.stringify(Object.assign({ action }, payload || {})) });
+    const r = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', 'x-editor-code': code, apikey: PUB }, body: JSON.stringify(pgSafe(Object.assign({ action }, payload || {}))) });
     const text = await r.text();
     let d; try { d = JSON.parse(text.trim().split('\n').pop()); } catch (e) { throw new Error('The server did not answer properly (' + r.status + ').'); }
     if (r.status === 401) throw Object.assign(new Error(d.error || 'Wrong passcode'), { auth: true });
@@ -401,7 +404,7 @@
       const text = pages.map((p) => p.text || '').join('\n\n').slice(0, 400000); const pdf = files.find((x) => x.kind === 'pdf');
       await admin('legacy-finish', { issue_id: issue.id, fields: { issue_date: d.date || null, cover_path: files.find((x) => x.kind === 'cover').path, pages: files.filter((x) => x.kind === 'page').map((x) => x.path), page_count: pages.length, search_text: text, pdf_url: pdf ? `${SB}/storage/v1/object/public/rcm/${pdf.path}` : null } });
       setDig(k, 'Added ✓'); ISS.push({ issue_no: d.no, issue_date: d.date }); return true;
-    } catch (err) { if (err.auth) { show('login'); return false; } setDig(k, 'failed: ' + err.message.slice(0, 60)); }
+    } catch (err) { if (err.auth) { show('login'); return false; } setDig(k, 'failed: ' + err.message.slice(0, 160)); }
     return false;
   }
   $('dig-start').onclick = async () => {
