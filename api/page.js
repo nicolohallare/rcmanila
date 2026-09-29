@@ -166,7 +166,7 @@ function storyCard(issue, a) {
   return `<a class="story" href="${href}">${visual}<span class="eyebrow">${esc(a.kicker || 'Balita')}${a.printed_pages ? ' · ' + esc(a.printed_pages) : ''}</span><h3>${esc(a.title)}</h3>${a.dek ? `<p>${esc(a.dek)}</p>` : ''}</a>`;
 }
 
-const ICOLS = 'id,issue_no,issue_date,meeting,guest,summary,cover_path,pages,page_count,status,publish_at,updated_at,source,pdf_url';
+const ICOLS = 'id,issue_no,issue_date,meeting,guest,summary,cover_path,pages,page_count,status,publish_at,updated_at,source,pdf_url,heyzine_url';
 const ACOLS = 'id,issue_id,slug,sort,kicker,title,dek,byline,body,photos,page_from,page_to,printed_pages,lead,included,source,legacy_url';
 async function liveIssues(limit = 20, cols = ICOLS) {
   return q(`rcm_issues?select=${cols}&order=issue_no.desc&limit=${limit}`);
@@ -622,6 +622,7 @@ ${issue.cover_path ? `<img class="cover${pgc(issue)}" src="${coverSrc(issue, 520
 <span class="meta">${esc(fmtDay(issue.issue_date))}${issue.meeting ? ' · ' + esc(issue.meeting) : ''}</span>
 ${issue.guest ? `<p>Guest of honor and speaker: ${esc(issue.guest)}</p>` : ''}
 ${issue.summary ? `<p>${esc(issue.summary)}</p>` : ''}
+${/^https:\/\/([a-z0-9-]+\.)*heyzine\.com\//i.test(issue.heyzine_url || '') ? `<p><a class="btn btn-gold" href="${esc(issue.heyzine_url)}" target="_blank" rel="noopener">Flip through the magazine <span aria-hidden="true">↗</span></a></p>` : ''}
 ${shareBar(url, title, false)}
 </div></div></section>
 <div class="tabs"><div class="wrap" role="tablist" aria-label="How to read this issue">
