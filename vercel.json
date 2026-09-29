@@ -46,6 +46,14 @@
       "destination": "/api/page?r=project&slug=:slug"
     },
     {
+      "source": "/meetings.ics",
+      "destination": "/api/page?r=ics"
+    },
+    {
+      "source": "/speakers",
+      "destination": "/api/page?r=speakers"
+    },
+    {
       "source": "/past-presidents",
       "destination": "/api/page?r=presidents"
     },
