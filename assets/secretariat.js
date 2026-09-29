@@ -121,6 +121,19 @@
 
   // ---------- share this meeting on Viber: a ready message and a picture (the poster, or a card made here) ----------
   const SITE = 'https://rcmanila.org';
+  let msMode = 'announce';
+  function reminderMessage() {
+    const m = state.meeting; if (!m) return '';
+    const n = (state.signups || []).length;
+    const L = [`⏰ Reminder: *${m.label || 'Our weekly meeting'}* is this ${longDate(m.meeting_date)}.`];
+    if (m.speaker) L.push(`🎤 ${m.speaker}${m.speaker_title ? ', ' + m.speaker_title : ''}${m.topic ? ` on “${m.topic}”` : ''}`);
+    const when = [m.time_text, m.venue].filter(Boolean).join(' · ');
+    if (when) L.push(`🕛 ${when}`);
+    if (m.rsvp_open !== false) L.push('', n ? `${n} ${n === 1 ? 'member has' : 'members have'} signed up so far. Not yet? Sign up here:` : 'Sign up here so the Secretariat can prepare your seat:', `${SITE}/meetings/${m.meeting_date}`);
+    return L.join('\n');
+  }
+  function currentMessage() { return msMode === 'remind' ? reminderMessage() : meetingMessage(); }
+  document.addEventListener('click', (e) => { const b = e.target.closest('[data-msmode]'); if (!b) return; msMode = b.getAttribute('data-msmode'); document.querySelectorAll('[data-msmode]').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); $('ms-msg').textContent = currentMessage(); });
   function meetingMessage() {
     const m = state.meeting; if (!m) return '';
     const L = [`📅 *${m.label || 'Weekly meeting'}*`, longDate(m.meeting_date)];
@@ -180,14 +193,14 @@
     if (!m) { box.hidden = true; return; }
     box.hidden = false;
     $('ms-note').textContent = m.status === 'published' ? '' : '(draft: the link works once “Show this meeting on the website” is ticked and saved)';
-    $('ms-msg').textContent = meetingMessage();
+    $('ms-msg').textContent = currentMessage();
     drawMeetingCard().catch(() => {});
   }
   async function msCopy(t) { try { await navigator.clipboard.writeText(t); return true; } catch (e) { return false; } }
-  $('ms-copy').onclick = () => copyText(meetingMessage(), $('ms-copy'));
+  $('ms-copy').onclick = () => copyText(currentMessage(), $('ms-copy'));
   $('ms-dl').onclick = async () => { await drawMeetingCard(); if (!msBlob) return; const a = document.createElement('a'); a.href = URL.createObjectURL(msBlob); a.download = `meeting-${state.meeting.meeting_date}.jpg`; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000); };
   $('ms-go').onclick = async () => {
-    const msg = meetingMessage(); await msCopy(msg); await drawMeetingCard();
+    const msg = currentMessage(); await msCopy(msg); await drawMeetingCard();
     const file = msBlob ? new File([msBlob], `meeting-${state.meeting.meeting_date}.jpg`, { type: 'image/jpeg' }) : null;
     try {
       if (file && navigator.canShare && navigator.canShare({ files: [file] })) await navigator.share({ files: [file], text: msg });
@@ -281,6 +294,7 @@
   // ---------- sign-ups ----------
   const lineOf = (s) => s.name + (s.affiliation ? ' - ' + s.affiliation : '') + (s.kind === 'guest' && s.guest_of ? ` (guest of ${s.guest_of})` : '');
   function renderSignups() {
+    if (state.meeting && !$('mshare').hidden) $('ms-msg').textContent = currentMessage();
     const list = state.signups;
     const guests = list.filter((s) => s.kind === 'guest').length;
     $('stats').innerHTML = `<div class="stat"><b>${list.length}</b>total</div><div class="stat"><b>${list.length - guests}</b>members</div><div class="stat"><b>${guests}</b>guests</div>`;
