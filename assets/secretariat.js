@@ -111,12 +111,90 @@
   }
   function renderLinks() {
     const m = state.meeting;
-    if (!m) { $('ed-links').innerHTML = ''; return; }
+    if (!m) { $('ed-links').innerHTML = ''; $('mshare').hidden = true; return; }
     const url = location.origin + '/meetings/' + m.meeting_date;
     $('ed-links').innerHTML = (m.status === 'published' ? `<a class="btn btn-line" style="color:var(--blue)" href="/meetings/${m.meeting_date}" target="_blank" rel="noopener">View on website ↗</a><button class="btn btn-gold" type="button" id="copy-link">Copy sign-up link for Viber</button>` : '<span class="tag flag">Draft: not on the website yet</span>');
     const b = $('copy-link');
     if (b) b.onclick = () => copyText(`Sign up for ${m.label || 'our meeting'} on ${longDate(m.meeting_date)}${m.topic ? ` (${m.topic})` : ''} here:\n${url}`, b);
+    renderShare();
   }
+
+  // ---------- share this meeting on Viber: a ready message and a picture (the poster, or a card made here) ----------
+  const SITE = 'https://rcmanila.org';
+  function meetingMessage() {
+    const m = state.meeting; if (!m) return '';
+    const L = [`📅 *${m.label || 'Weekly meeting'}*`, longDate(m.meeting_date)];
+    if (m.speaker) L.push('', `🎤 Guest speaker: *${m.speaker}*${m.speaker_title ? ', ' + m.speaker_title : ''}`);
+    if (m.topic) L.push(`Topic: ${m.topic}`);
+    const when = [m.time_text, m.venue].filter(Boolean).join(' · ');
+    if (when) L.push('', `🕛 ${when}`);
+    if (m.registration_text) L.push(m.registration_text);
+    if (m.notes) L.push('', m.notes.trim());
+    if (m.rsvp_open !== false) L.push('', 'Coming? Sign up here so the Secretariat can prepare your seat:', `${SITE}/meetings/${m.meeting_date}`);
+    else L.push('', 'Details:', `${SITE}/meetings/${m.meeting_date}`);
+    return L.join('\n');
+  }
+  let msBlob = null, msFor = '';
+  function loadImg(src) { return new Promise((res, rej) => { const im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => res(im); im.onerror = rej; im.src = src; }); }
+  function wrap(x, text, maxW) { const out = []; let line = ''; for (const w of String(text).split(/\s+/)) { const t = line ? line + ' ' + w : w; if (x.measureText(t).width > maxW && line) { out.push(line); line = w; } else line = t; } if (line) out.push(line); return out; }
+  async function drawMeetingCard() {
+    const m = state.meeting; if (!m) return;
+    const key = [m.id, m.updated_at, m.poster_path].join('|');
+    if (key === msFor && msBlob) return;
+    const c = $('ms-card'), x = c.getContext('2d');
+    if (m.poster_path) {
+      try {
+        const im = await loadImg(imgUrl(m.poster_path, 1400) + (m.updated_at ? '&v=' + Date.parse(m.updated_at) : ''));
+        c.width = Math.min(1400, im.width); c.height = Math.round(c.width * im.height / im.width);
+        x.drawImage(im, 0, 0, c.width, c.height);
+        msBlob = await new Promise((res) => c.toBlob(res, 'image/jpeg', 0.9)); msFor = key; return;
+      } catch (e) { /* fall back to the card */ }
+    }
+    const W = 1080, H = 1350; c.width = W; c.height = H;
+    x.fillStyle = '#17458f'; x.fillRect(0, 0, W, H);
+    try { const logo = await loadImg('/assets/club-logo-white.png'); const lh = 80, lw = logo.width * lh / logo.height; x.drawImage(logo, 72, 64, lw, lh); } catch (e) {}
+    x.fillStyle = '#f7a81b'; x.fillRect(72, 230, 120, 8);
+    x.fillStyle = '#f7a81b'; x.font = '800 30px "Open Sans", Arial, sans-serif'; x.fillText((m.label || 'Weekly meeting').toUpperCase(), 72, 300, W - 144);
+    x.fillStyle = '#fff'; x.font = '700 76px Georgia, "Times New Roman", serif';
+    const d = new Date(m.meeting_date + 'T12:00:00+08:00');
+    x.fillText(d.toLocaleDateString('en-GB', { weekday: 'long', timeZone: 'Asia/Manila' }), 72, 400);
+    x.fillText(d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Manila' }), 72, 490);
+    let y = 620;
+    if (m.speaker) {
+      x.fillStyle = '#b9d9eb'; x.font = '700 28px "Open Sans", Arial, sans-serif'; x.fillText('GUEST SPEAKER', 72, y); y += 64;
+      x.fillStyle = '#fff'; x.font = '700 56px Georgia, "Times New Roman", serif';
+      for (const l of wrap(x, m.speaker, W - 144).slice(0, 2)) { x.fillText(l, 72, y); y += 66; }
+      if (m.speaker_title) { x.fillStyle = '#dbe8f5'; x.font = '600 30px "Open Sans", Arial, sans-serif'; for (const l of wrap(x, m.speaker_title, W - 144).slice(0, 2)) { x.fillText(l, 72, y); y += 42; } }
+      y += 30;
+    }
+    if (m.topic) { x.fillStyle = '#f7a81b'; x.font = 'italic 700 40px Georgia, "Times New Roman", serif'; for (const l of wrap(x, '“' + m.topic + '”', W - 144).slice(0, 3)) { x.fillText(l, 72, y); y += 52; } }
+    x.fillStyle = '#0c2d62'; x.fillRect(0, H - 190, W, 190); x.fillStyle = '#f7a81b'; x.fillRect(0, H - 190, W, 6);
+    x.fillStyle = '#fff'; x.font = '600 32px "Open Sans", Arial, sans-serif';
+    const when = [m.time_text, m.venue].filter(Boolean).join('  ·  ');
+    if (when) x.fillText(when, 72, H - 118, W - 144);
+    x.fillStyle = '#f7a81b'; x.font = '800 32px "Open Sans", Arial, sans-serif'; x.fillText(`Sign up at rcmanila.org/meeting`, 72, H - 62, W - 144);
+    msBlob = await new Promise((res) => c.toBlob(res, 'image/jpeg', 0.9)); msFor = key;
+  }
+  function renderShare() {
+    const m = state.meeting, box = $('mshare');
+    if (!m) { box.hidden = true; return; }
+    box.hidden = false;
+    $('ms-note').textContent = m.status === 'published' ? '' : '(draft: the link works once “Show this meeting on the website” is ticked and saved)';
+    $('ms-msg').textContent = meetingMessage();
+    drawMeetingCard().catch(() => {});
+  }
+  async function msCopy(t) { try { await navigator.clipboard.writeText(t); return true; } catch (e) { return false; } }
+  $('ms-copy').onclick = () => copyText(meetingMessage(), $('ms-copy'));
+  $('ms-dl').onclick = async () => { await drawMeetingCard(); if (!msBlob) return; const a = document.createElement('a'); a.href = URL.createObjectURL(msBlob); a.download = `meeting-${state.meeting.meeting_date}.jpg`; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000); };
+  $('ms-go').onclick = async () => {
+    const msg = meetingMessage(); await msCopy(msg); await drawMeetingCard();
+    const file = msBlob ? new File([msBlob], `meeting-${state.meeting.meeting_date}.jpg`, { type: 'image/jpeg' }) : null;
+    try {
+      if (file && navigator.canShare && navigator.canShare({ files: [file] })) await navigator.share({ files: [file], text: msg });
+      else if (navigator.share) await navigator.share({ text: msg });
+      else { copyText(msg, $('ms-go')); }
+    } catch (e) { /* share menu closed */ }
+  };
   async function openMeeting(id) {
     show('v-edit');
     $('ed-title').textContent = 'Loading…';
