@@ -293,6 +293,8 @@
     const d = text.slice(0, 1500).match(new RegExp(`(${MONTHS})\\.?\\s+(\\d{1,2}),?\\s+(20\\d\\d)`, 'i'));
     return d ? iso(Number(d[3]), MONTHS.split('|').findIndex((x) => x.toLowerCase() === d[1].toLowerCase()) + 1, Number(d[2])) : '';
   }
+  // Collapse letter-spaced words ("A U G U S T 2 7 , 2 0 2 0" → "AUGUST27,2020" style runs) so the number and date can be read.
+  const despace = (t) => t.replace(/(?:\b\S ){2,}\S\b/g, (m) => m.replace(/ /g, '')).replace(/([A-Za-z])(\d)/g, '$1 $2').replace(/(\d),(\d{4})/g, '$1, $2').replace(/\s+([.,])/g, '$1');
   // The date printed in the masthead (next to "ISSUE NO.") wins over the file name, which is sometimes wrong.
   function mastDate(text, nameDate) {
     const m = text.match(/ISSUE\s*N[Oo]\.?\s*[:#]?\s*\d{4}/i);
@@ -383,8 +385,9 @@
       const [url] = await getUrls([d.key]); const blob = await (await fetch(url)).blob(); const f = new File([blob], d.name, { type: 'application/pdf' });
       const pk = await window.BalitaExtract.peek(f);
       if ((pk.text || '').replace(/\s/g, '').length < 60) { setDig(k, 'Reading the front page…'); pk.text = (await frontOcr(f)) + '\n' + (pk.text || ''); }
-      const td = mastDate(pk.text || '', d.date); if (td) d.date = td;
-      d.no = forcedNo || issueNo(pk.text || '', d.date);
+      const T = despace(pk.text || '') + '\n' + (pk.text || ''); // some mastheads are letter-spaced ("I S S U E  N O . 3 8 3 7")
+      const td = mastDate(T, d.date); if (td) d.date = td;
+      d.no = forcedNo || issueNo(T, d.date);
       $('dn-' + k).textContent = d.no || '?'; $('dd-' + k).textContent = d.date || '';
       if (!d.no) { setDig(k, 'failed: no issue number on the front page'); return false; }
       const chk = await admin('check-issue', { issue_no: d.no });
