@@ -385,8 +385,9 @@
       $('dn-' + k).textContent = d.no || '?'; $('dd-' + k).textContent = d.date || '';
       if (!d.no) { setDig(k, 'failed: no issue number on the front page'); return false; }
       const chk = await admin('check-issue', { issue_no: d.no });
-      const addPagesOnly = chk.exists && chk.source === 'legacy' && !chk.has_pages;
-      if (chk.exists && !addPagesOnly) { setDig(k, 'Already on the website'); return false; }
+      const stuck = chk.exists && chk.status !== 'published'; // an earlier try stopped partway: redo it from the start
+      const addPagesOnly = !stuck && chk.exists && chk.source === 'legacy' && !chk.has_pages;
+      if (chk.exists && !stuck && !addPagesOnly) { setDig(k, 'Already on the website'); return false; }
       setDig(k, 'Reading pages…');
       const pages = await window.BalitaExtract.extractPdf(f, ({ n, total }) => setDig(k, `Reading page ${n} of ${total}…`), { pagesOnly: true });
       const { issue } = await admin('start', { issue_no: d.no, issue_date: d.date || null, page_count: pages.length, source: 'legacy', keep: addPagesOnly });
