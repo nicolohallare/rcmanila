@@ -8,7 +8,7 @@
   const PUB = 'sb_publishable_zebFaErs-sjDwYWQUMfq3g_VuF2DTI6';
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  let code = ''; try { code = localStorage.getItem('rcm-editor-code') || ''; } catch (e) {}
+  let code = ''; try { code = sessionStorage.getItem('rcm-library-code') || ''; } catch (e) {} // asks again in each new browser session; separate from the Balita editor's sign-in
 
   // Text from old PDFs can hold null characters and broken surrogates, which the database refuses; strip them before sending.
   const pgSafe = (v) => typeof v === 'string' ? v.replace(/\u0000/g, '').replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '')
@@ -63,7 +63,7 @@
 
   // ---------- sign in / overview ----------
   function show(v) { $('v-login').classList.toggle('hidden', v !== 'login'); $('v-main').classList.toggle('hidden', v !== 'main'); }
-  $('login-form').onsubmit = async (e) => { e.preventDefault(); code = $('code').value.trim(); try { await call('status'); try { localStorage.setItem('rcm-editor-code', code); } catch (x) {} open(); } catch (err) { $('login-err').textContent = err.auth ? 'That passcode is not right.' : err.message; $('login-err').classList.remove('hidden'); } };
+  $('login-form').onsubmit = async (e) => { e.preventDefault(); code = $('code').value.trim(); try { await call('status'); try { sessionStorage.setItem('rcm-library-code', code); } catch (x) {} open(); } catch (err) { $('login-err').textContent = err.auth ? 'That passcode is not right.' : err.message; $('login-err').classList.remove('hidden'); } };
   async function open() {
     show('main');
     try {
@@ -75,6 +75,7 @@
     } catch (err) { if (err.auth) return show('login'); $('storage').innerHTML = `<span class="err">${esc(err.message)}</span>`; }
   }
   $('refresh').onclick = open;
+  $('signout').onclick = (e) => { e.preventDefault(); try { sessionStorage.removeItem('rcm-library-code'); } catch (x) {} code = ''; $('code').value = ''; show('login'); };
   let current = 'obj';
   function tab(t) { current = t; document.querySelectorAll('#tabs [data-t]').forEach((b) => b.setAttribute('aria-current', String(b.getAttribute('data-t') === t))); for (const k of ['obj', 'vol', 'dig', 'gal', 'browse']) $('t-' + k).classList.toggle('hidden', k !== t); if (t === 'obj') objList(); if (t === 'vol') volList(); if (t === 'gal') heldList(); }
   $('tabs').onclick = (e) => { const b = e.target.closest('[data-t]'); if (b) tab(b.getAttribute('data-t')); };
