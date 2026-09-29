@@ -575,7 +575,8 @@ ${guestName ? `<p class="h-balita-cover-note">On the cover: ${coverStory ? `<a h
   return layout({
     title: 'Rotary Club of Manila',
     description: 'Asia’s first Rotary club, serving since 1919. See our projects, read the Balita and join us every Thursday.',
-    image: origin + H('hero-helipad'), url: origin + '/', body, type: 'website',
+    image: pSrc((cover || COVER_FALLBACK).image_path, 1200), // the share picture follows the homepage cover
+    url: origin + '/', body, type: 'website',
   });
 }
 
