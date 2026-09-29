@@ -39,6 +39,8 @@ textarea{min-height:90px;resize:vertical;line-height:1.55}
 .alist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
 .alist li{display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid #eef1f5}
 .alist img{width:64px;height:46px;object-fit:cover;border-radius:4px;background:var(--sky);flex-shrink:0}
+.alist img.icov{width:52px;height:auto;aspect-ratio:4/9;object-fit:cover;object-position:center top;border-radius:3px;box-shadow:0 2px 6px rgba(0,0,0,.18)}
+.alist img.icov.pg{width:64px;aspect-ratio:3/4}
 .tag{font-size:13px;font-weight:700;padding:4px 10px;border-radius:12px;white-space:nowrap}
 .tag.wait{background:#eef1f5;color:var(--muted)}
 .tag.run{background:var(--sky);color:var(--blue)}
@@ -113,7 +115,7 @@ main.wide{max-width:1760px}
 <form id="find-form" class="row" role="search"><label class="f" style="flex:1;min-width:220px"><span class="sr-only">Find an issue</span><input id="find-q" type="search" style="font-weight:400" placeholder="4048, 2025-04-24, Banaguas…" autocomplete="off"></label><button class="btn btn-blue" type="submit">Find</button></form>
 <ul id="find-list" class="alist" aria-live="polite"></ul></div>
 <div class="panel stack" id="cover-panel"><h2 style="font-size:22px">Cover photo of the month</h2>
-<p class="muted">One People of Action photo on the top of the homepage, changed every month. Pick a photo of members doing the work, not a posed group. It goes live on the first day of the month you choose.</p>
+<p class="muted">One People of Action photo across the top of the homepage, changed every month. Use a wide photo of members doing the work, not a posed group, with no text or logos on it (the site adds the words). At least 2000 pixels wide is best. It goes live on the first day of the month you choose.</p>
 <div id="cover-now" class="muted">Loading…</div>
 <form id="cover-form" class="stack" novalidate>
 <div class="row" style="gap:12px;align-items:flex-end;flex-wrap:wrap">
@@ -121,6 +123,8 @@ main.wide{max-width:1760px}
 <label class="f" style="flex:1;min-width:240px">Photo (JPG or PNG)<input id="cv-file" type="file" accept="image/jpeg,image/png,image/webp"></label>
 </div>
 <img id="cv-preview" alt="" style="display:none;max-width:420px;width:100%;border-radius:6px;border:1px solid var(--line)">
+<label class="f">People of Action line, shown large on the photo<input id="cv-tagline" type="text" maxlength="80" placeholder="Together, we save lives."></label>
+<label class="f" style="max-width:340px">Which part of the photo matters most<select id="cv-focus"><option value="center">The middle</option><option value="center 25%">The top (faces near the top)</option><option value="center 75%">The bottom</option></select></label>
 <label class="f">Caption: what members are doing, where, and when<textarea id="cv-caption" rows="2" maxlength="400" placeholder="Members of the Rotary Clubs of Manila and Calumpit wade through floodwater to bring relief to three cut-off barangays in Calumpit, Bulacan."></textarea></label>
 <label class="f">Describe the photo for people who cannot see it<textarea id="cv-alt" rows="2" maxlength="400" placeholder="Rotarians in life vests carry relief bags through waist-deep floodwater."></textarea></label>
 <label class="f">Link to the story (optional)<input id="cv-link" type="text" placeholder="/projects/typhoon-relief-2025 or /balita/4106/kalinga-sa-kalumpit"></label>
