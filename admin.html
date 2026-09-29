@@ -80,6 +80,7 @@ main.wide{max-width:1760px}
 .hidden{display:none!important}
 .anote{font-size:13px;margin-top:4px}
 .anote.err{color:#a3262a}
+.share-grid{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:20px;align-items:start}#card{width:100%;height:auto;border-radius:8px;box-shadow:0 8px 24px -12px rgba(0,0,0,.4);background:#17458f}@media (max-width:760px){.share-grid{grid-template-columns:1fr}#card{max-width:320px}}
 .sharemsg{white-space:pre-line;background:#f8fafc;border:1px solid #c7d2df;border-radius:8px;padding:12px;font-size:15px}
 </style>
 </head>
@@ -190,6 +191,19 @@ main.wide{max-width:1760px}
 </div>
 </div>
 <div id="published" class="okbox stack hidden"></div>
+<div class="panel stack" id="share-panel">
+<div class="row" style="justify-content:space-between;align-items:baseline"><h2 style="font-size:22px;margin:0">Share this issue on Viber</h2><span class="muted" id="share-note"></span></div>
+<div class="share-grid">
+<div class="stack" style="gap:10px">
+<label class="f" for="hz">Heyzine flipbook link (optional)<input id="hz" type="url" inputmode="url" placeholder="https://heyzine.com/flip-book/…" autocomplete="off"></label>
+<div class="row"><button class="smallbtn" type="button" id="hz-save">Save link</button><span class="muted" id="hz-msg" role="status"></span></div>
+<div class="sharemsg" id="msg"></div>
+<div class="row"><button class="btn btn-gold" type="button" id="share-go">Share picture and message…</button><button class="btn btn-line" style="color:var(--blue)" type="button" id="copy-msg">Copy message</button><button class="btn btn-line" style="color:var(--blue)" type="button" id="dl-card">Download picture</button></div>
+<p class="muted" style="margin:0;font-size:14px">On a phone, <b>Share picture and message</b> opens the share menu: pick Viber, then the group. The message is also copied, so if Viber sends only the picture, paste the message as the caption.</p>
+</div>
+<canvas id="card" width="1080" height="1350" aria-label="Picture to share with the message"></canvas>
+</div>
+</div>
 <div class="review">
 <div class="panel" style="padding:0;overflow:hidden"><ul class="rlist" id="rlist"></ul></div>
 <div class="panel stack" id="editor"></div>
