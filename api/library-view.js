@@ -32,7 +32,7 @@ module.exports = function libraryModule(ctx) {
   // ---------- data ----------
   const volumes = () => safe(() => q('rcm_lib_volumes?select=id,acc,title,years,year_from,year_to,issue_from,issue_to,page_count,cover_path&status=eq.published&order=year_from'), []);
   const galleries = () => safe(() => q('rcm_lib_galleries?select=id,slug,title,event_date,place,cover_path,photo_count,balita_url&status=eq.published&order=event_date.desc'), []);
-  const objects = (limit = 2000) => safe(() => q(`rcm_lib_objects?select=acc,title,giver,kind,year,image_path,width,height,note&status=eq.published&order=year.desc.nullslast&limit=${limit}`), []);
+  const objects = (limit = 2000) => safe(() => q(`rcm_lib_objects?select=acc,title,giver,kind,year,image_path,width,height,note,polished,recipient,inscription,featured,original_path&status=eq.published&order=year.desc.nullslast&limit=${limit}`), []);
   const timeline = () => safe(() => q('rcm_lib_timeline?select=*&order=year'), []);
   async function thisWeek(vols) {
     if (!vols.length) return null;
@@ -85,7 +85,7 @@ ${gals.length ? `<section class="lib-sec"><div class="wrap">
 <div class="lib-gals">${gals.slice(0, 6).map(galCard).join('')}</div></div></section>` : ''}
 ${objs.length ? `<section class="lib-sec lib-dark"><div class="wrap">
 <div class="section-head"><div><span class="kicker">The trophy room</span><h2>Honors given and received</h2></div><a class="link-arrow" href="/library/trophies">Enter the trophy room</a></div>
-<div class="lib-objs">${objs.slice(0, 8).map(objCard).join('')}</div></div></section>` : ''}
+<div class="lib-objs">${objs.slice().sort((a, b) => (b.polished ? 1 : 0) - (a.polished ? 1 : 0)).slice(0, 8).map(objCard).join('')}</div></div></section>` : ''}
 <section class="lib-sec"><div class="wrap">
 <div class="section-head"><div><span class="kicker">The collection</span><h2>${CATALOGUE.length.toLocaleString('en')} items in the Club’s library</h2><p class="lib-lede">Catalogued in 2023: bound Balita volumes, anniversary programs, handbooks, conference books, photo albums, plaques and trophies.</p></div><a class="link-arrow" href="/library/collection">Browse the catalogue</a></div>
 <div class="lib-chips">${Object.entries(cats).sort((a, b) => b[1] - a[1]).map(([c, n]) => `<a href="/library/collection#c=${encodeURIComponent(c)}">${esc(c)} <b>${n.toLocaleString('en')}</b></a>`).join('')}</div>
@@ -99,7 +99,7 @@ ${objs.length ? `<section class="lib-sec lib-dark"><div class="wrap">
     return cards.length > (withModern ? 1 : 0) ? `<div class="lib-shelf">${cards.join('')}</div>` : `<div class="lib-empty">The first volumes are being prepared. <a href="/balita">Read the recent Balita issues</a> in the meantime.</div>`;
   }
   const galCard = (g) => `<a class="lib-gal" href="/library/photos/${esc(g.slug)}"><span class="im">${g.cover_path ? `<img src="${esc(aSrc(g.cover_path))}" alt="" loading="lazy">` : ''}</span><small>${esc(g.event_date ? fmtDate(g.event_date) : '')}${g.photo_count ? ` · ${g.photo_count} photos` : ''}</small><strong>${esc(g.title)}</strong></a>`;
-  const objCard = (o) => `<button type="button" class="lib-obj" data-obj="${esc(o.acc)}"><span class="im"><img src="${esc(aSrc(String(o.image_path || '').replace(/\.jpg$/, '-t.jpg')))}" data-full="${esc(aSrc(o.image_path))}" onerror="if(this.dataset.full&&this.src!==this.dataset.full)this.src=this.dataset.full" alt="${esc(o.title || '')}" loading="lazy"></span><strong>${esc(o.title || o.kind || 'Object')}</strong><small>${[o.year, o.giver].filter(Boolean).map(esc).join(' · ')}</small></button>`;
+  const objCard = (o) => `<button type="button" class="lib-obj${o.polished ? ' pol' : ''}" data-obj="${esc(o.acc)}"><span class="im"><img src="${esc(aSrc(String(o.image_path || '').replace(/\.jpg$/, '-t.jpg')))}" data-full="${esc(aSrc(o.image_path))}" onerror="if(this.dataset.full&&this.src!==this.dataset.full)this.src=this.dataset.full" alt="${esc(o.title || '')}" loading="lazy"></span><strong>${esc(o.title || o.kind || 'Object')}</strong><small>${[o.year, o.giver].filter(Boolean).map(esc).join(' · ')}</small></button>`;
 
   // ---------- an era (decade) ----------
   async function era(origin, y) {
@@ -272,16 +272,32 @@ d.addEventListener('keydown',function(e){if(e.key==='ArrowRight')show(k+1);if(e.
   // ---------- trophy room ----------
   async function trophies(origin) {
     const objs = await objects();
-    const kinds = [...new Set(objs.map((o) => o.kind).filter(Boolean))].sort();
+    const AWARD = ['Plaque', 'Trophy', 'Certificate', 'Medal'];
+    const isTreasure = (o) => o.featured || (o.kind && !AWARD.includes(o.kind)) || (o.year && o.year < 1980);
+    const treasures = objs.filter(isTreasure).sort((x, y) => (x.year || 9999) - (y.year || 9999)).slice(0, 12);
+    const tset = new Set(treasures.map((o) => o.acc));
+    const wall = objs.filter((o) => !tset.has(o.acc));
+    const decades = new Map();
+    for (const o of wall) { const d = o.year ? Math.floor(o.year / 10) * 10 : 0; (decades.get(d) || decades.set(d, []).get(d)).push(o); }
+    const order = [...decades.keys()].sort((x, y) => (y || -1) - (x || -1));
+    const kinds = [...new Set(wall.map((o) => o.kind).filter(Boolean))].sort();
+    const tagged = (o) => objCard(o).replace(/class="lib-obj( pol)?"/, (m, p1) => `class="lib-obj${p1 || ''}" data-kind="${esc(o.kind || '')}" data-year="${o.year || ''}"`);
     const body = `${libNav('trophies')}<section class="lib-era-hero dark"><div class="wrap"><span class="lib-eyebrow">The trophy room</span><h1>Honors given and received</h1><p>Plaques, trophies, medals and gifts from a century of service: awards from Rotary International and the District, thanks from partners and communities, and tokens from sister clubs around the world.</p></div></section>
-<section class="wrap lib-sec" style="padding-top:20px">${objs.length ? `<div class="lib-filter"><button type="button" data-k="" aria-pressed="true">All ${objs.length}</button>${kinds.map((k) => `<button type="button" data-k="${esc(k)}" aria-pressed="false">${esc(k)} ${objs.filter((o) => o.kind === k).length}</button>`).join('')}</div>
-<div class="lib-objs">${objs.map((o) => objCard(o).replace('class="lib-obj"', `class="lib-obj" data-kind="${esc(o.kind || '')}" data-year="${o.year || ''}"`)).join('')}</div>` : `<div class="lib-empty">Photographs of about 480 plaques and trophies are being prepared. <a href="/library/collection#c=Plaques%20%26%20trophies">See the list in the catalogue</a>.</div>`}</section>
-<dialog class="lib-lightbox light" id="lb"><button type="button" class="x" aria-label="Close">×</button><figure><img id="lbi" alt=""><figcaption id="lbc"></figcaption></figure></dialog>
-<script>(function(){var O=${JSON.stringify(objs.map((o) => ({ a: o.acc, s: aSrc(o.image_path), t: o.title, g: o.giver, y: o.year, k: o.kind, n: o.note }))).replace(/</g, '\\u003c')},d=document.getElementById('lb');
-document.addEventListener('click',function(e){var b=e.target.closest('[data-obj]');if(b){var o=O.find(function(x){return x.a===b.getAttribute('data-obj')});if(!o)return;document.getElementById('lbi').src=o.s;var c=document.getElementById('lbc');c.innerHTML='';var s=document.createElement('strong');s.textContent=o.t||'';c.appendChild(s);var m=document.createElement('span');m.textContent=[o.k,o.y,o.g,o.a].filter(Boolean).join(' · ');c.appendChild(m);if(o.n){var p=document.createElement('p');p.textContent=o.n;c.appendChild(p)}d.showModal();return}
-var f=e.target.closest('.lib-filter [data-k]');if(f){var k=f.getAttribute('data-k');document.querySelectorAll('.lib-filter [data-k]').forEach(function(x){x.setAttribute('aria-pressed',String(x===f))});document.querySelectorAll('.lib-objs .lib-obj').forEach(function(x){x.hidden=!!k&&x.getAttribute('data-kind')!==k})}});
+${objs.length ? `${treasures.length ? `<section class="lib-sec lib-dark"><div class="wrap"><div class="section-head"><div><span class="kicker">Treasures of the collection</span><h2>Objects with a story</h2></div></div>
+<div class="lib-objs lib-treasures">${treasures.map(tagged).join('')}</div></div></section>` : ''}
+<section class="wrap lib-sec"><div class="section-head"><div><span class="kicker">The awards wall</span><h2>${wall.length} awards and tokens, decade by decade</h2></div></div>
+${kinds.length > 1 ? `<div class="lib-filter" style="margin-top:6px"><button type="button" data-k="" aria-pressed="true">All</button>${kinds.map((k) => `<button type="button" data-k="${esc(k)}" aria-pressed="false">${esc(k)}</button>`).join('')}</div>` : ''}
+${order.map((d) => `<div class="lib-decade" data-dec="${d}"><h3>${d ? `The ${d}s` : 'Year not recorded'} <small>${decades.get(d).length}</small></h3><div class="lib-objs lib-wall">${decades.get(d).sort((x, y) => (y.year || 0) - (x.year || 0)).map(tagged).join('')}</div></div>`).join('')}</section>` : `<section class="wrap lib-sec"><div class="lib-empty">Photographs of about 480 plaques and trophies are being prepared. <a href="/library/collection#c=Plaques%20%26%20trophies">See the list in the catalogue</a>.</div></section>`}
+<dialog class="lib-lightbox light lib-objbox" id="lb"><button type="button" class="x" aria-label="Close">×</button><figure><img id="lbi" alt=""><figcaption id="lbc"></figcaption></figure></dialog>
+<script>(function(){var O=${JSON.stringify(objs.map((o) => ({ a: o.acc, s: aSrc(o.image_path), o: o.original_path ? aSrc(o.original_path) : '', t: o.title, g: o.giver, r: o.recipient, y: o.year, k: o.kind, i: o.inscription, n: o.note }))).replace(/</g, '\\u003c')},d=document.getElementById('lb');
+function el(t,x,c){var e=document.createElement(t);if(c)e.className=c;e.textContent=x;return e}
+document.addEventListener('click',function(e){var b=e.target.closest('[data-obj]');if(b){var o=O.find(function(x){return x.a===b.getAttribute('data-obj')});if(!o)return;var im=document.getElementById('lbi');im.src=o.s;im.alt=o.t||'';var c=document.getElementById('lbc');c.innerHTML='';c.appendChild(el('span',[o.k,o.y].filter(Boolean).join(' · '),'kick'));c.appendChild(el('strong',o.t||''));
+if(o.g||o.r)c.appendChild(el('span',(o.g?'Presented by '+o.g:'')+(o.g&&o.r?' to ':(o.r?'Presented to ':''))+(o.r||'')));
+if(o.i)c.appendChild(el('blockquote',o.i));else if(o.n)c.appendChild(el('p',o.n));
+var f=el('span','Catalogue no. '+o.a+' · ','small');if(o.o){var l=document.createElement('a');l.href=o.o;l.target='_blank';l.rel='noopener';l.textContent='original photograph';f.appendChild(l)}c.appendChild(f);d.showModal();return}
+var fb=e.target.closest('.lib-filter [data-k]');if(fb){var k=fb.getAttribute('data-k');document.querySelectorAll('.lib-filter [data-k]').forEach(function(x){x.setAttribute('aria-pressed',String(x===fb))});document.querySelectorAll('.lib-wall .lib-obj').forEach(function(x){x.hidden=!!k&&x.getAttribute('data-kind')!==k});document.querySelectorAll('.lib-decade').forEach(function(g){g.hidden=!g.querySelector('.lib-obj:not([hidden])')})}});
 d.querySelector('.x').onclick=function(){d.close()};d.addEventListener('click',function(e){if(e.target===d)d.close()});
-var y=location.hash.match(/^#y=(\\d{4})$/);if(y){document.querySelectorAll('.lib-objs .lib-obj').forEach(function(x){var v=Number(x.getAttribute('data-year'));x.hidden=!(v===Number(y[1])||v===Number(y[1])+1)})}})();</script>`;
+var y=location.hash.match(/^#y=(\\d{4})$/);if(y){document.querySelectorAll('.lib-objs .lib-obj').forEach(function(x){var v=Number(x.getAttribute('data-year'));x.hidden=!(v===Number(y[1])||v===Number(y[1])+1)});document.querySelectorAll('.lib-decade').forEach(function(g){g.hidden=!g.querySelector('.lib-obj:not([hidden])')})}})();</script>`;
     return page('The trophy room · Heritage Library', 'Plaques, trophies, medals and gifts from a century of the Rotary Club of Manila.', body, origin + '/library/trophies');
   }
 
