@@ -142,7 +142,7 @@
       }
       canvas.width = canvas.height = 0;
 
-      const rec = { n, width: W, height: H, spread: W > H * 0.7, text, thumbBlob, thumbUrl: URL.createObjectURL(thumbBlob), photos };
+      const rec = { n, width: W, height: H, spread: W > H * 0.82 /* real two-page spreads measure 0.89+; single letter and A4 pages 0.71–0.77 */, text, thumbBlob, thumbUrl: URL.createObjectURL(thumbBlob), photos };
       pages.push(rec);
       page.cleanup();
       if (onProgress) onProgress({ stage: 'page', n, total, page: rec });
