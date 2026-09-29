@@ -32,7 +32,39 @@ module.exports = function libraryModule(ctx) {
   // ---------- data ----------
   const volumes = () => safe(() => q('rcm_lib_volumes?select=id,acc,title,years,year_from,year_to,issue_from,issue_to,page_count,cover_path&status=eq.published&order=year_from'), []);
   const galleries = () => safe(() => q('rcm_lib_galleries?select=id,slug,title,event_date,place,cover_path,photo_count,balita_url&status=eq.published&order=event_date.desc'), []);
-  const objects = (limit = 2000) => safe(() => q(`rcm_lib_objects?select=acc,title,giver,kind,year,image_path,width,height,note,polished,recipient,inscription,featured,original_path&status=eq.published&order=year.desc.nullslast&limit=${limit}`), []);
+  const tidyO = (o) => {
+    const t = (x) => String(x || '').replace(/[\[\]]/g, '').replace(/\s+/g, ' ').trim().replace(/[.,;:]+$/, '');
+    let title = t(o.title).replace(/\s*—\s*(\d+\s+(plaques?|trophies|trophy|medals?|pieces?|items?)|(colou?red |printed |print )[^—]*|[^—]*(special|parchment) paper[^—]*)$/i, '').replace(/\s*—\s*(\d+\s+(plaques?|trophies|trophy|medals?|pieces?|items?)|(colou?red |printed |print )[^—]*|[^—]*(special|parchment) paper[^—]*)$/i, '').replace(/\s*\[?realia\]?/i, '');
+    title = title.replace(/^(presents this|is hereby presented to|is presented to)\s+/i, '');
+    if (title) title = title[0].toUpperCase() + title.slice(1);
+    let kind = t(o.kind);
+    if (/gavel/i.test(kind + ' ' + title) && !/^(Plaque|Trophy|Certificate|Medal)$/.test(kind)) kind = 'Keepsake';
+    if (!/^(Plaque|Trophy|Certificate|Medal|Photo album|Sculpture|Ceramic)$/i.test(kind)) kind = kind && kind.length < 16 && !/rotary|club/i.test(kind) ? kind : 'Keepsake';
+    if (kind === 'Object') kind = 'Keepsake';
+    const giver = t(o.giver).replace(/Rotary Club fof/i, 'Rotary Club of').replace(/^RC Manila$/i, 'Rotary Club of Manila');
+    return { ...o, title, kind, giver: giver || null };
+  };
+  const SRC = { ri: 'From Rotary International and The Rotary Foundation', district: 'From District 3810', club_other: 'From Rotary clubs at home and abroad', partner: 'From partners, communities and friends', rcm: 'The Club\'s own honors and keepsakes', other: 'Other honors and gifts' };
+  const srcOf = (o) => {
+    if (SRC[o.source_group]) return o.source_group;
+    const g = o.giver || '', all = `${g} ${o.title || ''}`;
+    if (g) {
+      if (/district|\b(P?DG|Dist\.? Gov)/i.test(g)) return 'district';
+      if (/rotary international|rotary foundation|^RI\b/i.test(g)) return 'ri';
+      if (/(rotary|rotaract|interact) club|RC\s/i.test(g) && !/of manila|RC ?Manila|RCManila/i.test(g)) return 'club_other';
+      if (/^Richard D\.? King$/i.test(g) || /presidential citation|paul harris|rotary foundation|\bTRF\b/i.test(o.title || '')) return 'ri';
+      if (/gavel|presidential award|club service award|perfect attendance|one hundred percent|pillar of rotary|attendance/i.test(o.title || '')) return 'rcm';
+      if (/\b(best|outstanding|excellence|most|champion|top club|quest|all.?star|governor|citation of merit|district|discon|manila area|category \d)\b/i.test(o.title || '') && !/university|school|inc\b|scouts|council|team|hospi/i.test(g)) return 'district';
+      if (/manila|RCM|RCManila|\b(PP|Rtn|RTN|STAR Rtn)\.?\s/i.test(g)) return 'rcm';
+      return 'partner';
+    }
+    if (/governor|district|discon|category \d|manila area|\bR\.?I\.? district/i.test(all)) return 'district';
+    if (/\bTRF\b|foundation contribution|presidential citation|rotary international/i.test(all)) return 'ri';
+    if (/\b(best|outstanding|excellence|most|champion|top club|quest|all.?star|citation of merit)\b/i.test(all)) return 'district';
+    if (/anniversary|one century|centennial|gavel|rotary club of manila|meritorious|presidential award|honorary member|plate|album|envelope/i.test(all)) return 'rcm';
+    return 'other';
+  };
+  const objects = (limit = 2000) => safe(() => q(`rcm_lib_objects?select=acc,title,giver,kind,year,image_path,width,height,note,polished,recipient,inscription,featured,original_path,source_group&status=eq.published&order=year.desc.nullslast&limit=${limit}`), []).then((r) => r.map(tidyO));
   const timeline = () => safe(() => q('rcm_lib_timeline?select=*&order=year'), []);
   async function thisWeek(vols) {
     if (!vols.length) return null;
@@ -274,20 +306,21 @@ d.addEventListener('keydown',function(e){if(e.key==='ArrowRight')show(k+1);if(e.
     const objs = await objects();
     const AWARD = ['Plaque', 'Trophy', 'Certificate', 'Medal'];
     const isTreasure = (o) => o.featured || (o.kind && !AWARD.includes(o.kind)) || (o.year && o.year < 1980);
-    const treasures = objs.filter(isTreasure).sort((x, y) => (x.year || 9999) - (y.year || 9999)).slice(0, 12);
+    const byNew = (x, y) => (y.year || 0) - (x.year || 0) || Number(!!y.polished) - Number(!!x.polished);
+    const treasures = objs.filter(isTreasure).sort((x, y) => Number(!!y.polished) - Number(!!x.polished) || (x.year || 9999) - (y.year || 9999)).slice(0, 12);
     const tset = new Set(treasures.map((o) => o.acc));
     const wall = objs.filter((o) => !tset.has(o.acc));
-    const decades = new Map();
-    for (const o of wall) { const d = o.year ? Math.floor(o.year / 10) * 10 : 0; (decades.get(d) || decades.set(d, []).get(d)).push(o); }
-    const order = [...decades.keys()].sort((x, y) => (y || -1) - (x || -1));
-    const kinds = [...new Set(wall.map((o) => o.kind).filter(Boolean))].sort();
+    const groups = new Map(Object.keys(SRC).map((k) => [k, []]));
+    for (const o of wall) groups.get(srcOf(o)).push(o);
+    const order = [...groups.keys()].filter((k) => groups.get(k).length);
+    const kinds = [...new Set(wall.map((o) => o.kind).filter(Boolean))].sort((x, y) => { const r = (k) => (AWARD.includes(k) ? AWARD.indexOf(k) : k === 'Keepsake' ? 99 : 50); return r(x) - r(y) || x.localeCompare(y); });
     const tagged = (o) => objCard(o).replace(/class="lib-obj( pol)?"/, (m, p1) => `class="lib-obj${p1 || ''}" data-kind="${esc(o.kind || '')}" data-year="${o.year || ''}"`);
     const body = `${libNav('trophies')}<section class="lib-era-hero dark"><div class="wrap"><span class="lib-eyebrow">The trophy room</span><h1>Honors given and received</h1><p>Plaques, trophies, medals and gifts from a century of service: awards from Rotary International and the District, thanks from partners and communities, and tokens from sister clubs around the world.</p></div></section>
 ${objs.length ? `${treasures.length ? `<section class="lib-sec lib-dark"><div class="wrap"><div class="section-head"><div><span class="kicker">Treasures of the collection</span><h2>Objects with a story</h2></div></div>
 <div class="lib-objs lib-treasures">${treasures.map(tagged).join('')}</div></div></section>` : ''}
-<section class="wrap lib-sec"><div class="section-head"><div><span class="kicker">The awards wall</span><h2>${wall.length} awards and tokens, decade by decade</h2></div></div>
+<section class="wrap lib-sec"><div class="section-head"><div><span class="kicker">The awards wall</span><h2>${wall.length} awards and tokens, by who gave them</h2></div></div>
 ${kinds.length > 1 ? `<div class="lib-filter" style="margin-top:6px"><button type="button" data-k="" aria-pressed="true">All</button>${kinds.map((k) => `<button type="button" data-k="${esc(k)}" aria-pressed="false">${esc(k)}</button>`).join('')}</div>` : ''}
-${order.map((d) => `<div class="lib-decade" data-dec="${d}"><h3>${d ? `The ${d}s` : 'Year not recorded'} <small>${decades.get(d).length}</small></h3><div class="lib-objs lib-wall">${decades.get(d).sort((x, y) => (y.year || 0) - (x.year || 0)).map(tagged).join('')}</div></div>`).join('')}</section>` : `<section class="wrap lib-sec"><div class="lib-empty">Photographs of about 480 plaques and trophies are being prepared. <a href="/library/collection#c=Plaques%20%26%20trophies">See the list in the catalogue</a>.</div></section>`}
+${order.length > 1 ? `<nav class="lib-srcnav">${order.map((k) => `<a href="#src-${k}">${esc(SRC[k].replace(/^From /, ''))} <small>${groups.get(k).length}</small></a>`).join('')}</nav>` : ''}${order.map((k) => `<div class="lib-decade" id="src-${k}"><h3>${esc(SRC[k])} <small>${groups.get(k).length}</small></h3><div class="lib-objs lib-wall">${groups.get(k).sort(byNew).map(tagged).join('')}</div></div>`).join('')}</section>` : `<section class="wrap lib-sec"><div class="lib-empty">Photographs of about 480 plaques and trophies are being prepared. <a href="/library/collection#c=Plaques%20%26%20trophies">See the list in the catalogue</a>.</div></section>`}
 <dialog class="lib-lightbox light lib-objbox" id="lb"><button type="button" class="x" aria-label="Close">×</button><figure><img id="lbi" alt=""><figcaption id="lbc"></figcaption></figure></dialog>
 <script>(function(){var O=${JSON.stringify(objs.map((o) => ({ a: o.acc, s: aSrc(o.image_path), o: o.original_path ? aSrc(o.original_path) : '', t: o.title, g: o.giver, r: o.recipient, y: o.year, k: o.kind, i: o.inscription, n: o.note }))).replace(/</g, '\\u003c')},d=document.getElementById('lb');
 function el(t,x,c){var e=document.createElement(t);if(c)e.className=c;e.textContent=x;return e}
