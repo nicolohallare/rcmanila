@@ -888,6 +888,11 @@ mark{background:#fce39b;color:inherit;padding:0 1px}
 .lib-decade{margin-top:34px}
 .lib-decade h3{font-size:22px;display:flex;align-items:baseline;gap:10px;border-bottom:1px solid var(--line);padding-bottom:8px;margin:0}
 .lib-decade h3 small{font-size:14px;color:var(--muted);font-weight:600}
+.lib-srcnav{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 0}
+.lib-srcnav a{padding:7px 12px;border:1px solid var(--line);border-radius:999px;font-size:14px;text-decoration:none;color:inherit;background:#fff}
+.lib-srcnav a:hover{border-color:currentColor}
+.lib-srcnav small{color:var(--muted);font-weight:600;margin-left:4px}
+.lib-decade{scroll-margin-top:90px}
 .lib-wall{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:18px 14px;margin-top:16px}
 .lib-wall .lib-obj strong{font-size:13.5px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .lib-objbox figure{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:28px;align-items:center}

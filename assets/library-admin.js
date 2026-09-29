@@ -181,7 +181,7 @@
           const kind = KIND[r.kind] || o.kind || 'Object';
           const giver = r.giver || o.giver || null;
           const title = (r.legible && r.title) ? r.title : (giver ? `${kind} from ${giver}` : (tidyCat(o.catalogue_title || o.title) || kind));
-          await retry(() => call('objects-save', { objects: [{ acc: o.acc, status: o.status, image_path: key, width: 1200, height: 1200, original_path: orig, catalogue_title: o.catalogue_title || o.title, polished: true, title, giver, kind, year: r.year || o.year || null, recipient: r.recipient || null, inscription: r.inscription || null, note: o.note || null, read_at: !!r.kind }] }));
+          await retry(() => call('objects-save', { objects: [{ acc: o.acc, status: o.status, image_path: key, width: 1200, height: 1200, original_path: orig, catalogue_title: o.catalogue_title || o.title, polished: true, title, giver, kind, year: r.year || o.year || null, recipient: r.recipient || null, inscription: r.inscription || null, note: o.note || null, read_at: !!r.kind, source_group: r.from && r.from !== 'unknown' ? r.from : null }] }));
           done++; if (cell) cell.innerHTML = stTag('done');
         } catch (err) { if (err.auth) return show('login'); failed++; if (cell) cell.innerHTML = stTag('failed: ' + String(err.message).slice(0, 60)); }
         $('obj-bar').style.width = Math.round((done + failed) / todo.length * 100) + '%';
