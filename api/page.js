@@ -11,6 +11,8 @@ async function q(path) {
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const img = (path, w) => path && path[0] === '/' ? path : path ? `${SB}/storage/v1/render/image/public/rcm/${path.split('/').map(encodeURIComponent).join('/')}?width=${w}&resize=contain&quality=78` : '';
 // Covers carry the issue's last-update time, so a re-uploaded issue never shows an old cached cover.
+// Changes with every deploy, so browsers fetch the new stylesheet at once instead of a saved copy.
+const ASSET_V = (process.env.VERCEL_GIT_COMMIT_SHA || process.env.VERCEL_DEPLOYMENT_ID || String(Date.now())).slice(0, 10);
 const coverSrc = (i, w) => img(i.cover_path, w) + (i.updated_at ? '&v=' + Date.parse(i.updated_at) : '');
 // Issues before July 2024 are letter-size pages; newer ones use the tall 4:9 design. The onload check corrects any exception.
 const pgc = (i) => (i && i.issue_date && i.issue_date < '2024-07-01' ? ' pg' : '');
@@ -105,7 +107,7 @@ ${url ? `<meta property="og:url" content="${esc(url)}">` : ''}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,400;0,600;0,700;0,800;1,700;1,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/site.css">
+<link rel="stylesheet" href="/assets/site.css?v=${ASSET_V}">
 </head>
 <body class="pub">
 <div class="topbar"><div class="wrap"><span class="tb-l">The first Rotary club in Asia · Established 1919</span><span class="tb-r"><a href="/secretariat">Secretariat login</a><a href="/admin">Editor login</a></span></div></div>
