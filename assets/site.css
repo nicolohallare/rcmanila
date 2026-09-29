@@ -359,6 +359,7 @@ p{margin:0}
 .ph.fit img.bgblur{object-fit:cover}
 
 .tb-r{display:flex;gap:18px}
+@media (max-width:420px){.tb-r{gap:12px;font-size:12.5px}}
 .wk-poster{flex-shrink:0;width:132px;aspect-ratio:2/3;overflow:hidden;border-radius:4px;box-shadow:0 10px 24px -10px rgba(0,0,0,.45);background:var(--sky);align-self:flex-start}
 .wk-poster img{width:100%;height:100%;object-fit:cover;object-position:top center}
 @media (max-width:700px){.wk-poster{display:none}}
