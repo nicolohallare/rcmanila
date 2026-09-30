@@ -517,7 +517,7 @@ module.exports = {
    "id": "p-1962a",
    "start": 1962,
    "name": "Jose Y. Orosa",
-   "img": "/assets/presidents/no-portrait.svg",
+   "img": "/assets/presidents/1962-orosa.jpg",
    "decade": "1959s",
    "summary": "Jose Y. Orosa, the first Filipino president of H.E. Heacock and former NAMARCO general manager, succeeded Emilio Abello as Manila Rotary’s forty-second president. He hosted the nineteenth District Conference with 700 attendees, supported charitable institutions and Mindanao flood victims, and advanced free eye care. His term also facilitated acceptance of the Manila Rotary Welcome Arch at Manila International Airport.",
    "balita": [],
