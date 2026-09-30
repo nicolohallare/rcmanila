@@ -71,7 +71,16 @@ main.wide{max-width:1760px}
 .pcell img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:4px}
 .pcell.off img{opacity:.35}
 .pcell textarea{min-height:56px;font-size:13px;padding:6px}
-.pcell .row{gap:6px}
+.pcell .row{gap:6px;flex-wrap:wrap}
+.crop-dlg{border:0;border-radius:8px;padding:20px 24px;width:min(1000px,calc(100vw - 32px));max-height:calc(100vh - 32px);overflow:auto}
+.crop-dlg::backdrop{background:rgba(10,25,55,.6)}
+.crop-dlg h2{margin:0 0 4px}
+.crop-stage{position:relative;display:inline-block;max-width:100%;touch-action:none;user-select:none;line-height:0;overflow:hidden}
+.crop-stage img{max-width:100%;max-height:62vh;display:block}
+.crop-box{position:absolute;box-shadow:0 0 0 9999px rgba(0,0,0,.55);outline:2px solid #fff;cursor:move}
+.crop-box i{position:absolute;width:18px;height:18px;background:#fff;border:2px solid #17458f;border-radius:3px}
+.crop-box i[data-h=nw]{left:-2px;top:-2px;cursor:nwse-resize}.crop-box i[data-h=ne]{right:-2px;top:-2px;cursor:nesw-resize}
+.crop-box i[data-h=sw]{left:-2px;bottom:-2px;cursor:nesw-resize}.crop-box i[data-h=se]{right:-2px;bottom:-2px;cursor:nwse-resize}
 .smallbtn{font:inherit;font-size:13px;font-weight:700;border:1px solid #c7d2df;background:#fff;border-radius:5px;padding:5px 8px;cursor:pointer}
 .note{background:#fdf0d5;border:1px solid #f0cf8a;border-radius:8px;padding:12px 14px;color:#5c3a00}
 .okbox{background:#e8f5ec;border:1px solid #b9dcc6;border-radius:10px;padding:18px}
@@ -219,7 +228,7 @@ main.wide{max-width:1760px}
 </section>
 </main>
 <script src="/assets/extract.js"></script>
-<script src="/assets/admin.js?v=1001a"></script>
+<script src="/assets/admin.js?v=1001b"></script>
 <script src="/assets/admin-cover.js"></script>
 </body>
 </html>
