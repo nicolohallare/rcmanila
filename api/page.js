@@ -27,7 +27,9 @@ const mailto = (subject) => `mailto:${MAIL}?subject=${encodeURIComponent(subject
 const TEL = 'tel:+63285271885';
 // The story's card photo: the one picked as cleanest (thumb), else the largest reasonably shaped photo.
 const cardScore = (p) => { const w = p.width || 400, h = p.height || 300, r = w / h; return Math.log(w * h) - (r < 0.55 ? 3 : 0) - (w < 260 || h < 180 ? 4 : 0); };
-const leadPhoto = (a) => { const ps = (a.photos || []).filter((p) => p.include !== false); return ps.find((p) => p.thumb) || ps.slice().sort((x, y) => cardScore(y) - cardScore(x))[0]; };
+// A story's picture for cards and lists: its clean cropped card picture when there is one.
+const cardOf = (a) => { const p = (a.photos || []).find((x) => x.thumb && x.card && x.include !== false); return p ? { path: p.card.path, width: p.card.width, height: p.card.height } : null; };
+const leadPhoto = (a) => { const c = cardOf(a); if (c) return c; const ps = (a.photos || []).filter((p) => p.include !== false); return ps.slice().sort((x, y) => cardScore(y) - cardScore(x))[0]; };
 // Show a photo no wider than its real pixel size, so small photos stay sharp instead of being blown up.
 const figure = (p, alt, w = 1400, lazy = true) => {
   const real = p.width || w;
@@ -42,7 +44,7 @@ const photoBox = (p, w0, cls = 'ph', w = Math.min(w0, p.width || w0)) => (p.widt
   ? `<div class="${cls} fit"><img class="bgblur" src="${img(p.path, 160)}" alt="" aria-hidden="true" loading="lazy"><img src="${img(p.path, w)}" alt="" loading="lazy"></div>`
   : `<div class="${cls}${isTall(p) ? ' tall' : ''}"><img src="${img(p.path, w)}" alt="" loading="lazy"></div>`;
 // Prefer a wide photo from the article for wide slots.
-const widePhoto = (a) => { const ps = (a.photos || []).filter((p) => p.include !== false); return ps.find((p) => p.thumb && !isTall(p)) || ps.slice().sort((x, y) => (isTall(x) - isTall(y)) || (cardScore(y) - cardScore(x)))[0]; };
+const widePhoto = (a) => { const c = cardOf(a); if (c && c.width >= c.height) return c; const ps = (a.photos || []).filter((p) => p.include !== false); return c || ps.slice().sort((x, y) => (isTall(x) - isTall(y)) || (cardScore(y) - cardScore(x)))[0]; };
 const manilaToday = () => new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10);
 const paras = (t) => String(t || '').split(/\n\s*\n/).map((blk) => {
   const lines = blk.split('\n').map((l) => l.trim()).filter(Boolean);
@@ -217,11 +219,17 @@ function shareBar(url, title, light) {
 }
 
 function storyCard(issue, a) {
-  const ph = leadPhoto(a);
+  const ph = (a.photos || []).find((p) => p.thumb && p.card && p.include !== false);
   const href = `/balita/${issue.issue_no}/${a.slug}`;
-  const visual = ph ? photoBox(ph, 640) 
-    : `<div class="ph quote">${esc(a.kicker || 'Balita')}</div>`;
-  return `<a class="story" href="${href}">${visual}<span class="eyebrow">${esc(a.kicker || 'Balita')}${a.printed_pages ? ' · ' + esc(a.printed_pages) : ''}</span><h3>${esc(a.title)}</h3>${a.dek ? `<p>${esc(a.dek)}</p>` : ''}</a>`;
+  const k = esc(a.kicker || 'Balita');
+  let visual;
+  if (ph) {
+    const c = ph.card, r = Math.min(1.6, Math.max(0.7, c.width / c.height));
+    visual = `<div class="sc-img" style="aspect-ratio:${r.toFixed(3)}"><img src="${img(c.path, Math.min(700, c.width))}" alt="" width="${c.width}" height="${c.height}" loading="lazy"></div>`;
+  } else {
+    visual = `<div class="sc-none"><img src="/assets/club-logo-white.png" alt="" aria-hidden="true"><span>${k}</span></div>`;
+  }
+  return `<a class="story sc" href="${href}">${visual}<span class="eyebrow">${k}${a.printed_pages ? ' · ' + esc(a.printed_pages) : ''}</span><h3>${esc(a.title)}</h3>${a.dek ? `<p>${esc(a.dek)}</p>` : ''}</a>`;
 }
 
 const ICOLS = 'id,issue_no,issue_date,meeting,guest,summary,cover_path,pages,page_count,status,publish_at,updated_at,source,pdf_url,heyzine_url';
@@ -751,7 +759,7 @@ ${arts.length ? `<button class="tab" role="tab" id="t-a" aria-selected="true" ar
 <button class="tab" role="tab" id="t-l" aria-selected="${arts.length ? 'false' : 'true'}" aria-controls="v-l">${arts.length ? 'Layout view' : 'Read the issue'}</button>
 <span style="margin-left:auto;align-self:center;color:var(--muted);font-size:15px">${arts.length ? `${arts.length} stories` : `${pages.length} pages`}${issue.pdf_url ? ` · <a href="${esc(issue.pdf_url)}" target="_blank" rel="noopener">Download PDF</a>` : ''}</span>
 </div></div>
-${arts.length ? '' : '<div hidden>'}<section class="wrap section" id="v-a" role="tabpanel" aria-labelledby="t-a"><div class="grid3">${arts.map((a) => storyCard(issue, a)).join('')}</div></section>${arts.length ? '' : '</div>'}
+${arts.length ? '' : '<div hidden>'}<section class="wrap section" id="v-a" role="tabpanel" aria-labelledby="t-a"><div class="sgrid">${arts.map((a) => storyCard(issue, a)).join('')}</div></section>${arts.length ? '' : '</div>'}
 <section class="wrap section" id="v-l" role="tabpanel" aria-labelledby="t-l"${arts.length ? ' hidden' : ''}>
 <p style="margin:0;color:var(--ink-2)">${arts.length ? 'The issue as it was printed, spread by spread. Switch to Articles for easy reading on a phone.' : 'The issue as it was printed, spread by spread. Tap a page to see it full size.'}</p>
 ${pages.length ? '' : '<p class="empty">The printed pages of this issue are not online yet.</p>'}<div class="pages">${pages.map((p, i) => `<figure><a href="${raw(p)}" target="_blank" rel="noopener"><img src="${img(p, 900)}" alt="Balita issue ${issue.issue_no}, PDF page ${i + 1}" loading="lazy"></a><figcaption>Page ${i + 1} of ${pages.length}</figcaption></figure>`).join('')}</div>
