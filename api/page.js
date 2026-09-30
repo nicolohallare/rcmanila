@@ -109,28 +109,24 @@ function calLink(m) {
 const FAMILY = [
   { name: 'Rotary International', href: 'https://www.rotary.org/', note: 'The worldwide network of Rotary clubs' },
   { name: 'Rotary Zone 10A', href: 'https://www.facebook.com/Zone10ARotaryVoice/', note: 'Rotary districts of the Philippines' },
-  { name: 'Rotary District 3810', href: 'https://www.facebook.com/district3810/', note: 'The Club’s district in Metro Manila' },
+  { name: 'Rotary District 3810', href: 'https://www.rotaryd3810.org/', note: 'The Club’s district in Metro Manila' },
+  { name: 'Zone 10A Public Image Awards', href: 'https://rotaryzone10apublicimageawards.com/', note: 'Recognizing Rotary storytelling across the Philippines' },
   { name: 'Philippine Rotary Magazine', href: 'https://www.philippinerotarymagazine.com/', note: 'Rotary’s regional magazine for the Philippines' },
   { name: 'Rotary Club of Manila Foundation, Inc.', href: 'https://rcmanilafoundation.com/', note: 'The Club’s foundation for its service projects' },
 ];
 let SITE = 'https://rcmanila.vercel.app';
-// Supporters band (above the footer on every public page). Set show:false to hide one.
+// Supporters band (above the footer on every public page). Artwork supplied by each supporter:
+// a wide 1200x520 for computers and a 300x250 box for phones. Set show:false to hide one.
 const SUPPORTERS = [
-  { key: 'herma', show: true, name: 'The Herma Group', href: 'https://www.hermagroup.com.ph/' },
-  { key: 'palawan', show: true, name: 'Palawan Group of Companies', href: 'https://www.palawanpawnshop.com/' },
+  { key: 'esguerra', show: true, name: 'Esguerra Foods Agriventures', href: 'https://esguerrakurobuta.com/', alt: 'Esguerra Foods Agriventures: Better food. Elevated lifestyle. esguerrakurobuta.com' },
+  { key: 'palawan', show: true, name: 'Palawan for Business', href: 'https://www.palawanpawnshop.com/', alt: 'Palawan for Business: Pang-asenso, pang-negosyo! palawanpawnshop.com' },
 ];
 function supportersBand() {
   const on = SUPPORTERS.filter((x) => x.show);
   if (!on.length) return '';
-  const card = (x) => {
-    const open = `<a class="sup-c sup-${x.key}" href="${x.href}" target="_blank" rel="sponsored noopener" aria-label="${esc(x.name)} (opens in a new tab)">`;
-    if (x.key === 'herma') return `${open}<img class="sup-hlogo" src="/assets/supporters/herma-logo.png" alt="The Herma Group, #BuiltToLast" width="440" height="460" loading="lazy"><span class="sup-hbody"><span class="sup-hlines"><b>Petroleum &amp; supply chain</b><b>Bunkering</b><b>Shipping</b><b>Shipbuilding &amp; ship repair</b><b>Agribusiness</b><b>Property development</b><b>Environmental management</b></span><span class="sup-go">hermagroup.com.ph ↗</span></span></a>`;
-    if (x.key === 'palawan') return `${open}<span class="sup-picons">${['palawanpay', 'padala', 'sangla', 'remit', 'bills', 'insurance'].map((k) => `<img src="/assets/supporters/pal-${k}.png" alt="" width="100" height="100" loading="lazy">`).join('')}</span><span class="sup-pserv">PalawanPay · Pera Padala · Sangla · Remittance · Bills payment · Insurance</span><span class="sup-pq">May pangangailangan?</span><img class="sup-phead" src="/assets/supporters/palawan-headline.png" alt="I-Palawan mo na!" width="814" height="98" loading="lazy"><span class="sup-pbsp">Supervised by the Bangko Sentral ng Pilipinas</span></a>`;
-    return '';
-  };
+  const card = (x) => `<a class="sup-ad" href="${x.href}" target="_blank" rel="sponsored noopener" aria-label="${esc(x.name)} (opens in a new tab)"><picture><source media="(max-width:560px)" srcset="/assets/supporters/${x.key}-box.jpg"><img src="/assets/supporters/${x.key}-wide.jpg" alt="${esc(x.alt)}" width="1200" height="520" loading="lazy"></picture></a>`;
   return `<section class="sup" aria-label="Supporters of the Rotary Club of Manila"><div class="wrap"><p class="sup-k">With thanks to our supporters</p><div class="sup-g">${on.map(card).join('')}</div></div></section>`;
 }
-
 function layout({ title, description, image, url, body, nav = '', type = 'article' }) {
   if (!image) image = '/assets/home/people-of-action.jpg';
   if (image[0] === '/') image = SITE + image;
