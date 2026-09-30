@@ -619,6 +619,17 @@ ${a.flag ? `<div class="note stack" role="note" style="gap:8px"><div><strong>The
   // ---------- share on Viber: the Heyzine link, a ready message, and a picture of the cover ----------
   const SITE = 'https://rcmanila.org';
   const LIB = SB + '/functions/v1/rcm-library';
+  document.addEventListener('click', async (e) => {
+    if (!e.target || e.target.id !== 'th-pick' || !R || !R.issue) return;
+    const b = e.target, m = document.getElementById('th-msg');
+    b.disabled = true; m.textContent = 'Looking at the photos…';
+    try {
+      const r = await fetch(SB + '/functions/v1/rcm-thumbs', { method: 'POST', headers: { 'content-type': 'application/json', 'x-editor-code': code, apikey: PUB }, body: JSON.stringify({ action: 'issue', issue_id: R.issue.id }) });
+      const d = await r.json();
+      if (!r.ok || d.error) throw new Error(d.error || ('Error ' + r.status));
+      m.textContent = `Done. Card photos chosen for ${d.done} stories.`;
+    } catch (err) { m.textContent = err.message; } finally { b.disabled = false; }
+  });
   async function libCall(action, payload) {
     const r = await fetch(LIB, { method: 'POST', headers: { 'content-type': 'application/json', 'x-editor-code': code, apikey: PUB }, body: JSON.stringify(Object.assign({ action }, payload || {})) });
     const d = await r.json().catch(() => ({}));

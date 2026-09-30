@@ -260,6 +260,7 @@ p{margin:0}
 .story{display:flex;flex-direction:column;gap:10px;color:var(--ink)!important;text-decoration:none!important;min-width:0}
 .story .ph{aspect-ratio:3/2;overflow:hidden;background:var(--sky);border-radius:6px}
 .story .ph img{width:100%;height:100%;object-fit:cover;object-position:center 30%}
+.ph.tall img{object-position:center 18%}
 .story .ph.quote{display:flex;align-items:flex-end;padding:22px;font-family:var(--serif);color:var(--blue);font-size:22px;line-height:1.3;background:var(--sky)}
 .story h3{font-size:23px}
 .story p{color:var(--ink-2);font-size:17px}
