@@ -127,6 +127,18 @@ function supportersBand() {
   const card = (x) => `<a class="sup-ad" href="${x.href}" target="_blank" rel="sponsored noopener" aria-label="${esc(x.name)} (opens in a new tab)"><picture><source media="(max-width:560px)" srcset="/assets/supporters/${x.key}-box.jpg"><img src="/assets/supporters/${x.key}-wide.jpg" alt="${esc(x.alt)}" width="1200" height="520" loading="lazy"></picture></a>`;
   return `<section class="sup" aria-label="Supporters of the Rotary Club of Manila"><div class="wrap"><p class="sup-k">With thanks to our supporters</p><div class="sup-g">${on.map(card).join('')}</div></div></section>`;
 }
+const WHATSON = ['meeting', 'events', 'speakers'];
+const INVOLVED = ['join', 'partner', 'donate'];
+// Second row under the header for the grouped sections (same look as the Library tabs).
+function subNav(nav) {
+  const groups = [
+    [WHATSON, 'What’s On', [['meeting', '/meeting', 'Weekly meetings'], ['events', '/events', 'Events'], ['speakers', '/speakers', 'Guest speakers']]],
+    [INVOLVED, 'Get Involved', [['join', '/join', 'Join the Club'], ['partner', '/partner', 'Partner with us'], ['donate', '/donate', 'Donate']]],
+  ];
+  const g = groups.find((x) => x[0].includes(nav));
+  if (!g) return '';
+  return `<nav class="lib-nav" aria-label="${g[1]}"><div class="wrap">${g[2].map(([k, h, t]) => `<a href="${h}" class="${k === nav ? 'on' : ''}">${t}</a>`).join('')}</div></nav>`;
+}
 function layout({ title, description, image, url, body, nav = '', type = 'article' }) {
   if (!image) image = '/assets/home/people-of-action.jpg';
   if (image[0] === '/') image = SITE + image;
@@ -156,14 +168,14 @@ ${url ? `<meta property="og:url" content="${esc(url)}">` : ''}
 <header class="site-head"><div class="wrap">
 <a class="logo lockup" href="/" aria-label="Rotary Club of Manila home"><img class="lk-club" src="/assets/club-logo.png" alt="Rotary Club of Manila" width="803" height="286"><span class="lk-rule" aria-hidden="true"></span><img class="lk-msg" src="/assets/msg-2026.png" alt="Create Lasting Impact" width="918" height="509"></a>
 <nav class="nav" aria-label="Main">
-<a href="/#club">Our Club</a><a href="/projects" class="${nav === 'projects' ? 'on' : ''}">Projects</a><a href="/meeting" class="${nav === 'meeting' ? 'on' : ''}">Meetings</a><a href="/events" class="${nav === 'events' ? 'on' : ''}">Events</a><a href="/balita" class="${nav === 'balita' ? 'on' : ''}">Balita</a><a href="/library" class="${nav === 'library' ? 'on' : ''}">Library</a><a href="/join" class="${nav === 'join' ? 'on' : ''}">Join</a><a href="/partner" class="${nav === 'partner' ? 'on' : ''}">Partner</a>
+<a href="/#club">Our Club</a><a href="/projects" class="${nav === 'projects' ? 'on' : ''}">Projects</a><a href="/meeting" class="${WHATSON.includes(nav) ? 'on' : ''}">What’s On</a><a href="/balita" class="${nav === 'balita' ? 'on' : ''}">Balita</a><a href="/library" class="${nav === 'library' ? 'on' : ''}">Library</a><a href="/join" class="${INVOLVED.includes(nav) ? 'on' : ''}">Get Involved</a>
 </nav>
 <details class="menu"><summary>Menu</summary><div class="menu-panel">
 <a href="/#club">Our Club</a><a href="/past-presidents">Past presidents</a><a href="/speakers">Guest speakers</a><a href="/projects">Service projects</a><a href="/meeting">Meetings</a><a href="/events">Events</a><a href="/balita">Balita</a><a href="/library">Heritage Library</a><a href="/join">Join the Club</a><a href="/partner">Partner or volunteer</a><a href="/donate">Donate</a><a href="#contact">Contact</a>
 </div></details>
 <a class="btn btn-gold head-cta" href="/meeting">Attend a meeting</a>
 </div></header>
-<main>${body}</main>
+${subNav(nav)}<main>${body}</main>
 ${supportersBand()}
 <footer class="foot" id="contact"><div class="wrap">
 <div style="display:flex;flex-direction:column;gap:14px"><span class="foot-lockup"><img class="lk-club" src="/assets/club-logo-white.png" alt="Rotary Club of Manila" width="803" height="286"><span class="lk-rule" aria-hidden="true"></span><img class="lk-msg" src="/assets/msg-2026-white.png" alt="Create Lasting Impact" width="918" height="509"></span><span>The first Rotary club in Asia. Service above self since 1919.</span></div>
@@ -317,7 +329,7 @@ ${up}
 <section class="wrap" style="padding-bottom:64px">${[...groups.entries()].map(([k, xs]) => `<div class="spk-yr"><h2>Rotary year ${esc(k)} <small>${xs.length}</small></h2><ul class="spk-list">${xs.map(row).join('')}</ul></div>`).join('') || '<p class="muted-p">The list is being prepared.</p>'}
 <p class="h-source">Names, positions and topics as printed in the Balita at the time. Corrections are welcome: <a href="mailto:${MAIL}?subject=Guest%20speakers%20page">${MAIL}</a>.</p></section>
 <script>(function(){var q=document.getElementById('spk-q');if(!q)return;q.addEventListener('input',function(){var v=q.value.trim().toLowerCase();document.querySelectorAll('.spk-yr .spk').forEach(function(li){li.hidden=!!v&&li.getAttribute('data-q').indexOf(v)<0});document.querySelectorAll('.spk-yr').forEach(function(g){g.hidden=!g.querySelector('.spk:not([hidden])')})})})();</script>`;
-  return layout({ title: 'Guest speakers · Rotary Club of Manila', description: `${list.length} guest speakers who have addressed the Rotary Club of Manila's weekly meetings since 2015.`, url: origin + '/speakers', body, nav: 'meeting' });
+  return layout({ title: 'Guest speakers · Rotary Club of Manila', description: `${list.length} guest speakers who have addressed the Rotary Club of Manila's weekly meetings since 2015.`, url: origin + '/speakers', body, nav: 'speakers' });
 }
 function presidentsPage(origin) {
   const list = PRES.presidents;
@@ -1085,7 +1097,7 @@ f.hidden=true;var done=document.getElementById('don-done');done.hidden=false;don
 catch(err){msg.textContent=err.message;b.disabled=false;}});
 })();
 </script>`;
-  return layout({ title: 'Donate · Rotary Club of Manila', description: 'Support the service projects of the Rotary Club of Manila using QR Ph from any bank or e-wallet app.', url: origin + '/donate', body });
+  return layout({ title: 'Donate · Rotary Club of Manila', description: 'Support the service projects of the Rotary Club of Manila using QR Ph from any bank or e-wallet app.', url: origin + '/donate', body, nav: 'donate' });
 }
 
 async function readJson(req) {
