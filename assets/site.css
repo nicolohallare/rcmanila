@@ -49,7 +49,7 @@ p{margin:0}
 .site-head .logo{flex-shrink:0}
 .site-head .logo img{height:48px;width:auto}
 .nav{display:flex;gap:4px;margin-left:auto;font-weight:600;font-size:16px}
-.nav a{color:var(--ink);padding:10px 12px;border-radius:4px}
+.nav a{color:var(--ink);padding:10px 14px;border-radius:4px;white-space:nowrap}
 .nav a:hover{background:var(--alt);text-decoration:none}
 .nav a.on{color:var(--blue);box-shadow:inset 0 -3px 0 var(--gold)}
 .menu{display:none;margin-left:auto;position:relative}
