@@ -143,7 +143,7 @@ ${url ? `<meta property="og:url" content="${esc(url)}">` : ''}
 <header class="site-head"><div class="wrap">
 <a class="logo lockup" href="/" aria-label="Rotary Club of Manila home"><img class="lk-club" src="/assets/club-logo.png" alt="Rotary Club of Manila" width="803" height="286"><span class="lk-rule" aria-hidden="true"></span><img class="lk-msg" src="/assets/msg-2026.png" alt="Create Lasting Impact" width="918" height="509"></a>
 <nav class="nav" aria-label="Main">
-<a href="/#club">Our Club</a><a href="/projects" class="${nav === 'projects' ? 'on' : ''}">Projects</a><a href="/meeting" class="${nav === 'meeting' ? 'on' : ''}">Meetings</a><a href="/balita" class="${nav === 'balita' ? 'on' : ''}">Balita</a><a href="/library" class="${nav === 'library' ? 'on' : ''}">Library</a><a href="/join" class="${nav === 'join' ? 'on' : ''}">Join</a><a href="/partner" class="${nav === 'partner' ? 'on' : ''}">Partner</a>
+<a href="/#club">Our Club</a><a href="/projects" class="${nav === 'projects' ? 'on' : ''}">Projects</a><a href="/meeting" class="${nav === 'meeting' ? 'on' : ''}">Meetings</a><a href="/events" class="${nav === 'events' ? 'on' : ''}">Events</a><a href="/balita" class="${nav === 'balita' ? 'on' : ''}">Balita</a><a href="/library" class="${nav === 'library' ? 'on' : ''}">Library</a><a href="/join" class="${nav === 'join' ? 'on' : ''}">Join</a><a href="/partner" class="${nav === 'partner' ? 'on' : ''}">Partner</a>
 </nav>
 <details class="menu"><summary>Menu</summary><div class="menu-panel">
 <a href="/#club">Our Club</a><a href="/past-presidents">Past presidents</a><a href="/speakers">Guest speakers</a><a href="/projects">Service projects</a><a href="/meeting">Meetings</a><a href="/events">Events</a><a href="/balita">Balita</a><a href="/library">Heritage Library</a><a href="/join">Join the Club</a><a href="/partner">Partner or volunteer</a><a href="/donate">Donate</a><a href="#contact">Contact</a>
@@ -811,7 +811,7 @@ async function eventsIndex(origin) {
 <p class="lead-p">Fellowships, fundraisers and special events of the Rotary Club of Manila. Sign up on each event’s page. For the weekly Thursday meeting, see <a href="/meeting">this week’s meeting</a>.</p></section>
 <section class="wrap" style="padding-bottom:48px">${up.length ? `<div class="ev-grid">${up.map((e) => card(e, false)).join('')}</div>` : '<p class="muted-p">No upcoming events are posted yet.</p>'}</section>
 ${past.filter((e) => !upIds.has(e.id)).length ? `<section class="wrap" style="padding-bottom:64px"><h2 style="font-size:24px;margin-bottom:16px">Past events</h2><div class="ev-grid past">${past.filter((e) => !upIds.has(e.id)).map((e) => card(e, true)).join('')}</div></section>` : ''}`;
-  return layout({ title: 'Events · Rotary Club of Manila', description: 'Fellowships, fundraisers and special events of the Rotary Club of Manila, with online sign-up.', url: origin + '/events', body, nav: 'meeting' });
+  return layout({ title: 'Events · Rotary Club of Manila', description: 'Fellowships, fundraisers and special events of the Rotary Club of Manila, with online sign-up.', url: origin + '/events', body, nav: 'events' });
 }
 async function eventPage(origin, slug) {
   if (!/^[a-z0-9-]{3,80}$/.test(String(slug || ''))) return null;
@@ -903,7 +903,7 @@ done.addEventListener('click',async function(ev){
 showDone();
 })();
 </script>`;
-  return layout({ title: `${e.title} · Rotary Club of Manila`, description: `${evWhen(e)}${e.time_text ? ', ' + e.time_text : ''}${e.venue ? ' at ' + e.venue : ''}. ${e.summary || ''}`.trim(), image: e.poster_path ? (e.poster_path[0] === '/' ? e.poster_path : img(e.poster_path, 1200)) : '', url, body, nav: 'meeting' });
+  return layout({ title: `${e.title} · Rotary Club of Manila`, description: `${evWhen(e)}${e.time_text ? ', ' + e.time_text : ''}${e.venue ? ' at ' + e.venue : ''}. ${e.summary || ''}`.trim(), image: e.poster_path ? (e.poster_path[0] === '/' ? e.poster_path : img(e.poster_path, 1200)) : '', url, body, nav: 'events' });
 }
 async function meetingPage(origin, dateParam) {
   const today = manilaToday();
