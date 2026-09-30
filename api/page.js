@@ -25,7 +25,9 @@ const PUB = 'sb_publishable_zebFaErs-sjDwYWQUMfq3g_VuF2DTI6';
 const MAIL = 'rotaryclubofmanila@gmail.com';
 const mailto = (subject) => `mailto:${MAIL}?subject=${encodeURIComponent(subject)}`;
 const TEL = 'tel:+63285271885';
-const leadPhoto = (a) => (a.photos || []).find((p) => p.include !== false);
+// The story's card photo: the one picked as cleanest (thumb), else the largest reasonably shaped photo.
+const cardScore = (p) => { const w = p.width || 400, h = p.height || 300, r = w / h; return Math.log(w * h) - (r < 0.55 ? 3 : 0) - (w < 260 || h < 180 ? 4 : 0); };
+const leadPhoto = (a) => { const ps = (a.photos || []).filter((p) => p.include !== false); return ps.find((p) => p.thumb) || ps.slice().sort((x, y) => cardScore(y) - cardScore(x))[0]; };
 // Show a photo no wider than its real pixel size, so small photos stay sharp instead of being blown up.
 const figure = (p, alt, w = 1400, lazy = true) => {
   const real = p.width || w;
@@ -35,11 +37,12 @@ const figure = (p, alt, w = 1400, lazy = true) => {
 };
 const isTall = (p) => p && p.width && p.height && p.height > p.width * 1.05;
 // A photo in a fixed frame: wide photos fill it; tall photos (portraits) show whole, over a soft blurred copy, so heads are never cut off.
-const photoBox = (p, w0, cls = 'ph', w = Math.min(w0, p.width || w0)) => (isTall(p) || (p.width && p.width < 560))
+// Portrait photos fill the frame, cropped from near the top where faces are; only very tall or tiny ones sit on a soft blurred backdrop.
+const photoBox = (p, w0, cls = 'ph', w = Math.min(w0, p.width || w0)) => (p.width && p.height && (p.height > p.width * 1.9 || p.width < 300))
   ? `<div class="${cls} fit"><img class="bgblur" src="${img(p.path, 160)}" alt="" aria-hidden="true" loading="lazy"><img src="${img(p.path, w)}" alt="" loading="lazy"></div>`
-  : `<div class="${cls}"><img src="${img(p.path, w)}" alt="" loading="lazy"></div>`;
+  : `<div class="${cls}${isTall(p) ? ' tall' : ''}"><img src="${img(p.path, w)}" alt="" loading="lazy"></div>`;
 // Prefer a wide photo from the article for wide slots.
-const widePhoto = (a) => (a.photos || []).filter((p) => p.include !== false).sort((x, y) => (isTall(x) - isTall(y)))[0];
+const widePhoto = (a) => { const ps = (a.photos || []).filter((p) => p.include !== false); return ps.find((p) => p.thumb && !isTall(p)) || ps.slice().sort((x, y) => (isTall(x) - isTall(y)) || (cardScore(y) - cardScore(x)))[0]; };
 const manilaToday = () => new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10);
 const paras = (t) => String(t || '').split(/\n\s*\n/).map((blk) => {
   const lines = blk.split('\n').map((l) => l.trim()).filter(Boolean);
