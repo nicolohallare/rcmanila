@@ -118,8 +118,8 @@ let SITE = 'https://rcmanila.vercel.app';
 // Supporters band (above the footer on every public page). Artwork supplied by each supporter:
 // a wide 1200x520 for computers and a 300x250 box for phones. Set show:false to hide one.
 const SUPPORTERS = [
-  { key: 'esguerra', show: true, name: 'Esguerra Foods Agriventures', href: 'https://esguerrakurobuta.com/', alt: 'Esguerra Foods Agriventures: Better food. Elevated lifestyle. esguerrakurobuta.com' },
-  { key: 'palawan', show: true, name: 'Palawan for Business', href: 'https://www.palawanpawnshop.com/', alt: 'Palawan for Business: Pang-asenso, pang-negosyo! palawanpawnshop.com' },
+  { key: 'esguerra', show: false, name: 'Esguerra Foods Agriventures', href: 'https://esguerrakurobuta.com/', alt: 'Esguerra Foods Agriventures: Better food. Elevated lifestyle. esguerrakurobuta.com' },
+  { key: 'palawan', show: false, name: 'Palawan for Business', href: 'https://www.palawanpawnshop.com/', alt: 'Palawan for Business: Pang-asenso, pang-negosyo! palawanpawnshop.com' },
 ];
 function supportersBand() {
   const on = SUPPORTERS.filter((x) => x.show);
