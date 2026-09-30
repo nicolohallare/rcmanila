@@ -114,6 +114,23 @@ const FAMILY = [
   { name: 'Rotary Club of Manila Foundation, Inc.', href: 'https://rcmanilafoundation.com/', note: 'The Club’s foundation for its service projects' },
 ];
 let SITE = 'https://rcmanila.vercel.app';
+// Supporters band (above the footer on every public page). Set show:false to hide one.
+const SUPPORTERS = [
+  { key: 'herma', show: true, name: 'The Herma Group', href: 'https://www.hermagroup.com.ph/' },
+  { key: 'palawan', show: true, name: 'Palawan Group of Companies', href: 'https://www.palawanpawnshop.com/' },
+];
+function supportersBand() {
+  const on = SUPPORTERS.filter((x) => x.show);
+  if (!on.length) return '';
+  const card = (x) => {
+    const open = `<a class="sup-c sup-${x.key}" href="${x.href}" target="_blank" rel="sponsored noopener" aria-label="${esc(x.name)} (opens in a new tab)">`;
+    if (x.key === 'herma') return `${open}<img class="sup-hlogo" src="/assets/supporters/herma-logo.png" alt="The Herma Group, #BuiltToLast" width="440" height="460" loading="lazy"><span class="sup-hbody"><span class="sup-hlines"><b>Petroleum &amp; supply chain</b> <i>·</i> <b>Bunkering</b> <i>·</i> <b>Shipping</b> <i>·</i> <b>Shipbuilding &amp; ship repair</b> <i>·</i> <b>Agribusiness</b> <i>·</i> <b>Property development</b> <i>·</i> <b>Environmental management</b></span><span class="sup-go">hermagroup.com.ph ↗</span></span></a>`;
+    if (x.key === 'palawan') return `${open}<span class="sup-picons">${['palawanpay', 'padala', 'sangla', 'remit', 'bills', 'insurance'].map((k) => `<img src="/assets/supporters/pal-${k}.png" alt="" width="100" height="100" loading="lazy">`).join('')}</span><span class="sup-pserv">PalawanPay · Pera Padala · Sangla · Remittance · Bills payment · Insurance</span><span class="sup-pq">May pangangailangan?</span><img class="sup-phead" src="/assets/supporters/palawan-headline.png" alt="I-Palawan mo na!" width="814" height="98" loading="lazy"><span class="sup-pbsp">Supervised by the Bangko Sentral ng Pilipinas</span></a>`;
+    return '';
+  };
+  return `<section class="sup" aria-label="Supporters of the Rotary Club of Manila"><div class="wrap"><p class="sup-k">With thanks to our supporters</p><div class="sup-g">${on.map(card).join('')}</div></div></section>`;
+}
+
 function layout({ title, description, image, url, body, nav = '', type = 'article' }) {
   if (!image) image = '/assets/home/people-of-action.jpg';
   if (image[0] === '/') image = SITE + image;
@@ -151,6 +168,7 @@ ${url ? `<meta property="og:url" content="${esc(url)}">` : ''}
 <a class="btn btn-gold head-cta" href="/meeting">Attend a meeting</a>
 </div></header>
 <main>${body}</main>
+${supportersBand()}
 <footer class="foot" id="contact"><div class="wrap">
 <div style="display:flex;flex-direction:column;gap:14px"><span class="foot-lockup"><img class="lk-club" src="/assets/club-logo-white.png" alt="Rotary Club of Manila" width="803" height="286"><span class="lk-rule" aria-hidden="true"></span><img class="lk-msg" src="/assets/msg-2026-white.png" alt="Create Lasting Impact" width="918" height="509"></span><span>The first Rotary club in Asia. Service above self since 1919.</span></div>
 <address style="font-style:normal"><strong>Secretariat</strong>RCM Office, 543 Arquiza St. cor. Grey St.<br>Ermita, Manila<br><a href="${TEL}">(02) 8527-1885</a><br><a href="mailto:${MAIL}">${MAIL}</a></address>
