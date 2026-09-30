@@ -944,3 +944,18 @@ mark{background:#fce39b;color:inherit;padding:0 1px}
 .spk-l{display:flex;flex-direction:column;gap:2px;text-align:right;font-size:14px;white-space:nowrap}
 @media (max-width:700px){.spk{grid-template-columns:1fr}.spk-l{flex-direction:row;gap:14px;text-align:left}}
 .cal-sub{margin-top:12px!important;font-size:14.5px;color:#dbe8f5}.cal-sub a{color:#fff;text-decoration:underline;text-underline-offset:3px}
+/* Club events */
+.ev-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:24px}
+.ev-card{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:#fff;color:var(--ink);text-decoration:none!important;transition:box-shadow .2s}
+.ev-card:hover{box-shadow:0 10px 28px -16px rgba(0,0,0,.45)}
+.ev-card .im{aspect-ratio:4/5;background:var(--sky);overflow:hidden}.ev-card .im img{width:100%;height:100%;object-fit:cover;object-position:top}
+.ev-b{display:flex;flex-direction:column;gap:4px;padding:16px 18px 18px}
+.ev-b small{font-size:12.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--blue)}
+.ev-b strong{font-family:var(--serif);font-size:20px;line-height:1.25;color:var(--navy)}
+.ev-b span{font-size:15px;color:var(--ink-2)}
+.ev-b em{font-style:normal;font-weight:700;font-size:14px;color:#1d7a46;margin-top:4px}.ev-b em.low{color:#a3262a}
+.ev-grid.past .ev-card{opacity:.85}.ev-grid.past .im{aspect-ratio:16/10}
+.ev-meter{height:8px;border-radius:99px;background:#e6ebf2;overflow:hidden;margin:-4px 0 14px}.ev-meter i{display:block;height:100%;background:var(--gold)}
+.ev-who{margin-top:14px;border-top:1px solid var(--line);padding-top:10px}.ev-who summary{cursor:pointer;font-weight:700;color:var(--blue)}.ev-who ol{margin:8px 0 0;padding-left:22px;font-size:15px;max-height:320px;overflow:auto}
+.hx-week-in.three{grid-template-columns:auto minmax(0,1.1fr) minmax(0,1fr) minmax(0,1fr)}
+@media (max-width:980px){.hx-week-in.three{grid-template-columns:1fr}}
