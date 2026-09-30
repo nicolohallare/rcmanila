@@ -224,7 +224,7 @@ function storyCard(issue, a) {
 const ICOLS = 'id,issue_no,issue_date,meeting,guest,summary,cover_path,pages,page_count,status,publish_at,updated_at,source,pdf_url,heyzine_url';
 const ACOLS = 'id,issue_id,slug,sort,kicker,title,dek,byline,body,photos,page_from,page_to,printed_pages,lead,included,source,legacy_url';
 async function liveIssues(limit = 20, cols = ICOLS) {
-  return q(`rcm_issues?select=${cols}&order=issue_no.desc&limit=${limit}`);
+  return q(`rcm_issues?select=${cols}&order=issue_date.desc,issue_no.desc&limit=${limit}`);
 }
 async function articlesOf(issueId) {
   return q(`rcm_articles?select=${ACOLS}&issue_id=eq.${issueId}&order=sort.asc`);
