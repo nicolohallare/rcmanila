@@ -50,6 +50,14 @@
       "destination": "/api/page?r=ics"
     },
     {
+      "source": "/events",
+      "destination": "/api/page?r=events"
+    },
+    {
+      "source": "/events/:slug",
+      "destination": "/api/page?r=event&slug=:slug"
+    },
+    {
       "source": "/speakers",
       "destination": "/api/page?r=speakers"
     },
