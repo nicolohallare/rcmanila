@@ -65,7 +65,7 @@ async function meetingsIcs(origin) {
   const escI = (t) => String(t || '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
   const fold = (line) => { const out = []; let l = line; while (l.length > 73) { out.push(l.slice(0, 73)); l = ' ' + l.slice(73); } out.push(l); return out.join('\r\n'); };
   const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
-  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Rotary Club of Manila//Meetings//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'X-WR-CALNAME:Rotary Club of Manila meetings', 'X-WR-TIMEZONE:Asia/Manila', 'REFRESH-INTERVAL;VALUE=DURATION:PT12H', 'X-PUBLISHED-TTL:PT12H',
+  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Rotary Club of Manila//Meetings//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'X-WR-CALNAME:Rotary Club of Manila meetings and events', 'X-WR-TIMEZONE:Asia/Manila', 'REFRESH-INTERVAL;VALUE=DURATION:PT12H', 'X-PUBLISHED-TTL:PT12H',
     'BEGIN:VTIMEZONE', 'TZID:Asia/Manila', 'BEGIN:STANDARD', 'DTSTART:19700101T000000', 'TZOFFSETFROM:+0800', 'TZOFFSETTO:+0800', 'TZNAME:PHT', 'END:STANDARD', 'END:VTIMEZONE'];
   for (const m of ms) {
     const [st, en] = mtTimes(m); const d = m.meeting_date.replace(/-/g, '');
@@ -73,6 +73,13 @@ async function meetingsIcs(origin) {
     const desc = [m.label, m.speaker ? `Guest speaker: ${m.speaker}${m.speaker_title ? ', ' + m.speaker_title : ''}` : '', m.notes, `Sign up: ${origin}/meetings/${m.meeting_date}`].filter(Boolean).join('\n');
     lines.push('BEGIN:VEVENT', `UID:${m.id}@rcmanila.org`, `DTSTAMP:${stamp}`, `DTSTART;TZID=Asia/Manila:${f(st)}`, `DTEND;TZID=Asia/Manila:${f(en)}`,
       fold(`SUMMARY:${escI('RCM: ' + (m.topic || m.label || 'Weekly meeting'))}`), fold(`LOCATION:${escI(m.venue)}`), fold(`DESCRIPTION:${escI(desc)}`), `URL:${origin}/meetings/${m.meeting_date}`, 'END:VEVENT');
+  }
+  const evs = await q(`rcm_events?select=id,slug,title,kicker,event_date,time_text,venue,summary&status=eq.published&event_date=gte.${since}&order=event_date&limit=100`).catch(() => []);
+  for (const e of evs) {
+    const [st, en] = mtTimes({ time_text: e.time_text || '6:00 PM' }); const d = e.event_date.replace(/-/g, '');
+    const f = (t) => `${d}T${String(t[0]).padStart(2, '0')}${String(t[1]).padStart(2, '0')}00`;
+    lines.push('BEGIN:VEVENT', `UID:${e.id}@rcmanila.org`, `DTSTAMP:${stamp}`, `DTSTART;TZID=Asia/Manila:${f(st)}`, `DTEND;TZID=Asia/Manila:${f(en)}`,
+      fold(`SUMMARY:${escI('RCM: ' + e.title)}`), fold(`LOCATION:${escI(e.venue)}`), fold(`DESCRIPTION:${escI([e.kicker, e.summary, `Sign up: ${origin}/events/${e.slug}`].filter(Boolean).join('\n'))}`), `URL:${origin}/events/${e.slug}`, 'END:VEVENT');
   }
   lines.push('END:VCALENDAR');
   return lines.join('\r\n') + '\r\n';
@@ -139,7 +146,7 @@ ${url ? `<meta property="og:url" content="${esc(url)}">` : ''}
 <a href="/#club">Our Club</a><a href="/projects" class="${nav === 'projects' ? 'on' : ''}">Projects</a><a href="/meeting" class="${nav === 'meeting' ? 'on' : ''}">Meetings</a><a href="/balita" class="${nav === 'balita' ? 'on' : ''}">Balita</a><a href="/library" class="${nav === 'library' ? 'on' : ''}">Library</a><a href="/join" class="${nav === 'join' ? 'on' : ''}">Join</a><a href="/partner" class="${nav === 'partner' ? 'on' : ''}">Partner</a>
 </nav>
 <details class="menu"><summary>Menu</summary><div class="menu-panel">
-<a href="/#club">Our Club</a><a href="/past-presidents">Past presidents</a><a href="/speakers">Guest speakers</a><a href="/projects">Service projects</a><a href="/meeting">Meetings</a><a href="/balita">Balita</a><a href="/library">Heritage Library</a><a href="/join">Join the Club</a><a href="/partner">Partner or volunteer</a><a href="/donate">Donate</a><a href="#contact">Contact</a>
+<a href="/#club">Our Club</a><a href="/past-presidents">Past presidents</a><a href="/speakers">Guest speakers</a><a href="/projects">Service projects</a><a href="/meeting">Meetings</a><a href="/events">Events</a><a href="/balita">Balita</a><a href="/library">Heritage Library</a><a href="/join">Join the Club</a><a href="/partner">Partner or volunteer</a><a href="/donate">Donate</a><a href="#contact">Contact</a>
 </div></details>
 <a class="btn btn-gold head-cta" href="/meeting">Attend a meeting</a>
 </div></header>
@@ -147,7 +154,7 @@ ${url ? `<meta property="og:url" content="${esc(url)}">` : ''}
 <footer class="foot" id="contact"><div class="wrap">
 <div style="display:flex;flex-direction:column;gap:14px"><span class="foot-lockup"><img class="lk-club" src="/assets/club-logo-white.png" alt="Rotary Club of Manila" width="803" height="286"><span class="lk-rule" aria-hidden="true"></span><img class="lk-msg" src="/assets/msg-2026-white.png" alt="Create Lasting Impact" width="918" height="509"></span><span>The first Rotary club in Asia. Service above self since 1919.</span></div>
 <address style="font-style:normal"><strong>Secretariat</strong>RCM Office, 543 Arquiza St. cor. Grey St.<br>Ermita, Manila<br><a href="${TEL}">(02) 8527-1885</a><br><a href="mailto:${MAIL}">${MAIL}</a></address>
-<div><strong>Explore</strong><a href="/projects">Service projects</a><br><a href="/past-presidents">Past presidents</a><br><a href="/meeting">Weekly meeting</a> · <a href="/speakers">Guest speakers</a><br><a href="/balita">Balita archive</a><br><a href="/library">Heritage Library</a><br><a href="/join">Join</a> · <a href="/partner">Partner</a> · <a href="/donate">Donate</a><br><a href="https://www.facebook.com/RotaryClubofManila" target="_blank" rel="noopener">Facebook</a> · <a href="https://www.linkedin.com/company/rotary-club-of-manila/" target="_blank" rel="noopener">LinkedIn</a></div>
+<div><strong>Explore</strong><a href="/projects">Service projects</a><br><a href="/past-presidents">Past presidents</a><br><a href="/meeting">Weekly meeting</a> · <a href="/events">Events</a> · <a href="/speakers">Guest speakers</a><br><a href="/balita">Balita archive</a><br><a href="/library">Heritage Library</a><br><a href="/join">Join</a> · <a href="/partner">Partner</a> · <a href="/donate">Donate</a><br><a href="https://www.facebook.com/RotaryClubofManila" target="_blank" rel="noopener">Facebook</a> · <a href="https://www.linkedin.com/company/rotary-club-of-manila/" target="_blank" rel="noopener">LinkedIn</a></div>
 <div><strong>Rotary family</strong>${FAMILY.map((f) => `<a href="${f.href}" target="_blank" rel="noopener">${esc(f.name)}</a>`).join('<br>')}</div>
 <div class="copy">© ${new Date().getFullYear()} Rotary Club of Manila</div>
 </div></footer>
@@ -550,6 +557,8 @@ ${lead ? `<a class="wk-lead" href="/balita/${issue.issue_no}/${lead.slug}">${esc
   // first-time visitors: heritage first, with this week's meeting and Balita kept to one slim bar.
   const wkMeeting = mt ? `<a class="hx-item" href="/meetings/${mt.meeting_date}"><span class="hx-date"><b>${new Date(mt.meeting_date + 'T12:00:00+08:00').toLocaleDateString('en-GB', { timeZone: 'Asia/Manila', day: 'numeric' })}</b>${new Date(mt.meeting_date + 'T12:00:00+08:00').toLocaleDateString('en-GB', { timeZone: 'Asia/Manila', month: 'short' }).toUpperCase()}</span><span class="hx-txt"><small>This week's meeting${mtCount ? ` · ${mtCount} signed up` : ''}</small><strong>${esc(mt.topic || mt.label || 'Weekly membership meeting')}</strong>${mt.speaker ? `<em>${esc(mt.speaker)}</em>` : ''}</span><span class="hx-go">Sign up →</span></a>`
     : `<a class="hx-item" href="/meeting"><span class="hx-date"><b>THU</b>12:15</span><span class="hx-txt"><small>Weekly meeting</small><strong>Every Thursday. Guests are welcome.</strong></span><span class="hx-go">Details →</span></a>`;
+  const soonEv = (await upcomingEvents(6)).filter((e) => e.event_date >= manilaToday() && Date.parse(e.event_date) - Date.now() < 21 * 864e5)[0];
+  const wkEvent = soonEv ? `<a class="hx-item" href="/events/${esc(soonEv.slug)}"><span class="hx-date"><b>${new Date(soonEv.event_date + 'T12:00:00+08:00').toLocaleDateString('en-GB', { timeZone: 'Asia/Manila', day: 'numeric' })}</b>${new Date(soonEv.event_date + 'T12:00:00+08:00').toLocaleDateString('en-GB', { timeZone: 'Asia/Manila', month: 'short' }).toUpperCase()}</span><span class="hx-txt"><small>${esc(soonEv.kicker ? soonEv.kicker.split(' · ')[0] : 'Club event')}</small><strong>${esc(soonEv.title)}</strong>${soonEv.venue ? `<em>${esc(soonEv.venue)}</em>` : ''}</span><span class="hx-go">Sign up →</span></a>` : '';
   const wkBalita = issue ? `<a class="hx-item" href="/balita/${issue.issue_no}"><span class="hx-cov">${issue.cover_path ? `<img src="${coverSrc(issue, 120)}" alt="">` : ''}</span><span class="hx-txt"><small>Balita No. ${issue.issue_no} · ${esc(fmtDate(issue.issue_date))}</small><strong>${guestName ? `On the cover: ${esc(guestName)}` : esc(coverStory ? coverStory.title : 'The latest issue')}</strong>${lead && lead !== coverStory ? `<em>Also: ${esc(lead.title)}</em>` : ''}</span><span class="hx-go">Read →</span></a>`
     : `<a class="hx-item" href="/balita"><span class="hx-txt"><small>Balita</small><strong>The Club's weekly publication</strong></span><span class="hx-go">Read →</span></a>`;
 
@@ -570,7 +579,7 @@ ${(() => { const cv = cover || COVER_FALLBACK; const mon = new Date(cv.month + '
 <span class="poa-mark-lock" aria-hidden="true"><img src="/assets/club-logo-white.png" alt="" width="803" height="286"><i></i><b>People <small>of</small> Action</b></span>
 </div></div>
 <div class="poa-cover-cap"><div class="wrap poa-cover-cap-in"><span class="poa-cover-tag">People of Action · ${esc(mon)}</span>${cv.caption ? `<span class="poa-cover-txt">${esc(cv.caption)}</span>` : ''}${cv.link ? `<a class="poa-cover-go" href="${esc(cv.link)}">Read the story <span aria-hidden="true">→</span></a>` : ''}</div></div>`; })()}
-<div class="hx-week"><div class="wrap hx-week-in"><span class="hx-week-l">This week</span>${wkMeeting}${wkBalita}</div></div>
+<div class="hx-week"><div class="wrap hx-week-in${wkEvent ? ' three' : ''}"><span class="hx-week-l">This week</span>${wkMeeting}${wkEvent}${wkBalita}</div></div>
 </section>
 
 
@@ -773,6 +782,129 @@ ${others.length ? `<h2 style="font-size:24px;margin-top:12px">More from this iss
   return layout({ title: `${a.title} · Balita ${issue.issue_no}`, description: a.dek || `From the Balita, issue ${issue.issue_no}.`, image: lead ? img(lead.path, 1200) : (issue.cover_path ? coverSrc(issue, 1200) : ''), url, body, nav: 'balita' });
 }
 
+// ---------- Club events: fellowships, fundraisers, exhibits, with online sign-up and a seat limit ----------
+const EFN = `${SB}/functions/v1/rcm-events`;
+const peso = (n) => '₱' + Number(n).toLocaleString('en-PH', { maximumFractionDigits: 2 });
+const evWhen = (e) => {
+  const d = fmtDay(e.event_date);
+  if (e.end_date && e.end_date !== e.event_date) return `${d}, until ${fmtDate(e.end_date)}`;
+  return d;
+};
+async function upcomingEvents(limit = 20) {
+  const today = manilaToday();
+  return q(`rcm_events?select=id,slug,title,kicker,event_date,end_date,time_text,venue,summary,poster_path,capacity,price&status=eq.published&or=(event_date.gte.${today},end_date.gte.${today})&order=event_date&limit=${limit}`).catch(() => []);
+}
+async function eventsIndex(origin) {
+  const today = manilaToday();
+  const [up, past, seats] = await Promise.all([
+    upcomingEvents(40),
+    q(`rcm_events?select=id,slug,title,kicker,event_date,end_date,venue,poster_path&status=eq.published&event_date=lt.${today}&order=event_date.desc&limit=24`).catch(() => []),
+    q('rpc/rcm_event_seats').catch(() => []),
+  ]);
+  const taken = new Map(seats.map((s) => [s.event_id, Number(s.seats)]));
+  const upIds = new Set(up.map((e) => e.id));
+  const card = (e, isPast) => {
+    const left = e.capacity ? Math.max(0, e.capacity - (taken.get(e.id) || 0)) : null;
+    return `<a class="ev-card" href="/events/${esc(e.slug)}"><span class="im">${e.poster_path ? `<img src="${esc(img(e.poster_path, 600))}" alt="" loading="lazy">` : ''}</span><span class="ev-b"><small>${esc(e.kicker || 'Club event')}</small><strong>${esc(e.title)}</strong><span>${esc(evWhen(e))}${e.time_text ? ' · ' + esc(e.time_text) : ''}</span>${e.venue ? `<span>${esc(e.venue)}</span>` : ''}${!isPast && left !== null ? `<em class="${left <= 10 ? 'low' : ''}">${left ? `${left} of ${e.capacity} seats left` : 'Fully booked'}</em>` : ''}</span></a>`;
+  };
+  const body = `<section class="wrap pj-index-head"><span class="kicker">Meetings &amp; events</span><h1>Club events</h1>
+<p class="lead-p">Fellowships, fundraisers and special events of the Rotary Club of Manila. Sign up on each event’s page. For the weekly Thursday meeting, see <a href="/meeting">this week’s meeting</a>.</p></section>
+<section class="wrap" style="padding-bottom:48px">${up.length ? `<div class="ev-grid">${up.map((e) => card(e, false)).join('')}</div>` : '<p class="muted-p">No upcoming events are posted yet.</p>'}</section>
+${past.filter((e) => !upIds.has(e.id)).length ? `<section class="wrap" style="padding-bottom:64px"><h2 style="font-size:24px;margin-bottom:16px">Past events</h2><div class="ev-grid past">${past.filter((e) => !upIds.has(e.id)).map((e) => card(e, true)).join('')}</div></section>` : ''}`;
+  return layout({ title: 'Events · Rotary Club of Manila', description: 'Fellowships, fundraisers and special events of the Rotary Club of Manila, with online sign-up.', url: origin + '/events', body, nav: 'meeting' });
+}
+async function eventPage(origin, slug) {
+  if (!/^[a-z0-9-]{3,80}$/.test(String(slug || ''))) return null;
+  const e = (await q(`rcm_events?select=*&status=eq.published&slug=eq.${slug}`).catch(() => []))[0];
+  if (!e) return null;
+  const pub = await q(`rpc/rcm_event_public?ev=${e.id}`).catch(() => null) || {};
+  const taken = Number(pub.seats || 0);
+  const today = manilaToday();
+  const past = (e.end_date || e.event_date) < today;
+  const started = e.event_date < today;
+  const left = e.capacity ? Math.max(0, e.capacity - taken) : null;
+  const open = e.rsvp_open && !started && (left === null || left > 0);
+  const url = `${origin}/events/${e.slug}`;
+  const partner = e.who !== 'members';
+  const max = Math.max(1, Math.min(10, Number(e.per_member) || 1));
+  const calM = { meeting_date: e.event_date, time_text: e.time_text, topic: e.title, label: e.kicker, venue: e.venue, notes: e.summary };
+  const seatLine = () => e.capacity ? (left ? `<strong>${left}</strong> of ${e.capacity} seats left` : '<strong>Fully booked</strong>') : (taken ? `<strong>${taken}</strong> ${taken === 1 ? 'person has' : 'people have'} signed up` : 'Be the first to sign up');
+  const whoText = e.who === 'members' ? 'For RCM members' : e.who === 'members_partners' ? `For RCM members and their wife or partner${max > 1 ? ` · up to ${max} per member` : ''}` : 'Members, families and friends welcome';
+  const body = `
+<section class="issue-head meet-head ev-head"><div class="wrap">
+${dateChip(e.event_date)}
+<div style="display:flex;flex-direction:column;gap:12px">
+<nav class="crumbs" aria-label="Breadcrumb"><a href="/">Home</a> / <a href="/events">Events</a></nav>
+<span class="eyebrow" style="color:var(--gold)">${esc(e.kicker || 'Club event')}</span>
+<h1>${esc(e.title)}</h1>
+${e.summary ? `<p style="font-size:19px;color:#fff;max-width:60ch">${esc(e.summary)}</p>` : ''}
+${past ? '<p><strong style="color:var(--gold)">This event has ended. Thank you to everyone who took part.</strong></p>' : `<div class="hero-cta">${open ? '<a class="btn btn-gold" href="#rsvp">Sign up</a>' : ''}${/^https:\/\//.test(e.link_url || '') ? `<a class="btn btn-line" style="color:#fff" href="${esc(e.link_url)}" target="_blank" rel="noopener">${esc(e.link_label || 'More details')} ↗</a>` : ''}${!started ? `<a class="btn btn-line" style="color:#fff" href="${calLink(calM)}" target="_blank" rel="noopener">Add to calendar</a>` : ''}</div>`}
+</div></div></section>
+<div class="wrap meet-grid">
+<div class="meet-main">
+<dl class="facts">
+<div><dt>When</dt><dd>${esc(evWhen(e))}${e.time_text ? ` · ${esc(e.time_text)}` : ''}</dd></div>
+${e.venue ? `<div><dt>Where</dt><dd>${esc(e.venue)} · <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.venue)}" target="_blank" rel="noopener">Map</a></dd></div>` : ''}
+${e.price ? `<div><dt>Ticket</dt><dd>${esc(peso(e.price))}${e.price_note ? ` ${esc(e.price_note)}` : ''}</dd></div>` : ''}
+<div><dt>Who</dt><dd>${esc(whoText)}</dd></div>
+${e.organizer ? `<div><dt>Organized by</dt><dd>${esc(e.organizer)}</dd></div>` : ''}
+</dl>
+${e.body ? `<div class="meet-note big">${paras(e.body)}</div>` : ''}
+${e.poster_path ? `<figure class="poster"><a href="${raw(e.poster_path)}" target="_blank" rel="noopener"><img src="${img(e.poster_path, 900)}" alt="Event poster: ${esc(e.title)}"></a><figcaption>Tap the poster to see it full size</figcaption></figure>` : ''}
+<div class="share-row">${shareBar(url, e.title, true)}</div>
+</div>
+<aside class="rsvp" id="rsvp">
+<h2>${past ? 'This event has ended' : open ? 'Sign up' : left === 0 ? 'Fully booked' : 'Sign-ups closed'}</h2>
+<p class="rsvp-count" id="ev-count">${seatLine()}</p>
+${e.capacity ? `<div class="ev-meter" aria-hidden="true"><i style="width:${Math.min(100, Math.round(taken / e.capacity * 100))}%"></i></div>` : ''}
+${open ? `<form id="ev-form" novalidate>
+<label>Your name, as it should appear on the list<input name="name" required maxlength="100" autocomplete="name" placeholder="e.g. PP Juan Dela Cruz"></label>
+${partner ? `<label>${e.who === 'members_partners' ? 'Wife or partner coming with you' : 'Guest coming with you'} <span style="font-weight:400;color:var(--muted)">(optional)</span><input name="guest_name" maxlength="100" placeholder="Full name"></label>` : ''}
+<label>Mobile number <span style="font-weight:400;color:var(--muted)">(optional, only the Secretariat sees it)</span><input name="contact" maxlength="80" inputmode="tel" autocomplete="tel"></label>
+<label class="hp" aria-hidden="true">Website<input name="website" tabindex="-1" autocomplete="off"></label>
+<button class="btn btn-blue" type="submit" style="width:100%">${e.price ? `Reserve${partner ? '' : ' my seat'}` : 'Sign me up'}</button>
+<p id="ev-msg" role="status" aria-live="polite"></p>
+</form>
+<div id="ev-done" hidden></div>
+${e.price ? `<p class="small">Payment details will follow from the ${e.who === 'members' || e.who === 'members_partners' ? 'Secretariat' : 'organizers'}. ${esc(peso(e.price))} ${e.price_note ? esc(e.price_note) : 'per ticket'}.</p>` : ''}` : ''}
+${Array.isArray(pub.names) && pub.names.length ? `<details class="ev-who"><summary>Who’s coming (${pub.names.length})</summary><ol>${pub.names.map((n) => `<li>${esc(n)}</li>`).join('')}</ol></details>` : ''}
+<p class="small">${e.contact ? `Questions: ${esc(e.contact)}, or the ` : 'Questions: the '}Secretariat at <a href="${TEL}">(02) 8527-1885</a>.</p>
+</aside>
+</div>
+<script>
+(function(){
+var f=document.getElementById('ev-form'); if(!f) return;
+var FN=${JSON.stringify(EFN)}, PUB=${JSON.stringify(PUB)}, KEY='rcm-ev-${e.id}', CAP=${e.capacity || 0};
+var msg=document.getElementById('ev-msg'), done=document.getElementById('ev-done'), cnt=document.getElementById('ev-count');
+function mine(){try{return JSON.parse(localStorage.getItem(KEY)||'[]')}catch(x){return []}}
+function save(l){try{localStorage.setItem(KEY,JSON.stringify(l))}catch(x){}}
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function setSeats(n){if(CAP){var l=Math.max(0,CAP-n);cnt.innerHTML=l?'<strong>'+l+'</strong> of '+CAP+' seats left':'<strong>Fully booked</strong>';var m=document.querySelector('.ev-meter i');if(m)m.style.width=Math.min(100,Math.round(n/CAP*100))+'%';}else cnt.innerHTML='<strong>'+n+'</strong> signed up';}
+function showDone(){var l=mine();if(!l.length){done.hidden=true;f.hidden=false;return;}done.hidden=false;f.hidden=true;
+ done.innerHTML='<p class="ok"><strong>You’re on the list.</strong></p><ul class="mine">'+l.map(function(x,i){return '<li>'+esc(x.name)+'<button type="button" class="smallbtn" data-rm="'+i+'">Cancel</button></li>'}).join('')+'</ul><button type="button" class="smallbtn" id="ev-more">Sign up someone else</button>';}
+f.addEventListener('submit',async function(ev){ev.preventDefault();
+ var d={action:'signup',event_id:${JSON.stringify(e.id)},name:f.name.value,guest_name:f.guest_name?f.guest_name.value:'',contact:f.contact.value,website:f.website.value};
+ if(d.name.trim().length<2){msg.textContent='Please type your name.';f.name.focus();return;}
+ var b=f.querySelector('button[type=submit]');b.disabled=true;msg.textContent='Saving…';
+ try{var r=await fetch(FN,{method:'POST',headers:{'content-type':'application/json',apikey:PUB},body:JSON.stringify(d)});var j=await r.json();
+  if(!r.ok||j.error)throw new Error(j.error||'Please try again.');
+  var l=mine();l.push({id:j.id,token:j.token,name:d.name.trim()+(d.guest_name.trim()?' & '+d.guest_name.trim():''),seats:d.guest_name.trim()?2:1});save(l);
+  setSeats(j.seats);msg.textContent='';f.reset();showDone();
+ }catch(err){msg.textContent=err.message||'Something went wrong. Please try again.';}
+ finally{b.disabled=false;}
+});
+done.addEventListener('click',async function(ev){
+ if(ev.target.id==='ev-more'){done.hidden=true;f.hidden=false;f.name.focus();return;}
+ var rm=ev.target.getAttribute('data-rm');if(rm===null)return;
+ var l=mine(),x=l[+rm];ev.target.disabled=true;
+ if(x&&x.id){try{await fetch(FN,{method:'POST',headers:{'content-type':'application/json',apikey:PUB},body:JSON.stringify({action:'cancel',id:x.id,token:x.token})});}catch(err){}}
+ l.splice(+rm,1);save(l);showDone();
+});
+showDone();
+})();
+</script>`;
+  return layout({ title: `${e.title} · Rotary Club of Manila`, description: `${evWhen(e)}${e.time_text ? ', ' + e.time_text : ''}${e.venue ? ' at ' + e.venue : ''}. ${e.summary || ''}`.trim(), image: e.poster_path ? (e.poster_path[0] === '/' ? e.poster_path : img(e.poster_path, 1200)) : '', url, body, nav: 'meeting' });
+}
 async function meetingPage(origin, dateParam) {
   const today = manilaToday();
   let m = null;
@@ -1063,6 +1195,8 @@ module.exports = async (req, res) => {
     else if (r === 'join') html = joinPage(origin);
     else if (r === 'presidents') html = presidentsPage(origin);
     else if (r === 'speakers') html = await speakersPage(origin);
+    else if (r === 'events') html = await eventsIndex(origin);
+    else if (r === 'event') html = await eventPage(origin, u.searchParams.get('slug'));
     else if (r === 'lib') html = await LIB.route(origin, u);
     else if (r === 'partner') html = partnerPage(origin, String(u.searchParams.get('i') || '').slice(0, 80));
   } catch (e) {
