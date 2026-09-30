@@ -622,12 +622,24 @@ ${a.flag ? `<div class="note stack" role="note" style="gap:8px"><div><strong>The
   document.addEventListener('click', async (e) => {
     if (!e.target || e.target.id !== 'th-pick' || !R || !R.issue) return;
     const b = e.target, m = document.getElementById('th-msg');
-    b.disabled = true; m.textContent = 'Looking at the photos…';
-    try {
-      const r = await fetch(SB + '/functions/v1/rcm-thumbs', { method: 'POST', headers: { 'content-type': 'application/json', 'x-editor-code': code, apikey: PUB }, body: JSON.stringify({ action: 'issue', issue_id: R.issue.id }) });
-      const d = await r.json();
+    b.disabled = true; m.textContent = 'Starting…';
+    const call = async (action) => {
+      const r = await fetch(SB + '/functions/v1/rcm-thumbs', { method: 'POST', headers: { 'content-type': 'application/json', 'x-editor-code': code, apikey: PUB }, body: JSON.stringify({ action, issue_id: R.issue.id }) });
+      const d = await r.json().catch(() => ({}));
       if (!r.ok || d.error) throw new Error(d.error || ('Error ' + r.status));
-      m.textContent = `Done. Card photos chosen for ${d.done} stories.`;
+      return d;
+    };
+    try {
+      const s = await call('issue');
+      if (!s.started) { m.textContent = 'No stories with photos in this issue.'; return; }
+      // The photos are chosen in the background, one story at a time (about half a minute each).
+      for (;;) {
+        await new Promise((res) => setTimeout(res, 5000));
+        const st = await call('status');
+        if (st.finished) { m.textContent = `Done. Clean card photos chosen for ${st.cards} of ${st.total} stories. The rest show the Club logo card.`; break; }
+        if (Date.now() - Date.parse(st.at) > 180000) { m.textContent = `Stopped at ${st.done} of ${st.total}. Click the button again to retry.`; break; }
+        m.textContent = `Picking photos… ${st.done} of ${st.total} stories (about ${Math.max(1, Math.ceil((st.total - st.done) / 2))} min left). You can keep working.`;
+      }
     } catch (err) { m.textContent = err.message; } finally { b.disabled = false; }
   });
   async function libCall(action, payload) {
