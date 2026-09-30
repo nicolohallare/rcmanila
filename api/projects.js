@@ -183,7 +183,7 @@ module.exports = [
       'Capable young people from low-income families often cannot afford the industry-ready technical training that leads to stable jobs.',
     ],
     did: [
-      ['4 March 2025', 'Planning with DUALTECH', 'Club and Rotary Club of Manila Foundation officers met DUALTECH’s leadership to set up the scholarship program.'],
+      ['4 March 2025', 'Planning with DUALTECH', 'Club and RCManila Foundation officers met DUALTECH’s leadership to set up the scholarship program.'],
       ['RY 2025–26', 'Leon Lambert Fellows Fund', 'The Club allocated P1 million to the education and technical training of 15 scholars.'],
       ['December 2025', 'Memorandum of Agreement', 'The Club signed a Memorandum of Agreement with Dualtech Training Center and launched the A.R.A.L. program.'],
       ['September 2026', 'Dualtech Excellence Center, Canlubang, Laguna', 'President Reginald T. Yu, IPP Raoul Creencia and Project Chair Anton Mauricio visited the workshops, watched scholars at work and discussed how to extend the scholarships to more students.'],
@@ -193,7 +193,7 @@ module.exports = [
       ['P1M', 'revolving fund: repayments pay for the next scholars'],
     ],
     resultText: 'DUALTECH’s German-inspired dual training model combines classroom instruction with supervised on-the-job training in partner industries, so scholars graduate ready for work.',
-    partners: ['DUALTECH Training Center', 'Leon Lambert Fellows', 'Rotary Club of Manila Foundation, Inc.'],
+    partners: ['DUALTECH Training Center', 'Leon Lambert Fellows', 'RCManila Foundation'],
     next: 'As scholars find work and repay, the fund supports new students.',
     gallery: [
       { src: '/assets/projects/aral-machining-2026.jpg', caption: 'Members of the Rotary Club of Manila watch Dualtech scholars in hands-on precision machining training, September 2026.' },

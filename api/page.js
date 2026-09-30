@@ -111,13 +111,21 @@ function calLink(m) {
 }
 
 // Mutual links with the wider Rotary family (District, Zone, RI, the Philippine Rotary Magazine, the Club's foundation).
+// Useful parts of rotary.org for members (the Secretariat asked for Rotary International to be easy to reach).
+const RI_LINKS = [
+  { name: 'rotary.org', href: 'https://www.rotary.org/', note: 'Rotary International: who we are, our causes and how Rotary works' },
+  { name: 'My Rotary', href: 'https://my.rotary.org/', note: 'Sign in with your Rotary account for member and club tools' },
+  { name: 'Learning & Reference', href: 'https://my.rotary.org/en/learning-reference', note: 'Free courses in the Rotary Learning Center, guides and manuals' },
+  { name: 'The Rotary Foundation', href: 'https://my.rotary.org/en/rotary-foundation', note: 'Grants, giving and the Foundation’s programs' },
+  { name: 'Rotary magazine', href: 'https://www.rotary.org/en/news-and-stories/rotary-magazine', note: 'Stories of Rotary members around the world' },
+];
 const FAMILY = [
   { name: 'Rotary International', href: 'https://www.rotary.org/', note: 'The worldwide network of Rotary clubs' },
   { name: 'Rotary Zone 10A', href: 'https://www.facebook.com/Zone10ARotaryVoice/', note: 'Rotary districts of the Philippines' },
   { name: 'Rotary District 3810', href: 'https://www.rotaryd3810.org/', note: 'The Club’s district in Metro Manila' },
   { name: 'Zone 10A Public Image Awards', href: 'https://rotaryzone10apublicimageawards.com/', note: 'Recognizing Rotary storytelling across the Philippines' },
   { name: 'Philippine Rotary Magazine', href: 'https://www.philippinerotarymagazine.com/', note: 'Rotary’s regional magazine for the Philippines' },
-  { name: 'Rotary Club of Manila Foundation, Inc.', href: 'https://rcmanilafoundation.com/', note: 'The Club’s foundation for its service projects' },
+  { name: 'RCManila Foundation', href: 'https://rcmanilafoundation.com/', note: 'The Club’s foundation for its service projects' },
 ];
 let SITE = 'https://rcmanila.vercel.app';
 // Supporters band (above the footer on every public page). Artwork supplied by each supporter:
@@ -163,6 +171,12 @@ ${image ? `<meta property="og:image" content="${esc(image)}">` : ''}
 ${url ? `<meta property="og:url" content="${esc(url)}">` : ''}
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/assets/logo.png">
+<link rel="manifest" href="/assets/site.webmanifest">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<meta name="theme-color" content="#17458f">
+<meta name="apple-mobile-web-app-title" content="RC Manila">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,400;0,600;0,700;0,800;1,700;1,800&display=swap" rel="stylesheet">
@@ -185,7 +199,7 @@ ${supportersBand()}
 <footer class="foot" id="contact"><div class="wrap">
 <div style="display:flex;flex-direction:column;gap:14px"><span class="foot-lockup"><img class="lk-club" src="/assets/club-logo-white.png" alt="Rotary Club of Manila" width="803" height="286"><span class="lk-rule" aria-hidden="true"></span><img class="lk-msg" src="/assets/msg-2026-white.png" alt="Create Lasting Impact" width="918" height="509"></span><span>The first Rotary club in Asia. Service above self since 1919.</span></div>
 <address style="font-style:normal"><strong>Secretariat</strong>RCM Office, 543 Arquiza St. cor. Grey St.<br>Ermita, Manila<br><a href="${TEL}">(02) 8527-1885</a><br><a href="mailto:${MAIL}">${MAIL}</a></address>
-<div><strong>Explore</strong><a href="/projects">Service projects</a><br><a href="/past-presidents">Past presidents</a><br><a href="/meeting">Weekly meeting</a> · <a href="/events">Events</a> · <a href="/speakers">Guest speakers</a><br><a href="/balita">Balita archive</a><br><a href="/library">Heritage Library</a><br><a href="/join">Join</a> · <a href="/partner">Partner</a> · <a href="/donate">Donate</a><br><a href="https://www.facebook.com/RotaryClubofManila" target="_blank" rel="noopener">Facebook</a> · <a href="https://www.linkedin.com/company/rotary-club-of-manila/" target="_blank" rel="noopener">LinkedIn</a></div>
+<div><strong>Explore</strong><a href="/projects">Service projects</a><br><a href="/past-presidents">Past presidents</a><br><a href="/meeting">Weekly meeting</a> · <a href="/events">Events</a> · <a href="/speakers">Guest speakers</a><br><a href="/balita">Balita archive</a><br><a href="/library">Heritage Library</a><br><a href="/join">Join</a> · <a href="/partner">Partner</a> · <a href="/donate">Donate</a><br><a href="/app">Put the Club on your phone</a><br><a href="https://www.facebook.com/RotaryClubofManila" target="_blank" rel="noopener">Facebook</a> · <a href="https://www.linkedin.com/company/rotary-club-of-manila/" target="_blank" rel="noopener">LinkedIn</a></div>
 <div><strong>Rotary family</strong>${FAMILY.map((f) => `<a href="${f.href}" target="_blank" rel="noopener">${esc(f.name)}</a>`).join('<br>')}</div>
 <div class="copy">© ${new Date().getFullYear()} Rotary Club of Manila</div>
 </div></footer>
@@ -345,7 +359,7 @@ ${up}
 function presidentsPage(origin) {
   const list = PRES.presidents;
   const current = list[list.length - 1];
-  const card = (x, i) => `<button type="button" class="pres-card" id="${presId(x)}" data-p="${i}" aria-haspopup="dialog"><img src="${x.img}" alt="" width="320" height="320" loading="lazy"><b>${esc(x.name)}</b><span>${esc(x.years)}${x === current ? ' · Current' : ''}</span></button>`;
+  const card = (x, i) => `<button type="button" class="pres-card" id="${presId(x)}" data-p="${i}" aria-haspopup="dialog"><img src="${x.img}" alt="" width="400" height="600" loading="lazy"><b>${esc(x.name)}</b><span>${esc(x.years)}${x === current ? ' · Current' : ''}</span></button>`;
   const detail = (x, i) => {
     const src = [x.profile ? 'Presidential profiles, Rotary Club of Manila (2026)' : x.book || !x.summary ? '“The Work That Endures”, the Club’s 107th anniversary history (2026)' : '', ...x.balita.map(([u, t]) => `<a href="${esc(u)}">Balita: ${esc(t)}</a>`)].filter(Boolean);
     return `<template id="pt-${i}"><img src="${x.img}" alt="Portrait of ${esc(x.name)}" width="320" height="320"><div><span class="kicker">${x === current ? 'President, ' : ''}${esc(x.years)}</span><h2>${esc(x.name)}</h2>
@@ -419,6 +433,29 @@ if(!r.ok||d.error)throw new Error(d.error||'Please try again.');
 f.hidden=true;var done=document.getElementById('inq-done');done.hidden=false;done.innerHTML='<strong>Thank you!</strong><p>The Secretariat has your message and will get in touch. You can also call (02) 8527-1885 or email rotaryclubofmanila@gmail.com.</p>';}
 catch(err){msg.textContent=err.message;b.disabled=false;}});})();
 </script>`;
+}
+
+// "Put the Club on your phone": how to add rcmanila.org to the home screen (the site installs like an app).
+function appPage(origin) {
+  const body = `<section class="wrap pj-index-head"><span class="kicker">On your phone</span><h1>Put the Club on your home screen</h1>
+<p class="lede">Add rcmanila.org to your phone once, and the Club’s icon sits with your other apps. One tap opens the weekly meeting, events, the Balita and the library. Nothing to download from an app store, and no account needed.</p>
+<div class="app-inst"><button type="button" class="btn btn-gold" id="app-add" hidden>Add to home screen</button></div></section>
+<section class="wrap app-steps">
+<div class="app-card"><h2>iPhone or iPad</h2><ol>
+<li>Open <b>rcmanila.org</b> in <b>Safari</b>.</li>
+<li>Tap the <b>Share</b> button (the square with an arrow pointing up) at the bottom of the screen.</li>
+<li>Scroll down and tap <b>Add to Home Screen</b>.</li>
+<li>Tap <b>Add</b> at the top right. The Rotary wheel icon, named <b>RC Manila</b>, appears on your home screen.</li>
+</ol></div>
+<div class="app-card"><h2>Android phone</h2><ol>
+<li>Open <b>rcmanila.org</b> in <b>Chrome</b>.</li>
+<li>Tap the <b>three dots</b> at the top right.</li>
+<li>Tap <b>Add to Home screen</b> (on some phones: <b>Install app</b>).</li>
+<li>Tap <b>Add</b> or <b>Install</b>. The Rotary wheel icon, named <b>RC Manila</b>, appears on your home screen.</li>
+</ol></div>
+</section>
+<script>(function(){var ev=null,b=document.getElementById('app-add');window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();ev=e;b.hidden=false;});b.addEventListener('click',function(){if(!ev)return;ev.prompt();ev.userChoice.finally(function(){ev=null;b.hidden=true;});});})();</script>`;
+  return layout({ title: 'Put the Club on your phone · Rotary Club of Manila', description: 'Add rcmanila.org to your phone’s home screen: one tap to the weekly meeting, events, the Balita and the library.', url: `${origin}/app`, body, type: 'website' });
 }
 
 function joinPage(origin) {
@@ -677,7 +714,7 @@ ${routesStrip()}
 ${historyWeek(hist)}
 <div class="h-years">${YEARS.map((y) => `<figure class="h-year" style="margin:0"><img src="${H(y.img)}" alt="" loading="lazy"><b>${y.year}</b><p>${esc(y.text)}</p></figure>`).join('')}</div>
 <div class="h-pres"><div class="h-pres-head"><h3>${PRES.presidents.length} presidential terms since 1919</h3><a class="link-arrow" href="/past-presidents">See every president and his term</a></div>
-<div class="h-pres-row">${PRES.presidents.slice(-8).reverse().map((x) => `<a href="/past-presidents#${presId(x)}"><img src="${x.img}" alt="" width="320" height="320" loading="lazy"><b>${esc(x.name)}</b><span>${esc(x.years)}</span></a>`).join('')}</div></div>
+<div class="h-pres-row">${PRES.presidents.slice(-8).reverse().map((x) => `<a href="/past-presidents#${presId(x)}"><img src="${x.img}" alt="" width="400" height="600" loading="lazy"><b>${esc(x.name)}</b><span>${esc(x.years)}</span></a>`).join('')}</div></div>
 </div></section>
 
 ${issue ? `<section class="h-sec alt" id="balita"><div class="wrap h-balita">
@@ -694,6 +731,12 @@ ${guestName ? `<p class="h-balita-cover-note">On the cover: ${coverStory ? `<a h
 <h2>Leadership becomes more meaningful in the service of others.</h2>
 <p>Join business, professional and civic leaders working for a stronger Manila. Start by joining us at a Thursday meeting as a guest.</p>
 <div class="h-cta"><a class="btn btn-gold" href="/meeting">Attend as a guest</a><a class="btn btn-ghost" href="/join">How to join</a></div>
+</div></section>
+<section class="h-family h-ri" aria-labelledby="h-ri-t"><div class="wrap">
+<span class="kicker">From Rotary International</span>
+<h2 id="h-ri-t">A wealth of Rotary information for members</h2>
+<p>Rotary International’s website has courses, guides, Foundation grants and news from Rotary clubs around the world.</p>
+<div class="h-family-row">${RI_LINKS.map((f) => `<a href="${f.href}" target="_blank" rel="noopener"><b>${esc(f.name)}</b><span>${esc(f.note)}</span></a>`).join('')}</div>
 </div></section>
 <section class="h-family" aria-label="The Rotary family"><div class="wrap">
 <span class="kicker">Part of the Rotary family</span>
@@ -1230,6 +1273,7 @@ module.exports = async (req, res) => {
     else if (r === 'projects') html = projectsIndex(origin);
     else if (r === 'project') { html = projectPage(origin, u.searchParams.get('slug')); if (!html) { res.statusCode = 301; res.setHeader('Location', '/projects'); return res.end(); } }
     else if (r === 'join') html = joinPage(origin);
+    else if (r === 'app') html = appPage(origin);
     else if (r === 'presidents') html = presidentsPage(origin);
     else if (r === 'speakers') html = await speakersPage(origin);
     else if (r === 'events') html = await eventsIndex(origin);
