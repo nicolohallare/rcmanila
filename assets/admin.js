@@ -524,7 +524,7 @@ ${a.flag ? `<div class="note stack" role="note" style="gap:8px"><div><strong>The
 <label class="f" for="e-dek">Summary shown when shared<textarea id="e-dek" style="min-height:64px">${esc(a.dek || '')}</textarea></label>
 <div class="row"><label class="f" for="e-byline" style="flex:1">Byline<input id="e-byline" type="text" value="${esc(a.byline || '')}"></label><label class="f" for="e-kicker" style="flex:1">Section label<input id="e-kicker" type="text" value="${esc(a.kicker || '')}"></label></div>
 <div class="stack" style="gap:8px"><strong style="font-size:14px;color:var(--ink-2)">Photos — the first one included leads the article</strong>
-<div class="pgrid">${(a.photos || []).map((p, k) => `<div class="pcell ${p.include === false ? 'off' : ''}"><strong style="font-size:13px">Photo ${k + 1}${p.include === false ? ' · left out' : k === 0 || (a.photos || []).slice(0, k).every((x) => x.include === false) ? ' · top of article' : ''}</strong><img src="${imgUrl(p.path, 320)}" alt=""><textarea data-cap="${k}" aria-label="Caption for photo ${k + 1}" placeholder="Caption (optional)">${esc(p.caption || '')}</textarea><div class="row"><button class="smallbtn" type="button" data-tog="${k}">${p.include === false ? 'Include' : 'Leave out'}</button>${k > 0 ? `<button class="smallbtn" type="button" data-lead="${k}">Make first</button>` : ''}</div></div>`).join('') || '<p class="muted">No photos for this article.</p>'}</div></div>
+<div class="pgrid">${(a.photos || []).map((p, k) => `<div class="pcell ${p.include === false ? 'off' : ''}"><strong style="font-size:13px">Photo ${k + 1}${p.include === false ? ' · left out' : k === 0 || (a.photos || []).slice(0, k).every((x) => x.include === false) ? ' · top of article' : ''}</strong><img src="${imgUrl(p.path, 320)}" alt=""><textarea data-cap="${k}" aria-label="Caption for photo ${k + 1}" placeholder="Caption (optional)">${esc(p.caption || '')}</textarea><div class="row"><button class="smallbtn" type="button" data-tog="${k}">${p.include === false ? 'Include' : 'Leave out'}</button>${k > 0 ? `<button class="smallbtn" type="button" data-lead="${k}">Make first</button>` : ''}<button class="smallbtn" type="button" data-crop="${k}">Crop</button>${p.orig_path ? `<button class="smallbtn" type="button" data-uncrop="${k}">Undo crop</button>` : ''}</div></div>`).join('') || '<p class="muted">No photos for this article.</p>'}</div></div>
 <label class="f" for="e-body">Text <span class="muted" style="font-weight:400">(blank line between paragraphs; start a line with ## for a subheading)</span><textarea id="e-body" style="min-height:320px">${esc(bodyText)}</textarea></label>
 <div class="row" style="justify-content:space-between">
 <div class="row"><button class="smallbtn" type="button" id="e-incl">${a.included ? 'Leave out of website' : 'Put back on website'}</button><button class="smallbtn" type="button" id="e-lead">${a.lead ? '★ Featured on homepage' : 'Feature on homepage'}</button></div>
@@ -553,12 +553,75 @@ ${a.flag ? `<div class="note stack" role="note" style="gap:8px"><div><strong>The
     const t = e.target.closest('[data-tog]'), l = e.target.closest('[data-lead]');
     if (t) { const k = +t.getAttribute('data-tog'); const cur = readEditor(a); cur.photos[k].include = cur.photos[k].include === false; Object.assign(a, cur); renderReview(); return; }
     if (l) { const k = +l.getAttribute('data-lead'); const cur = readEditor(a); cur.photos.unshift(cur.photos.splice(k, 1)[0]); Object.assign(a, cur); renderReview(); return; }
+    const cr = e.target.closest('[data-crop]'), uc = e.target.closest('[data-uncrop]');
+    if (cr) { openCrop(a, +cr.getAttribute('data-crop')); return; }
+    if (uc) {
+      const k = +uc.getAttribute('data-uncrop'); const cur = readEditor(a); const ph = cur.photos[k];
+      Object.assign(ph, { path: ph.orig_path, width: ph.orig_width || ph.width, height: ph.orig_height || ph.height }); delete ph.orig_path; delete ph.orig_width; delete ph.orig_height;
+      if (ph.thumb && ph.card && ph.card.manual) { delete ph.card; delete ph.thumb; }
+      Object.assign(a, cur); save(); return;
+    }
     if (e.target.id === 'e-save') save();
     if (e.target.id === 'f-done') { save({ flag: null, checked: true }); return; }
     if (e.target.id === 'e-ok') save({ checked: true, flag: null }).then(() => { const next = R.articles.findIndex((x, i) => i > R.sel && !x.checked && x.included); if (next >= 0) { R.sel = next; renderReview(); } });
     if (e.target.id === 'e-incl') save({ included: !a.included });
     if (e.target.id === 'e-lead') save({ lead: true });
   });
+  // ---------- crop a photo by hand: drag the box over the part to keep ----------
+  function openCrop(a, k) {
+    const cur = readEditor(a); Object.assign(a, cur);
+    const ph = a.photos[k]; const src = ph.orig_path || ph.path;
+    const dlg = document.createElement('dialog'); dlg.className = 'crop-dlg';
+    dlg.innerHTML = `<h2>Crop photo ${k + 1}</h2><p class="muted">Drag the box to move it, and drag its corners to resize. Keep only the photograph: no page text, captions or borders.</p>
+<div class="crop-stage"><img alt="" crossorigin="anonymous"><div class="crop-box"><i data-h="nw"></i><i data-h="ne"></i><i data-h="sw"></i><i data-h="se"></i></div></div>
+<div class="row" style="margin-top:12px"><button class="btn btn-blue" type="button" data-c="ok">Use this crop</button><button class="btn btn-line" type="button" data-c="all">Whole photo</button><button class="btn btn-line" type="button" data-c="x">Cancel</button><span class="muted" data-c="msg"></span></div>`;
+    document.body.appendChild(dlg); dlg.showModal();
+    const im = dlg.querySelector('img'), box = dlg.querySelector('.crop-box'), msg = dlg.querySelector('[data-c="msg"]');
+    let r = { x: 0.05, y: 0.05, w: 0.9, h: 0.9 };            // crop box as fractions of the photo
+    const draw = () => { box.style.left = r.x * 100 + '%'; box.style.top = r.y * 100 + '%'; box.style.width = r.w * 100 + '%'; box.style.height = r.h * 100 + '%'; };
+    im.onload = draw; im.onerror = () => { msg.textContent = 'Could not load the photo.'; };
+    im.src = `${SB}/storage/v1/object/public/rcm/${src.split('/').map(encodeURIComponent).join('/')}`;
+    let drag = null;
+    box.addEventListener('pointerdown', (e) => { e.preventDefault(); box.setPointerCapture(e.pointerId); const b = im.getBoundingClientRect(); drag = { h: e.target.getAttribute('data-h') || 'move', x0: e.clientX, y0: e.clientY, r0: Object.assign({}, r), W: b.width, H: b.height }; });
+    box.addEventListener('pointermove', (e) => {
+      if (!drag) return;
+      const dx = (e.clientX - drag.x0) / drag.W, dy = (e.clientY - drag.y0) / drag.H, o = drag.r0, M = 0.05;
+      let { x, y, w, h } = o;
+      if (drag.h === 'move') { x = Math.min(Math.max(0, o.x + dx), 1 - o.w); y = Math.min(Math.max(0, o.y + dy), 1 - o.h); }
+      else {
+        if (drag.h.includes('w')) { x = Math.min(Math.max(0, o.x + dx), o.x + o.w - M); w = o.x + o.w - x; }
+        if (drag.h.includes('e')) { w = Math.min(Math.max(M, o.w + dx), 1 - o.x); }
+        if (drag.h.includes('n')) { y = Math.min(Math.max(0, o.y + dy), o.y + o.h - M); h = o.y + o.h - y; }
+        if (drag.h.includes('s')) { h = Math.min(Math.max(M, o.h + dy), 1 - o.y); }
+      }
+      r = { x, y, w, h }; draw();
+    });
+    box.addEventListener('pointerup', () => { drag = null; });
+    const close = () => { dlg.close(); dlg.remove(); };
+    dlg.addEventListener('click', async (e) => {
+      const c = e.target.getAttribute && e.target.getAttribute('data-c');
+      if (c === 'x') close();
+      if (c === 'all') { r = { x: 0, y: 0, w: 1, h: 1 }; draw(); }
+      if (c !== 'ok') return;
+      e.target.disabled = true; msg.textContent = 'Saving the crop…';
+      try {
+        const NW = im.naturalWidth, NH = im.naturalHeight;
+        let sw = Math.round(r.w * NW), sh = Math.round(r.h * NH); const sx = Math.round(r.x * NW), sy = Math.round(r.y * NH);
+        const k2 = Math.min(1, 1800 / sw); const cv = document.createElement('canvas'); cv.width = Math.round(sw * k2); cv.height = Math.round(sh * k2);
+        cv.getContext('2d').drawImage(im, sx, sy, sw, sh, 0, 0, cv.width, cv.height);
+        const blob = await new Promise((res) => cv.toBlob(res, 'image/jpeg', 0.88));
+        const f = { name: `photos/crop-${a.id.slice(0, 8)}-${Date.now().toString(36)}.jpg`, blob };
+        await uploadAll(R.issue.issue_no, [f], () => {});
+        const cur2 = readEditor(a); const p2 = cur2.photos[k];
+        if (!p2.orig_path) Object.assign(p2, { orig_path: p2.path, orig_width: p2.width, orig_height: p2.height });
+        Object.assign(p2, { path: f.path, width: cv.width, height: cv.height });
+        // The hand-cropped photo also becomes the story's card photo if it already was, or if the story has none.
+        const hasCard = cur2.photos.some((x) => x.thumb && x.card);
+        if (p2.thumb || !hasCard) { cur2.photos.forEach((x) => { delete x.thumb; delete x.card; }); p2.thumb = true; p2.card = { path: f.path, width: cv.width, height: cv.height, manual: true }; p2.include = true; }
+        Object.assign(a, cur2); close(); save();
+      } catch (err) { msg.textContent = err.message || 'Could not save the crop.'; e.target.disabled = false; }
+    });
+  }
   // ---------- live preview: the website's own page, rendered from what is in the form ----------
   let pvMode = 'web', pvTimer = null, pvSeq = 0;
   function fitPreview() {
