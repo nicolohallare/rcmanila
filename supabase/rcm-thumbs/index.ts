@@ -83,7 +83,8 @@ async function makeCard(issueNo: number, articleId: string, photos: Photo[]) {
   l = Math.max(0, l); t = Math.max(0, t); r = Math.min(pick.w, r); b = Math.min(pick.h, b);
   if (!(r - l > 60 && b - t > 60)) return clear;
   const p = photos[pick.i];
-  const orig = await fetch(PUB(p.path));
+  // A 1600px render is plenty for a card and keeps memory low (full-size originals can exhaust the worker).
+  const orig = await fetch(`${URL_}/storage/v1/render/image/public/rcm/${p.path}?width=1600&quality=90&format=origin`);
   if (!orig.ok) return clear;
   const im = await Image.decode(new Uint8Array(await orig.arrayBuffer()));
   const k = im.width / pick.w;
@@ -137,12 +138,52 @@ Deno.serve(async (req) => {
   try { body = await req.json(); } catch { return json({ error: "Bad request" }, 400); }
   try {
     const sel = "id,photos,rcm_issues(issue_no)";
-    if (body.action === "issue") {
+    // Editor button: checks the passcode, then works through the issue's stories in the background,
+    // one story per call (a whole issue in one call runs out of worker memory/time: error 546).
+    if (body.action === "issue" || body.action === "status") {
       const code = req.headers.get("x-editor-code") || "";
       const ed = await setting("editor_code");
       if (!code || code.length < 6 || code !== ed) return json({ error: "Wrong passcode." }, 401);
-      const { data } = await db.from("rcm_articles").select(sel).eq("issue_id", String(body.issue_id)).eq("included", true);
-      return json({ done: await doArticles((data || []) as any) });
+      const iid = String(body.issue_id || "");
+      const key = "thumbs_run_" + iid;
+      if (body.action === "status") { const v = await setting(key); return json(v ? JSON.parse(v) : { total: 0, done: 0, finished: true }); }
+      const { data } = await db.from("rcm_articles").select("id,photos").eq("issue_id", iid).eq("included", true).order("id");
+      const ids = (data || []).filter((a: any) => Array.isArray(a.photos) && a.photos.length).map((a: any) => a.id);
+      const run = crypto.randomUUID();
+      await db.from("rcm_settings").upsert({ key, value: JSON.stringify({ run, total: ids.length, done: 0, cards: 0, finished: !ids.length, at: new Date().toISOString() }) });
+      if (ids.length) {
+        const p = fetch(SELF, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "step", issue_id: iid, run, token: await setting("thumbs_backfill_token") }) }).catch(() => {});
+        // @ts-ignore EdgeRuntime is available on Supabase
+        if (typeof EdgeRuntime !== "undefined") EdgeRuntime.waitUntil(p);
+      }
+      return json({ started: ids.length });
+    }
+    if (body.action === "step") {
+      const tok = await setting("thumbs_backfill_token");
+      if (!tok || body.token !== tok) return json({ error: "No." }, 401);
+      const key = "thumbs_run_" + String(body.issue_id);
+      const st = JSON.parse((await setting(key)) || "{}");
+      if (st.run !== body.run || st.finished) return json({ stale: true });   // a newer run replaced this one
+      let q = db.from("rcm_articles").select(sel).eq("issue_id", String(body.issue_id)).eq("included", true).order("id").limit(1);
+      if (body.after) q = q.gt("id", String(body.after));
+      const { data } = await q;
+      const rows = ((data || []) as any[]);
+      const row = rows[0];
+      if (row && Array.isArray(row.photos) && row.photos.length) {
+        await doArticles([row]);
+        const { data: fresh } = await db.from("rcm_articles").select("photos").eq("id", row.id).maybeSingle();
+        st.done++; if ((fresh?.photos || []).some((x: Photo) => x.card)) st.cards++;
+      }
+      st.finished = !row; st.at = new Date().toISOString();
+      const cur = JSON.parse((await setting(key)) || "{}");
+      if (cur.run !== body.run) return json({ stale: true });
+      await db.from("rcm_settings").upsert({ key, value: JSON.stringify(st) });
+      if (row) {
+        const p = fetch(SELF, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...body, after: row.id }) }).catch(() => {});
+        // @ts-ignore EdgeRuntime is available on Supabase
+        if (typeof EdgeRuntime !== "undefined") EdgeRuntime.waitUntil(p);
+      }
+      return json({ ok: true });
     }
     if (body.action === "backfill") {
       const tok = await setting("thumbs_backfill_token");
