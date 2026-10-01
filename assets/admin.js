@@ -486,6 +486,7 @@
     try {
       const d = await call('get', { issue_id: id });
       R = { issue: d.issue, articles: d.articles || [], sel: 0 };
+      { const em = document.getElementById('th-email'); if (em) em.href = `/balita/${d.issue.issue_no}/email`; }
       $('pub-at').value = toLocalInput(defaultGoLive(d.issue));
       renderReview();
       if (d.issue.status === 'scheduled' || d.issue.status === 'published') showPublished();

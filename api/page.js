@@ -818,6 +818,67 @@ a.onclick=function(){show(a)};l.onclick=function(){show(l)};if(location.hash==='
   return layout({ title, description: issue.summary || `The ${fmtDate(issue.issue_date)} issue of the Rotary Club of Manila's weekly publication.`, image: issue.cover_path ? coverSrc(issue, 1200) : '', url, body, nav: 'balita', ads: 'all' });
 }
 
+// ---------- Balita by email: an email-safe copy of an issue (tables and inline styles only, so Gmail,
+// Outlook and phone mail apps show it as designed). Open /balita/<no>/email, click "Copy email", paste into Gmail.
+async function emailPage(origin, no) {
+  // /balita/latest/email always gives the newest live issue (the link on the Secretariat page).
+  const rows = String(no) === 'latest' ? await liveIssues(1) : await q(`rcm_issues?select=${ICOLS}&issue_no=eq.${Number(no)}`);
+  const issue = rows[0];
+  if (!issue) return null;
+  const arts = (await articlesOf(issue.id)).filter((a) => a.title);
+  const url = `${origin}/balita/${issue.issue_no}`;
+  const abs = (src) => (src && src[0] === '/' ? origin + src : src);
+  const day = fmtDate(issue.issue_date);
+  const subject = `Balita No. ${issue.issue_no} · ${day}${issue.guest ? ' · Guest speaker: ' + issue.guest.split(/[,;(]/)[0].trim() : ''}`;
+  const NAVY = '#17458f', GOLD = '#f7a81b', INK = '#1f2733', MUTED = '#5b6573', SERIF = "Georgia,'Times New Roman',serif", SANS = 'Arial,Helvetica,sans-serif';
+  const aUrl = (a) => `${url}/${encodeURIComponent(a.slug)}`;
+  const photoOf = (a) => { const c = leadPhoto(a); return c && c.path ? c : null; };
+  const lead = arts.find((a) => a.lead && photoOf(a)) || arts.find((a) => photoOf(a)) || null;
+  const rest = arts.filter((a) => a !== lead);
+  const kick = (a) => a.kicker ? `<div style="font:bold 11px ${SANS};letter-spacing:1.5px;text-transform:uppercase;color:${NAVY};margin:0 0 6px">${esc(a.kicker)}</div>` : '';
+  const leadHtml = lead ? (() => { const ph = photoOf(lead); return `<tr><td style="padding:0 0 8px"><a href="${aUrl(lead)}"><img src="${abs(img(ph.path, 1200))}" width="600" alt="" style="display:block;width:100%;max-width:600px;height:auto;border:0"></a></td></tr>
+<tr><td style="padding:16px 32px 28px">${kick(lead)}<a href="${aUrl(lead)}" style="font:bold 26px/1.25 ${SERIF};color:${INK};text-decoration:none">${esc(lead.title)}</a>${lead.dek ? `<p style="font:16px/1.55 ${SERIF};color:${MUTED};margin:10px 0 14px">${esc(lead.dek)}</p>` : ''}<a href="${aUrl(lead)}" style="font:bold 15px ${SANS};color:${NAVY}">Read the story &rarr;</a></td></tr>`; })() : '';
+  const row = (a) => { const ph = photoOf(a); return `<tr><td style="padding:0 32px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #e3e7ee"><tr>
+${ph ? `<td width="126" valign="top" style="padding:20px 16px 20px 0"><a href="${aUrl(a)}"><img src="${abs(img(ph.path, 300))}" width="110" alt="" style="display:block;width:110px;height:auto;border:0;border-radius:4px"></a></td>` : ''}
+<td valign="top" style="padding:20px 0">${kick(a)}<a href="${aUrl(a)}" style="font:bold 18px/1.3 ${SERIF};color:${INK};text-decoration:none">${esc(a.title)}</a>${a.dek ? `<p style="font:14px/1.5 ${SANS};color:${MUTED};margin:6px 0 8px">${esc(a.dek.length > 180 ? a.dek.slice(0, 177) + '…' : a.dek)}</p>` : '<div style="height:8px"></div>'}<a href="${aUrl(a)}" style="font:bold 14px ${SANS};color:${NAVY}">Read more &rarr;</a></td></tr></table></td></tr>`; };
+  const ads = SUPPORTERS.filter((x) => x.show).map((x) => `<tr><td style="padding:0 32px 14px"><a href="${x.href}"><img src="${origin}/assets/supporters/${x.key}-wide.jpg" width="536" alt="${esc(x.alt)}" style="display:block;width:100%;max-width:536px;height:auto;border:0;border-radius:6px"></a></td></tr>`).join('');
+  const heyzine = /^https:\/\/([a-z0-9-]+\.)*heyzine\.com\//i.test(issue.heyzine_url || '') ? issue.heyzine_url : '';
+  const email = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef1f6"><tr><td align="center" style="padding:24px 12px">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#ffffff">
+<tr><td style="background:${NAVY};padding:22px 32px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+<td valign="middle"><a href="${origin}"><img src="${origin}/assets/club-logo-white.png" width="150" alt="Rotary Club of Manila" style="display:block;width:150px;height:auto;border:0"></a></td>
+<td valign="middle" align="right" style="font:bold 13px ${SANS};color:#ffffff">THE BALITA<br><span style="font-weight:normal;color:#cfe0f5">No. ${issue.issue_no} &middot; ${esc(day)}</span></td></tr></table></td></tr>
+<tr><td style="height:4px;background:${GOLD};font-size:0;line-height:0">&nbsp;</td></tr>
+<tr><td style="padding:28px 32px 20px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+${issue.cover_path ? `<td width="150" valign="top" style="padding-right:22px"><a href="${url}"><img src="${abs(coverSrc(issue, 400))}" width="150" alt="Cover of Balita No. ${issue.issue_no}" style="display:block;width:150px;height:auto;border:1px solid #e3e7ee"></a></td>` : ''}
+<td valign="top"><div style="font:bold 11px ${SANS};letter-spacing:1.5px;text-transform:uppercase;color:${NAVY}">This week&rsquo;s issue</div>
+<div style="font:bold 24px/1.25 ${SERIF};color:${INK};margin:6px 0 8px">Balita No. ${issue.issue_no}</div>
+${issue.meeting ? `<div style="font:14px/1.5 ${SANS};color:${MUTED}">${esc(issue.meeting)}</div>` : ''}
+${issue.guest ? `<div style="font:14px/1.5 ${SANS};color:${INK};margin-top:6px"><b>Guest speaker:</b> ${esc(issue.guest)}</div>` : ''}
+<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:16px"><tr><td style="background:${GOLD};border-radius:4px"><a href="${url}" style="display:inline-block;padding:11px 18px;font:bold 15px ${SANS};color:${NAVY};text-decoration:none">Read the issue online</a></td></tr></table>
+${heyzine ? `<div style="margin-top:10px;font:14px ${SANS}"><a href="${esc(heyzine)}" style="color:${NAVY}">Or flip through the magazine &rarr;</a></div>` : ''}</td></tr></table></td></tr>
+${issue.summary ? `<tr><td style="padding:0 32px 24px;font:16px/1.6 ${SERIF};color:${INK}">${esc(issue.summary)}</td></tr>` : ''}
+<tr><td style="padding:0 32px 14px;font:bold 11px ${SANS};letter-spacing:1.5px;text-transform:uppercase;color:${MUTED}">In this issue &middot; ${arts.length} ${arts.length === 1 ? 'story' : 'stories'}</td></tr>
+${leadHtml}
+${rest.map(row).join('')}
+<tr><td style="padding:12px 32px 28px;border-top:1px solid #e3e7ee" align="center"><table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:16px"><tr><td style="background:${NAVY};border-radius:4px"><a href="${url}" style="display:inline-block;padding:12px 22px;font:bold 15px ${SANS};color:#ffffff;text-decoration:none">See all ${arts.length} stories on rcmanila.org</a></td></tr></table></td></tr>
+${ads ? `<tr><td style="padding:18px 32px 10px;background:#f6f4ee;font:bold 11px ${SANS};letter-spacing:1.5px;text-transform:uppercase;color:${MUTED}">With thanks to our supporters</td></tr><tr><td style="background:#f6f4ee"><table role="presentation" width="100%" cellpadding="0" cellspacing="0">${ads}</table></td></tr><tr><td style="background:#f6f4ee;height:10px;font-size:0">&nbsp;</td></tr>` : ''}
+<tr><td style="background:${NAVY};padding:24px 32px;font:13px/1.6 ${SANS};color:#cfe0f5">
+<b style="color:#ffffff">Rotary Club of Manila</b> &middot; The first Rotary club in Asia, established 1919<br>
+RCM Office, 543 Arquiza St. cor. Grey St., Ermita, Manila &middot; (02) 8527-1885<br>
+<a href="${origin}" style="color:#ffffff">rcmanila.org</a> &middot; <a href="${origin}/meeting" style="color:#ffffff">This week&rsquo;s meeting</a> &middot; <a href="${origin}/events" style="color:#ffffff">Events</a> &middot; <a href="${origin}/balita" style="color:#ffffff">Past issues</a></td></tr>
+</table></td></tr></table>`;
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${esc(subject)}</title>
+<style>body{margin:0;background:#eef1f6}#tb{font:15px/1.5 ${SANS};background:#fff;border-bottom:1px solid #d9dee7;padding:14px 16px;position:sticky;top:0;z-index:2}#tb .in{max-width:760px;margin:0 auto;display:flex;flex-wrap:wrap;gap:10px;align-items:center}#tb button{font:bold 15px ${SANS};padding:9px 14px;border-radius:4px;border:1px solid ${NAVY};background:${NAVY};color:#fff;cursor:pointer}#tb button.l{background:#fff;color:${NAVY}}#tb .s{width:100%;color:${MUTED};font-size:14px}#tb .ok{color:#1d7a3a;font-weight:bold}</style></head><body>
+<div id="tb"><div class="in"><b style="color:${NAVY}">Email version</b><button type="button" id="cp">Copy email</button><button type="button" class="l" id="cs">Copy subject line</button><span id="st" class="ok" role="status"></span>
+<div class="s">Subject: <span id="sj">${esc(subject)}</span><br>In Gmail: click <b>Copy email</b>, open a new message, click in the message body and paste (Ctrl+V). Then <b>Copy subject line</b> and paste it into the subject. Send to yourself first to check, then to the members&rsquo; list (put the addresses in Bcc).</div></div></div>
+<div id="em">${email}</div>
+<script>(function(){var st=document.getElementById('st');function sel(n){var r=document.createRange();r.selectNode(n);var s=getSelection();s.removeAllRanges();s.addRange(r);var ok=false;try{ok=document.execCommand('copy')}catch(e){}s.removeAllRanges();return ok}
+document.getElementById('cp').onclick=async function(){var n=document.getElementById('em');var ok=false;try{if(window.ClipboardItem&&navigator.clipboard&&navigator.clipboard.write){await navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([n.innerHTML],{type:'text/html'}),'text/plain':new Blob([n.innerText],{type:'text/plain'})})]);ok=true}}catch(e){}if(!ok)ok=sel(n);st.textContent=ok?'Copied. Now paste it into a new Gmail message.':'Could not copy. Select the email below with your mouse and copy it.'};
+document.getElementById('cs').onclick=function(){var t=document.getElementById('sj').textContent;(navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(t):Promise.reject()).then(function(){st.textContent='Subject line copied.'},function(){sel(document.getElementById('sj'));st.textContent='Subject line copied.'})};})();</script>
+</body></html>`;
+}
+
 async function articlePage(origin, no, slug) {
   const rows = await q(`rcm_issues?select=${ICOLS}&issue_no=eq.${Number(no)}`);
   const issue = rows[0];
@@ -1270,6 +1331,7 @@ module.exports = async (req, res) => {
     if (r === 'home') html = await home(origin);
     else if (r === 'archive') html = await archive(origin, u.searchParams.get('q'));
     else if (r === 'issue') html = await issuePage(origin, u.searchParams.get('no'));
+    else if (r === 'email') html = await emailPage(origin, u.searchParams.get('no'));
     else if (r === 'article') html = await articlePage(origin, u.searchParams.get('no'), u.searchParams.get('slug'));
     else if (r === 'meeting') html = await meetingPage(origin, u.searchParams.get('date'));
     else if (r === 'donate') html = await donatePage(origin, u.searchParams.get('for'));

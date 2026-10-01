@@ -113,14 +113,14 @@ const CLEAN_TASK = `Return exactly this JSON shape:
  "lead_photo":"photo id or null",
  "flag":null or "a short note to the editor in plain words (at most two sentences) about something they should fix before publishing"}
 "h" = a printed subheading, "q" = a printed pull quote. Photos: include only real photographs that belong to this article, in reading order; leave out logos, headline art, cover images, advertisements and graphics that are mostly text. Match each printed caption to the photo it describes using what you can see in the images; use an empty caption rather than guessing. lead_photo is the best wide photo for the top of the web page.
-Flag only real problems the editor must act on: text that is cut off or out of order, or a name, date or title that looks wrong. The editor is not technical: write the way a colleague would ("The photo of a man in a tuxedo on printed page 6 has no caption. Is this the author?"). Never mention photo ids, JSON or the PDF. Do not flag empty captions on group or crowd photos, typos you cannot confirm, or anything that is fine as printed. When in doubt, use null.`;
+Flag only real problems the editor must act on: text that is cut off or out of order, or a name, date or title that looks wrong. The editor is not technical: write the way a colleague would ("The photo of a man in a tuxedo on printed page 6 has no caption. Is this the author?"). Never mention photo ids, JSON or the PDF. Do not flag empty captions on group or crowd photos, typos you cannot confirm, or anything that is fine as printed. Never flag dates, page numbers or titles found only in running page headers or footers: the layout file carries hidden leftover text from old templates there (such as "32 | MIXED • OCTOBER 2019") that does not show in print. When in doubt, use null.`;
 
 const CONT_TASK = `This is a continuation of an article whose beginning was already processed. Return exactly this JSON shape:
 {"body":[{"t":"p"|"h"|"q","text":"..."}],
  "photos":[{"id":"photo id","caption":"the caption printed for this photo, or empty string"}],
  "flag":null or "a short note to the editor in plain words (at most two sentences) about something they should fix before publishing"}
 If the first paragraph continues a sentence cut off at the end of the previous part, start with the continuing words as they appear. Same rules for photos as before: only real photographs that belong to this article, in reading order.
-Flag only real problems the editor must act on: text that is cut off or out of order, or a name, date or title that looks wrong. The editor is not technical: write the way a colleague would ("The photo of a man in a tuxedo on printed page 6 has no caption. Is this the author?"). Never mention photo ids, JSON or the PDF. Do not flag empty captions on group or crowd photos, typos you cannot confirm, or anything that is fine as printed. When in doubt, use null.`;
+Flag only real problems the editor must act on: text that is cut off or out of order, or a name, date or title that looks wrong. The editor is not technical: write the way a colleague would ("The photo of a man in a tuxedo on printed page 6 has no caption. Is this the author?"). Never mention photo ids, JSON or the PDF. Do not flag empty captions on group or crowd photos, typos you cannot confirm, or anything that is fine as printed. Never flag dates, page numbers or titles found only in running page headers or footers: the layout file carries hidden leftover text from old templates there (such as "32 | MIXED • OCTOBER 2019") that does not show in print. When in doubt, use null.`;
 
 function mapPhotos(list: { id: string; caption: string }[], photos: { id: string; path: string; width: number; height: number }[]) {
   const byId = new Map(photos.map((p) => [p.id, p]));
@@ -192,11 +192,19 @@ async function checkProof(id: string) {
   await db.from("rcm_donations").update({ ai, check_status: status, updated_at: new Date().toISOString() }).eq("id", id);
 }
 
+// Text read from old PDFs can carry null characters and broken surrogate pairs, which Postgres refuses ("unsupported Unicode escape sequence").
+function pgSafe(v: any): any {
+  if (typeof v === "string") return v.replace(/\u0000/g, "").replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "");
+  if (Array.isArray(v)) return v.map(pgSafe);
+  if (v && typeof v === "object") { const o: Record<string, any> = {}; for (const k of Object.keys(v)) o[k] = pgSafe(v[k]); return o; }
+  return v;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ error: "Use POST" }, 405);
   let body: Record<string, any>;
-  try { body = await req.json(); } catch { return json({ error: "Bad request" }, 400); }
+  try { body = pgSafe(await req.json()); } catch { return json({ error: "Bad request" }, 400); }
   const action = body.action;
 
   // ---------- public: meeting sign-ups (no passcode) ----------
@@ -392,6 +400,99 @@ Deno.serve(async (req) => {
       const { data, error } = await db.storage.from(BUCKET).createSignedUploadUrl(path, { upsert: true });
       if (error) throw error;
       return json({ path, signedUrl: data.signedUrl });
+    }
+
+    // ---------- Secretariat: member attendance (private; never shown on the public site) ----------
+    if (action === "m-att-list") {
+      const today = manilaToday();
+      const from = /^\d{4}-\d{2}-\d{2}$/.test(body.from || "") ? body.from : `${Number(today.slice(0, 4)) - (Number(today.slice(5, 7)) < 7 ? 1 : 0)}-07-01`;
+      const to = /^\d{4}-\d{2}-\d{2}$/.test(body.to || "") ? body.to : today;
+      const { data, error } = await db.rpc("rcm_att_meetings_between", { p_from: from, p_to: to });
+      if (error) throw error;
+      const { data: first } = await db.from("rcm_att_meetings").select("meeting_date").order("meeting_date").limit(1);
+      return json({ today, from, to, meetings: data || [], earliest: first?.[0]?.meeting_date || null });
+    }
+    if (action === "m-att-get") {
+      const date = String(body.date || "");
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return json({ error: "Choose the meeting date." }, 400);
+      const [{ data: meeting }, { data: marks }, { data: web }] = await Promise.all([
+        db.from("rcm_att_meetings").select("*").eq("meeting_date", date).maybeSingle(),
+        db.from("rcm_attendance").select("member_id").eq("meeting_date", date),
+        db.from("rcm_meetings").select("id,topic,speaker,label").eq("meeting_date", date).maybeSingle(),
+      ]);
+      const present = (marks || []).map((r: { member_id: string }) => r.member_id);
+      let q = db.from("rcm_members").select("id,full_name,nickname,ri_no,status").order("full_name").limit(1000);
+      q = present.length ? q.or(`status.in.("ACTIVE","SR. ACTIVE","EXEMPTED"),id.in.(${present.join(",")})`) : q.in("status", ["ACTIVE", "SR. ACTIVE", "EXEMPTED"]);
+      const { data: members, error } = await q;
+      if (error) throw error;
+      let signups: string[] = [];
+      if (web) {
+        const { data: s } = await db.from("rcm_signups").select("name,kind").eq("meeting_id", web.id);
+        signups = (s || []).filter((x: { kind: string }) => x.kind !== "guest").map((x: { name: string }) => x.name);
+      }
+      const suggested = meeting?.title || (web ? [web.speaker, web.topic].filter(Boolean).join(" · ") || web.label : null);
+      return json({ date, meeting, suggested_title: suggested, members: members || [], present, signups });
+    }
+    if (action === "m-att-save") {
+      const date = String(body.date || "");
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return json({ error: "Choose the meeting date." }, 400);
+      if (date > manilaToday()) return json({ error: "You can only record attendance for a meeting that has happened." }, 400);
+      const kind = body.kind === "none" ? "none" : "regular";
+      const ids: string[] = Array.isArray(body.present) ? [...new Set(body.present.map(String))].slice(0, 600) as string[] : [];
+      const { error: e1 } = await db.from("rcm_att_meetings").upsert({ meeting_date: date, title: clean(body.title, 200) || null, kind, updated_at: new Date().toISOString() }, { onConflict: "meeting_date" });
+      if (e1) throw e1;
+      const { data: have } = await db.from("rcm_attendance").select("member_id").eq("meeting_date", date);
+      const had = new Set((have || []).map((r: { member_id: string }) => r.member_id));
+      const want = new Set(kind === "none" ? [] : ids);
+      const drop = [...had].filter((x) => !want.has(x));
+      const add = [...want].filter((x) => !had.has(x)).map((member_id) => ({ meeting_date: date, member_id, source: "secretariat" }));
+      if (drop.length) { const { error } = await db.from("rcm_attendance").delete().eq("meeting_date", date).in("member_id", drop); if (error) throw error; }
+      if (add.length) { const { error } = await db.from("rcm_attendance").insert(add); if (error) throw error; }
+      return json({ ok: true, present: want.size, added: add.length, removed: drop.length });
+    }
+    if (action === "m-att-makeups") {
+      const month = String(body.month || "").slice(0, 7);
+      if (!/^\d{4}-\d{2}$/.test(month)) return json({ error: "Choose the month." }, 400);
+      if (Array.isArray(body.set)) {
+        for (const x of body.set.slice(0, 400)) {
+          const n = Math.max(0, Math.min(10, Math.round(Number(x.count) || 0)));
+          if (n) { const { error } = await db.from("rcm_makeups").upsert({ member_id: x.member_id, month: month + "-01", count: n, updated_at: new Date().toISOString() }, { onConflict: "member_id,month" }); if (error) throw error; }
+          else await db.from("rcm_makeups").delete().eq("member_id", x.member_id).eq("month", month + "-01");
+        }
+      }
+      const { data, error } = await db.from("rcm_makeups").select("member_id,count").eq("month", month + "-01");
+      if (error) throw error;
+      return json({ month, makeups: data || [] });
+    }
+    if (action === "m-att-report") {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(body.from || "") || !/^\d{4}-\d{2}-\d{2}$/.test(body.to || "")) return json({ error: "Choose the dates." }, 400);
+      const { data, error } = await db.rpc("rcm_att_report", { p_from: body.from, p_to: body.to });
+      if (error) throw error;
+      return json({ from: body.from, to: body.to, rows: data || [] });
+    }
+    if (action === "m-att-member-save") {
+      const row: Record<string, unknown> = { updated_at: new Date().toISOString() };
+      if ("full_name" in body) row.full_name = clean(body.full_name, 160);
+      if ("nickname" in body) row.nickname = clean(body.nickname, 80).toUpperCase() || null;
+      if ("ri_no" in body) row.ri_no = clean(body.ri_no, 20).replace(/\D/g, "") || null;
+      if ("status" in body) {
+        const st = String(body.status).toUpperCase();
+        if (!["ACTIVE", "SR. ACTIVE", "EXEMPTED", "ON LEAVE", "RESIGNED", "TERMINATED", "DECEASED", "FORMER"].includes(st)) return json({ error: "Unknown status." }, 400);
+        row.status = st;
+      }
+      if (!body.id && !(row.full_name as string)) return json({ error: "Type the member's full name (Surname, First name)." }, 400);
+      const q = body.id ? db.from("rcm_members").update(row).eq("id", body.id) : db.from("rcm_members").insert(row);
+      const { data, error } = await q.select("id,full_name,nickname,ri_no,status").single();
+      if (error) {
+        if (String(error.message).includes("duplicate")) return json({ error: "Another member already has that RI number." }, 400);
+        throw error;
+      }
+      return json({ member: data });
+    }
+    if (action === "m-att-members") {
+      const { data, error } = await db.from("rcm_members").select("id,full_name,nickname,ri_no,status").order("full_name").limit(1000);
+      if (error) throw error;
+      return json({ members: data || [] });
     }
 
     if (action === "m-parse") {

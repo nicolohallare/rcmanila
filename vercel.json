@@ -18,6 +18,10 @@
       "destination": "/api/page?r=issue&no=:no"
     },
     {
+      "source": "/balita/:no/email",
+      "destination": "/api/page?r=email&no=:no"
+    },
+    {
       "source": "/balita/:no/:slug",
       "destination": "/api/page?r=article&no=:no&slug=:slug"
     },
