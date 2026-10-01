@@ -744,17 +744,48 @@ ${a.flag ? `<div class="note stack" role="note" style="gap:8px"><div><strong>The
     if (!r.ok || d.error) throw new Error(d.error || ('Error ' + r.status));
     return d;
   }
+  // Short on purpose: Viber shows the link's preview card above it, so the message only needs the essentials.
   function shareMessage() {
     const i = R.issue; if (!i) return '';
     const day = i.issue_date ? new Date(i.issue_date + 'T12:00:00+08:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Manila' }) : '';
-    const top = R.articles.filter((a) => a.included).sort((a, b) => (b.lead - a.lead) || (a.sort - b.sort)).slice(0, 4);
-    const lines = [`📰 *Balita No. ${i.issue_no}*${day ? ' · ' + day : ''} is out!`];
-    if (i.guest) lines.push(`Guest speaker: ${i.guest}`);
-    lines.push('', 'Read the full issue online:', `${SITE}/balita/${i.issue_no}`);
-    if (top.length) { lines.push('', 'In this issue:'); for (const a of top) lines.push(`• ${a.title}`, `${SITE}/balita/${i.issue_no}/${a.slug}`); }
-    if (R.hz) lines.push('', '📖 Flip through the magazine:', R.hz);
-    lines.push('', '📅 Sign up for Thursday’s meeting:', `${SITE}/meeting`);
+    const guest = i.guest ? i.guest.split(/[,;(]/)[0].trim() : '';
+    const lines = [`📰 *Balita No. ${i.issue_no}*${day ? ' · ' + day : ''}`];
+    if (guest) lines.push(`Guest speaker: ${guest}`);
+    lines.push(`${SITE}/balita/${i.issue_no}`);
+    if (R.hz) lines.push('', `📖 Flipbook: ${R.hz}`);
     return lines.join('\n');
+  }
+  // Wide picture (1200×630) that Viber, Facebook and Messenger show when the issue link is shared.
+  // Saved as issues/<no>/share.jpg; the issue page points its preview to it.
+  let wideFor = '';
+  async function saveWideShare() {
+    const i = R.issue; if (!i || !i.cover_path) return;
+    const key = i.id + '|' + i.cover_path + '|' + (i.updated_at || '') + '|' + (i.guest || '');
+    if (key === wideFor) return;
+    const c = document.createElement('canvas'), W = 1200, H = 630; c.width = W; c.height = H;
+    const x = c.getContext('2d');
+    x.fillStyle = '#17458f'; x.fillRect(0, 0, W, H);
+    x.fillStyle = '#f7a81b'; x.fillRect(0, H - 10, W, 10);
+    const im = await loadImg(imgUrl(i.cover_path, 900) + '&v=' + Date.parse(i.updated_at || 0));
+    const ch = H - 90, cw = im.width * ch / im.height, cx = 60, cy = 40;
+    x.save(); x.shadowColor = 'rgba(0,0,0,.45)'; x.shadowBlur = 30; x.shadowOffsetY = 12; x.fillStyle = '#fff'; x.fillRect(cx, cy, cw, ch); x.restore();
+    x.drawImage(im, cx, cy, cw, ch);
+    const tx = cx + cw + 56, tw = W - tx - 56;
+    try { const logo = await loadImg('/assets/club-logo-white.png'); const lh = 62, lw = logo.width * lh / logo.height; x.drawImage(logo, tx, 64, lw, lh); } catch (e) {}
+    const day = i.issue_date ? new Date(i.issue_date + 'T12:00:00+08:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Manila' }) : '';
+    x.fillStyle = '#f7a81b'; x.font = '800 24px "Open Sans", Arial, sans-serif'; x.fillText('THE BALITA · NEW ISSUE', tx, 196);
+    x.fillStyle = '#fff'; x.font = '700 64px Georgia, "Times New Roman", serif'; x.fillText(`No. ${i.issue_no}`, tx, 270, tw);
+    x.fillStyle = '#dbe8f5'; x.font = '600 30px "Open Sans", Arial, sans-serif'; x.fillText(day, tx, 318, tw);
+    let y = 392;
+    if (i.guest) {
+      x.fillStyle = '#f7a81b'; x.font = '700 22px "Open Sans", Arial, sans-serif'; x.fillText('GUEST SPEAKER', tx, y); y += 40;
+      x.fillStyle = '#fff'; x.font = '700 32px "Open Sans", Arial, sans-serif';
+      for (const ln of wrapLines(x, i.guest.split(/[,;(]/)[0].trim(), tw).slice(0, 2)) { x.fillText(ln, tx, y); y += 42; }
+    }
+    x.fillStyle = '#dbe8f5'; x.font = '600 26px "Open Sans", Arial, sans-serif'; x.fillText('rcmanila.org', tx, H - 52);
+    const blob = await new Promise((res) => c.toBlob(res, 'image/jpeg', 0.88));
+    await uploadAll(i.issue_no, [{ name: 'share.jpg', blob }], () => {});
+    wideFor = key;
   }
   let cardBlob = null, cardFor = '';
   function loadImg(src) { return new Promise((res, rej) => { const im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => res(im); im.onerror = rej; im.src = src; }); }
@@ -789,6 +820,7 @@ ${a.flag ? `<div class="note stack" role="note" style="gap:8px"><div><strong>The
     $('share-note').textContent = live ? '' : 'The links work once the issue is live.';
     $('msg').textContent = shareMessage();
     drawCard().catch(() => {});
+    saveWideShare().catch(() => {});
   }
   async function loadHeyzine() {
     R.hz = null; $('hz').value = ''; $('hz-msg').textContent = '';

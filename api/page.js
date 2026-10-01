@@ -815,7 +815,13 @@ ${pages.length ? '' : '<p class="empty">The printed pages of this issue are not 
 function show(x){var isA=x===a;a.setAttribute('aria-selected',isA);l.setAttribute('aria-selected',!isA);va.hidden=!isA;vl.hidden=isA;}
 a.onclick=function(){show(a)};l.onclick=function(){show(l)};if(location.hash==='#layout')show(l);})();
 </script>`;
-  return layout({ title, description: issue.summary || `The ${fmtDate(issue.issue_date)} issue of the Rotary Club of Manila's weekly publication.`, image: issue.cover_path ? coverSrc(issue, 1200) : '', url, body, nav: 'balita', ads: 'all' });
+  // Link previews (Viber, Facebook): the wide share picture made in the editor, else the cover.
+  let shareImg = issue.cover_path ? coverSrc(issue, 1200) : '';
+  try {
+    const h = await fetch(`${SB}/storage/v1/object/public/rcm/issues/${issue.issue_no}/share.jpg`, { method: 'HEAD' });
+    if (h.ok) shareImg = `${SB}/storage/v1/object/public/rcm/issues/${issue.issue_no}/share.jpg?v=${Date.parse(h.headers.get('last-modified') || '') || 1}`;
+  } catch (e) { /* keep the cover */ }
+  return layout({ title, description: issue.summary || `The ${fmtDate(issue.issue_date)} issue of the Rotary Club of Manila's weekly publication.`, image: shareImg, url, body, nav: 'balita', ads: 'all' });
 }
 
 // ---------- Balita by email: an email-safe copy of an issue (tables and inline styles only, so Gmail,
