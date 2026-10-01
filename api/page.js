@@ -184,6 +184,7 @@ ${url ? `<meta property="og:url" content="${esc(url)}">` : ''}
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,400;0,600;0,700;0,800;1,700;1,800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/site.css?v=${ASSET_V}">
+<script defer src="https://cdn.vercel-insights.com/v1/script.js"></script>
 </head>
 <body class="pub">
 <div class="topbar"><div class="wrap"><span class="tb-l">The first Rotary club in Asia · Established 1919</span><span class="tb-r"><a href="/secretariat">Secretariat login</a><a href="/admin">Editor login</a><a href="/library-admin">Librarian login</a></span></div></div>
