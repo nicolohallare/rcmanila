@@ -124,6 +124,10 @@ main.wide{max-width:1760px}
 <p class="muted">Search by issue number, date (e.g. 2025-04-24), guest or a word from the story. Open it with Edit, change the text, photo or caption, and save.</p>
 <form id="find-form" class="row" role="search"><label class="f" style="flex:1;min-width:220px"><span class="sr-only">Find an issue</span><input id="find-q" type="search" style="font-weight:400" placeholder="4048, 2025-04-24, Banaguas…" autocomplete="off"></label><button class="btn btn-blue" type="submit">Find</button></form>
 <ul id="find-list" class="alist" aria-live="polite"></ul></div>
+<div class="panel stack"><h2 style="font-size:22px">Clean up photos in past issues</h2>
+<p class="muted">Choose the PDFs of past issues (you can select several at once). Each is matched to its issue on the site, and its article photos are replaced with clean copies without page text or captions. Photos you cropped by hand are kept. Takes a minute or two per issue; keep this page open.</p>
+<div class="row"><button class="btn btn-blue" type="button" id="rc-btn">Choose PDFs…</button><input id="rc-files" type="file" accept="application/pdf" multiple hidden></div>
+<ul id="rc-log" class="alist" aria-live="polite"></ul></div>
 <div class="panel stack" id="cover-panel"><h2 style="font-size:22px">Cover photo of the month</h2>
 <p class="muted">One People of Action photo across the top of the homepage, changed every month. Use a wide photo of members doing the work, not a posed group, with no text or logos on it (the site adds the words). At least 2000 pixels wide is best. It goes live on the first day of the month you choose.</p>
 <div id="cover-now" class="muted">Loading…</div>
@@ -228,7 +232,7 @@ main.wide{max-width:1760px}
 </section>
 </main>
 <script src="/assets/extract.js?v=1001c"></script>
-<script src="/assets/admin.js?v=1001f"></script>
+<script src="/assets/admin.js?v=1001g"></script>
 <script src="/assets/admin-cover.js"></script>
 </body>
 </html>

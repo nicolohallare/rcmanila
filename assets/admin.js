@@ -525,7 +525,7 @@ ${a.flag ? `<div class="note stack" role="note" style="gap:8px"><div><strong>The
 <label class="f" for="e-dek">Summary shown when shared<textarea id="e-dek" style="min-height:64px">${esc(a.dek || '')}</textarea></label>
 <div class="row"><label class="f" for="e-byline" style="flex:1">Byline<input id="e-byline" type="text" value="${esc(a.byline || '')}"></label><label class="f" for="e-kicker" style="flex:1">Section label<input id="e-kicker" type="text" value="${esc(a.kicker || '')}"></label></div>
 <div class="stack" style="gap:8px"><strong style="font-size:14px;color:var(--ink-2)">Photos — the first one included leads the article</strong>
-<div class="pgrid">${(a.photos || []).map((p, k) => `<div class="pcell ${p.include === false ? 'off' : ''}"><strong style="font-size:13px">Photo ${k + 1}${p.include === false ? ' · left out' : k === 0 || (a.photos || []).slice(0, k).every((x) => x.include === false) ? ' · top of article' : ''}</strong><img src="${imgUrl(p.path, 320)}" alt=""><textarea data-cap="${k}" aria-label="Caption for photo ${k + 1}" placeholder="Caption (optional)">${esc(p.caption || '')}</textarea><div class="row"><button class="smallbtn" type="button" data-tog="${k}">${p.include === false ? 'Include' : 'Leave out'}</button>${k > 0 ? `<button class="smallbtn" type="button" data-lead="${k}">Make first</button>` : ''}<button class="smallbtn" type="button" data-crop="${k}">Crop</button>${p.orig_path ? `<button class="smallbtn" type="button" data-uncrop="${k}">Undo crop</button>` : ''}</div></div>`).join('') || '<p class="muted">No photos for this article.</p>'}</div></div>
+<div class="pgrid">${(a.photos || []).map((p, k) => `<div class="pcell ${p.include === false ? 'off' : ''}"><strong style="font-size:13px">Photo ${k + 1}${p.include === false ? ' · left out' : k === 0 || (a.photos || []).slice(0, k).every((x) => x.include === false) ? ' · top of article' : ''}</strong><img src="${imgUrl(p.path, 320)}" alt=""><textarea data-cap="${k}" aria-label="Caption for photo ${k + 1}" placeholder="Caption (optional)">${esc(p.caption || '')}</textarea><div class="row"><button class="smallbtn" type="button" data-tog="${k}">${p.include === false ? 'Include' : 'Leave out'}</button>${k > 0 ? `<button class="smallbtn" type="button" data-lead="${k}">Make first</button>` : ''}<button class="smallbtn" type="button" data-crop="${k}">Crop</button>${p.orig_path ? `<button class="smallbtn" type="button" data-uncrop="${k}">Undo crop</button>` : p.pdf_cut_old ? `<button class="smallbtn" type="button" data-unrecut="${k}" title="Go back to the photo as first cut from the page">Use old cut</button>` : ''}</div></div>`).join('') || '<p class="muted">No photos for this article.</p>'}</div></div>
 <label class="f" for="e-body">Text <span class="muted" style="font-weight:400">(blank line between paragraphs; start a line with ## for a subheading)</span><textarea id="e-body" style="min-height:320px">${esc(bodyText)}</textarea></label>
 <div class="row" style="justify-content:space-between">
 <div class="row"><button class="smallbtn" type="button" id="e-incl">${a.included ? 'Leave out of website' : 'Put back on website'}</button><button class="smallbtn" type="button" id="e-lead">${a.lead ? '★ Featured on homepage' : 'Feature on homepage'}</button></div>
@@ -556,6 +556,8 @@ ${a.flag ? `<div class="note stack" role="note" style="gap:8px"><div><strong>The
     if (l) { const k = +l.getAttribute('data-lead'); const cur = readEditor(a); cur.photos.unshift(cur.photos.splice(k, 1)[0]); Object.assign(a, cur); renderReview(); return; }
     const cr = e.target.closest('[data-crop]'), uc = e.target.closest('[data-uncrop]');
     if (cr) { openCrop(a, +cr.getAttribute('data-crop')); return; }
+    const ur = e.target.closest('[data-unrecut]');
+    if (ur) { const k = +ur.getAttribute('data-unrecut'); const cur = readEditor(a); const ph = cur.photos[k]; ph.path = ph.pdf_cut_old; delete ph.pdf_cut_old; delete ph.width; delete ph.height; Object.assign(a, cur); save(); return; }
     if (uc) {
       const k = +uc.getAttribute('data-uncrop'); const cur = readEditor(a); const ph = cur.photos[k];
       Object.assign(ph, { path: ph.orig_path, width: ph.orig_width || ph.width, height: ph.orig_height || ph.height }); delete ph.orig_path; delete ph.orig_width; delete ph.orig_height;
@@ -706,38 +708,75 @@ ${a.flag ? `<div class="note stack" role="note" style="gap:8px"><div><strong>The
       }
     } catch (err) { m.textContent = err.message; } finally { b.disabled = false; }
   });
-  // Re-cut: read the issue's PDF again with the clean photo reader and swap in the clean copies.
+  // Re-cut: read an issue's PDF again with the clean photo reader and swap in the clean copies.
+  // Photos the editor cropped by hand are left alone. Returns how many photos were replaced.
+  async function recutIssue(file, issue, articles, say) {
+    const want = new Set();
+    articles.forEach((a) => (a.photos || []).forEach((p) => { if (p.id && !p.orig_path) want.add(p.id); }));
+    if (!want.size) return { n: 0, articles };
+    const pages = await BalitaExtract.extractPdf(file, (p) => say(`reading page ${p.n} of ${p.total}…`), { recut: true, only: want });
+    const ts = Date.now().toString(36);
+    const files = pages.flatMap((pg) => pg.photos).map((ph) => ({ name: `photos/${ph.id}-clean-${ts}.jpg`, blob: ph.blob, id: ph.id, width: ph.width, height: ph.height }));
+    if (!files.length) throw new Error('this PDF does not seem to match the issue (no photos found to replace)');
+    await uploadAll(issue.issue_no, files, (d) => say(`saving clean photos… ${d} of ${files.length}`));
+    const byId = new Map(files.map((f) => [f.id, f]));
+    let n = 0; const out = articles.slice();
+    for (let i = 0; i < out.length; i++) {
+      const a = out[i]; let changed = false;
+      const photos = (a.photos || []).map((p) => {
+        const f = byId.get(p.id); if (!f || p.orig_path) return p;
+        changed = true; n++;
+        return Object.assign({}, p, { path: f.path, width: f.width, height: f.height, pdf_cut_old: p.pdf_cut_old || p.path });
+      });
+      if (changed) { const { article } = await call('save-article', { id: a.id, fields: { photos } }); out[i] = article; }
+    }
+    return { n, articles: out };
+  }
+  function pickCards(issueId) {
+    return fetch(SB + '/functions/v1/rcm-thumbs', { method: 'POST', headers: { 'content-type': 'application/json', 'x-editor-code': code, apikey: PUB }, body: JSON.stringify({ action: 'issue', issue_id: issueId }) }).catch(() => {});
+  }
   document.addEventListener('click', (e) => { if (e.target && e.target.id === 'th-recut') document.getElementById('th-recut-file').click(); });
   document.addEventListener('change', async (e) => {
     if (!e.target || e.target.id !== 'th-recut-file' || !R || !R.issue) return;
     const file = e.target.files[0]; e.target.value = ''; if (!file) return;
     const m = document.getElementById('th-msg'), b = document.getElementById('th-recut'); b.disabled = true;
     try {
-      const want = new Set();
-      R.articles.forEach((a) => (a.photos || []).forEach((p) => { if (p.id && !p.orig_path) want.add(p.id); }));
-      if (!want.size) { m.textContent = 'No photos to re-cut.'; return; }
-      m.textContent = 'Reading the PDF…';
-      const pages = await BalitaExtract.extractPdf(file, (p) => { m.textContent = `Reading page ${p.n} of ${p.total}…`; }, { recut: true, only: want });
-      const ts = Date.now().toString(36);
-      const files = pages.flatMap((pg) => pg.photos).map((ph) => ({ name: `photos/${ph.id}-clean-${ts}.jpg`, blob: ph.blob, id: ph.id, width: ph.width, height: ph.height }));
-      if (!files.length) { m.textContent = 'This PDF does not seem to match this issue: no photos found to replace.'; return; }
-      await uploadAll(R.issue.issue_no, files, (d) => { m.textContent = `Saving clean photos… ${d} of ${files.length}`; });
-      const byId = new Map(files.map((f) => [f.id, f]));
-      let n = 0;
-      for (let i = 0; i < R.articles.length; i++) {
-        const a = R.articles[i]; let changed = false;
-        const photos = (a.photos || []).map((p) => {
-          const f = byId.get(p.id); if (!f || p.orig_path) return p;
-          changed = true; n++;
-          return Object.assign({}, p, { path: f.path, width: f.width, height: f.height, pdf_cut_old: p.pdf_cut_old || p.path });
-        });
-        if (changed) { const { article } = await call('save-article', { id: a.id, fields: { photos } }); R.articles[i] = article; }
-      }
-      renderReview();
-      m.textContent = `Replaced ${n} photos with clean copies. Now picking card photos…`;
+      const r = await recutIssue(file, R.issue, R.articles, (t) => { m.textContent = t; });
+      R.articles = r.articles; renderReview();
+      if (!r.n) { m.textContent = 'No photos to re-cut.'; return; }
+      m.textContent = `Replaced ${r.n} photos with clean copies. Now picking card photos…`;
       document.getElementById('th-pick').click();
     } catch (err) { m.textContent = err.message || 'Could not re-cut the photos.'; } finally { b.disabled = false; }
   });
+  // Home page: clean up past issues in one go. Choose several PDFs at once; each is matched to its issue
+  // by the issue number printed inside it.
+  document.addEventListener('change', async (e) => {
+    if (!e.target || e.target.id !== 'rc-files') return;
+    const files = [...e.target.files]; e.target.value = ''; if (!files.length) return;
+    const log = $('rc-log'), btn = $('rc-btn'); btn.disabled = true; log.innerHTML = '';
+    const line = (txt) => { const li = document.createElement('li'); li.textContent = txt; log.appendChild(li); return li; };
+    try {
+      const { issues } = await call('issues');
+      const byNo = new Map((issues || []).map((i) => [Number(i.issue_no), i]));
+      let total = 0;
+      for (const f of files) {
+        const li = line(`${f.name}: checking…`);
+        try {
+          let meta = {}; try { meta = guessMeta((await BalitaExtract.peek(f)).text, f.name); } catch (err) { meta = guessMeta('', f.name); }
+          const iss = meta.no && byNo.get(Number(meta.no));
+          if (!iss) { li.textContent = `${f.name}: skipped, could not find its issue on the site${meta.no ? ' (No. ' + meta.no + ')' : ''}.`; continue; }
+          const say = (t) => { li.textContent = `Issue ${iss.issue_no}: ${t}`; };
+          const { issue, articles } = await call('get', { issue_id: iss.id });
+          const r = await recutIssue(f, issue, articles || [], say);
+          total += r.n;
+          if (r.n) { pickCards(issue.id); say(`done, ${r.n} photos replaced. Card photos are being picked in the background.`); }
+          else say('nothing to replace (no photos from the PDF, or all cropped by hand).');
+        } catch (err) { li.textContent = `${f.name}: ${err.message || 'failed'}`; }
+      }
+      line(`Finished. ${total} photos replaced in total.`);
+    } catch (err) { line(err.message || 'Something went wrong.'); } finally { btn.disabled = false; }
+  });
+  document.addEventListener('click', (e) => { if (e.target && e.target.id === 'rc-btn') $('rc-files').click(); });
   async function libCall(action, payload) {
     const r = await fetch(LIB, { method: 'POST', headers: { 'content-type': 'application/json', 'x-editor-code': code, apikey: PUB }, body: JSON.stringify(Object.assign({ action }, payload || {})) });
     const d = await r.json().catch(() => ({}));
