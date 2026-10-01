@@ -439,25 +439,45 @@ catch(err){msg.textContent=err.message;b.disabled=false;}});})();
 }
 
 // "Put the Club on your phone": how to add rcmanila.org to the home screen (the site installs like an app).
+// iPhone pictures for the steps (drawn, so they stay sharp): Safari's Share button and "more" button.
+const ICON_SHARE = '<svg class="ico" viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M12 3v12M7.5 7.5 12 3l4.5 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 10H6.5A1.5 1.5 0 0 0 5 11.5v8A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5v-8a1.5 1.5 0 0 0-1.5-1.5H16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+const ICON_MORE = '<svg class="ico" viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="7.5" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="16.5" cy="12" r="1.5" fill="currentColor"/></svg>';
+const ICON_ADD = '<svg class="ico" viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 8v8M8 12h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+
+// "Put the Club on your phone": how to add rcmanila.org to the home screen (the site installs like an app).
+// Android can show a one-tap button; Apple does not allow that on iPhone, so the iPhone steps come with
+// pictures and an arrow pointing at Safari's Share button.
 function appPage(origin) {
   const body = `<section class="wrap pj-index-head"><span class="kicker">On your phone</span><h1>Put the Club on your home screen</h1>
 <p class="lede">Add rcmanila.org to your phone once, and the Club’s icon sits with your other apps. One tap opens the weekly meeting, events, the Balita and the library. Nothing to download from an app store, and no account needed.</p>
-<div class="app-inst"><button type="button" class="btn btn-gold" id="app-add" hidden>Add to home screen</button></div></section>
+<div class="app-inst"><button type="button" class="btn btn-gold" id="app-add" hidden>Add to home screen</button><p class="app-done" id="app-done" hidden>✓ You are already using the Club’s app on this phone.</p></div></section>
 <section class="wrap app-steps">
-<div class="app-card"><h2>iPhone or iPad</h2><ol>
-<li>Open <b>rcmanila.org</b> in <b>Safari</b>.</li>
-<li>Tap the <b>Share</b> button (the square with an arrow pointing up) at the bottom of the screen.</li>
-<li>Scroll down and tap <b>Add to Home Screen</b>.</li>
-<li>Tap <b>Add</b> at the top right. The Rotary wheel icon, named <b>RC Manila</b>, appears on your home screen.</li>
+<div class="app-card" id="app-ios"><h2>iPhone or iPad</h2>
+<p class="muted-p">Use <b>Safari</b> (the blue compass). Apple asks for three taps:</p>
+<ol class="app-big">
+<li><span class="app-n">1</span><div>Tap the <b>Share</b> button ${ICON_SHARE} at the bottom of the screen.<small>Don’t see it? Tap the <b>more</b> button ${ICON_MORE} at the bottom right first, then <b>Share</b>.</small></div></li>
+<li><span class="app-n">2</span><div>Scroll down the list and tap <b>Add to Home Screen</b> ${ICON_ADD}</div></li>
+<li><span class="app-n">3</span><div>Tap <b>Add</b> at the top right. The Rotary wheel icon, <b>RC Manila</b>, appears on your home screen.</div></li>
 </ol></div>
-<div class="app-card"><h2>Android phone</h2><ol>
-<li>Open <b>rcmanila.org</b> in <b>Chrome</b>.</li>
-<li>Tap the <b>three dots</b> at the top right.</li>
-<li>Tap <b>Add to Home screen</b> (on some phones: <b>Install app</b>).</li>
-<li>Tap <b>Add</b> or <b>Install</b>. The Rotary wheel icon, named <b>RC Manila</b>, appears on your home screen.</li>
+<div class="app-card" id="app-android"><h2>Android phone</h2><ol class="app-big">
+<li><span class="app-n">1</span><div>In <b>Chrome</b>, tap the <b>three dots</b> at the top right. (In Edge: the <b>…</b> at the bottom.)</div></li>
+<li><span class="app-n">2</span><div>Tap <b>Add to Home screen</b> (on some phones: <b>Install app</b> or <b>Add to phone</b>).</div></li>
+<li><span class="app-n">3</span><div>Tap <b>Add</b> or <b>Install</b>. The Rotary wheel icon, <b>RC Manila</b>, appears on your home screen.</div></li>
 </ol></div>
+<p class="muted-p app-help">Need a hand? Ask at the Secretariat’s table at the Thursday meeting and we’ll set it up for you.</p>
 </section>
-<script>(function(){var ev=null,b=document.getElementById('app-add');window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();ev=e;b.hidden=false;});b.addEventListener('click',function(){if(!ev)return;ev.prompt();ev.userChoice.finally(function(){ev=null;b.hidden=true;});});})();</script>`;
+<div class="app-point" id="app-point" hidden title="Tap to hide"><span>Tap ${ICON_SHARE} below, then <b>Add to Home Screen</b></span><i aria-hidden="true">↓</i></div>
+<script>(function(){
+var ua=navigator.userAgent,ios=/iPhone|iPad|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1),android=/Android/.test(ua);
+var standalone=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone;
+if(standalone){document.getElementById('app-done').hidden=false;}
+var steps=document.querySelector('.app-steps');
+if(android)steps.insertBefore(document.getElementById('app-android'),steps.firstChild);
+if(ios&&!standalone&&/Safari/.test(ua)&&!/CriOS|FxiOS|EdgiOS/.test(ua)&&!/iPad/.test(ua)){var pt=document.getElementById('app-point'),sv=Number((/Version\\/(\\d+)/.exec(ua)||[])[1]||0);
+// Safari 26 and later keeps Share inside the "more" (...) button at the bottom right; older Safari has Share in the bottom bar.
+if(sv>=26){pt.classList.add('right');pt.querySelector('span').innerHTML='Tap ${ICON_MORE.replace(/'/g,"\\'")} below, then <b>Share</b>, then <b>Add to Home Screen</b>';}
+pt.hidden=false;pt.onclick=function(){pt.hidden=true;};}
+var ev=null,b=document.getElementById('app-add');window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();ev=e;b.hidden=false;});b.addEventListener('click',function(){if(!ev)return;ev.prompt();ev.userChoice.finally(function(){ev=null;b.hidden=true;});});})();</script>`;
   return layout({ title: 'Put the Club on your phone · Rotary Club of Manila', description: 'Add rcmanila.org to your phone’s home screen: one tap to the weekly meeting, events, the Balita and the library.', url: `${origin}/app`, body, type: 'website' });
 }
 
@@ -745,7 +765,12 @@ ${guestName ? `<p class="h-balita-cover-note">On the cover: ${coverStory ? `<a h
 <span class="kicker">Part of the Rotary family</span>
 <div class="h-family-row">${FAMILY.map((f) => `<a href="${f.href}" target="_blank" rel="noopener"><b>${esc(f.name)}</b><span>${esc(f.note)}</span></a>`).join('')}</div>
 </div></section>
-
+<div class="app-tip" id="app-tip" hidden><a href="/app"><img src="/assets/apple-touch-icon.png" alt="" width="36" height="36"><span><b>Put the Club on your phone</b>One tap to the meeting, events and the Balita.</span></a><button type="button" aria-label="Not now">×</button></div>
+<script>(function(){var t=document.getElementById('app-tip');if(!t)return;var ua=navigator.userAgent;
+if(!/iPhone|Android/.test(ua)||window.matchMedia('(display-mode: standalone)').matches||navigator.standalone)return;
+try{if(localStorage.getItem('rcm-app-tip'))return;}catch(e){}
+setTimeout(function(){t.hidden=false;},1500);
+t.querySelector('button').onclick=function(){t.hidden=true;try{localStorage.setItem('rcm-app-tip','1');}catch(e){}};})();</script>
 `;
   return layout({
     title: 'Rotary Club of Manila',
