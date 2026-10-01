@@ -106,6 +106,10 @@
       "destination": "/api/page?r=partner"
     },
     {
+      "source": "/llms.txt",
+      "destination": "/api/page?r=llms"
+    },
+    {
       "source": "/robots.txt",
       "destination": "/api/page?r=robots"
     },

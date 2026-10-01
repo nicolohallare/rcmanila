@@ -155,7 +155,7 @@ function subNav(nav) {
   if (!g) return '';
   return `<nav class="lib-nav" aria-label="${g[1]}"><div class="wrap">${g[2].map(([k, h, t]) => `<a href="${h}" class="${k === nav ? 'on' : ''}">${t}</a>`).join('')}</div></nav>`;
 }
-function layout({ title, description, image, url, body, nav = '', type = 'article', ads = '' }) {
+function layout({ title, description, image, url, body, nav = '', type = 'article', ads = '', ld = null }) {
   if (!image) image = '/assets/home/people-of-action.jpg';
   if (image[0] === '/') image = SITE + image;
   if (!description) description = 'The Rotary Club of Manila, the first Rotary club in Asia. Service above self since 1919.';
@@ -172,6 +172,8 @@ function layout({ title, description, image, url, body, nav = '', type = 'articl
 ${image ? `<meta property="og:image" content="${esc(image)}">` : ''}
 <meta property="og:type" content="${type}">
 ${url ? `<meta property="og:url" content="${esc(url)}">` : ''}
+${url ? `<link rel="canonical" href="${esc(url)}">` : ''}
+${ld ? `<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, '\\u003c')}</script>` : ''}
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/assets/logo.png">
 <link rel="manifest" href="/assets/site.webmanifest">
@@ -267,6 +269,17 @@ async function searchBalita(term) {
 }
 
 // ---------- Service projects, visitor routes, Join and Partner ----------
+// What search engines and AI assistants read about the Club (schema.org).
+const ORG_LD = (origin) => ({
+  '@context': 'https://schema.org', '@type': 'NGO', '@id': origin + '/#club',
+  name: 'Rotary Club of Manila', alternateName: ['RC Manila', 'RCM', 'Rotary Manila'],
+  description: 'The Rotary Club of Manila, founded in 1919, is the first Rotary club in Asia. Its members serve Manila through service projects in health, education, disaster relief and the environment, and meet every Thursday.',
+  url: origin + '/', logo: origin + '/assets/club-logo.png', foundingDate: '1919',
+  email: MAIL, telephone: '+63-2-8527-1885',
+  address: { '@type': 'PostalAddress', streetAddress: '543 Arquiza St. cor. Grey St., Ermita', addressLocality: 'Manila', addressCountry: 'PH' },
+  parentOrganization: { '@type': 'Organization', name: 'Rotary International', url: 'https://www.rotary.org/' },
+  sameAs: ['https://www.facebook.com/RotaryClubofManila', 'https://www.linkedin.com/company/rotary-club-of-manila/', 'https://en.wikipedia.org/wiki/Rotary_Club_of_Manila'],
+});
 const PROJECTS = require('./projects.js');
 const PRES = require('./presidents.js');
 const pSrc = (src, w) => (src && src[0] === '/' ? src : img(src, w));
@@ -778,7 +791,7 @@ t.querySelector('button').onclick=function(){t.hidden=true;try{localStorage.setI
     title: 'Rotary Club of Manila',
     description: 'Asia’s first Rotary club, serving since 1919. See our projects, read the Balita and join us every Thursday.',
     image: pSrc((cover || COVER_FALLBACK).image_path, 1200), // the share picture follows the homepage cover
-    url: origin + '/', body, type: 'website',
+    url: origin + '/', body, type: 'website', ld: ORG_LD(origin),
   });
 }
 
@@ -956,7 +969,7 @@ ${lead ? figure(lead, lead.caption || a.title, 1400, false) : ''}
 ${Array.isArray(issue.pages) && issue.pages.length ? `<a href="/balita/${issue.issue_no}#layout">See this story as printed${a.printed_pages ? ', ' + esc(a.printed_pages) : ''}</a>` : (issue.pdf_url ? `<a href="${esc(issue.pdf_url)}">Download the printed issue (PDF)</a>` : '')}<a href="/balita/${issue.issue_no}">Read the whole issue</a></div></div>
 ${others.length ? `<h2 style="font-size:24px;margin-top:12px">More from this issue</h2><div style="display:flex;flex-direction:column;gap:14px">${others.map((o) => { const p = leadPhoto(o); return `<a class="mini" style="background:var(--tint)" href="/balita/${issue.issue_no}/${o.slug}">${p ? `<img src="${img(p.path, 200)}" alt="">` : ''}${esc(o.title)}</a>`; }).join('')}</div>` : ''}
 </article>`;
-  return layout({ title: `${a.title} · Balita ${issue.issue_no}`, description: a.dek || `From the Balita, issue ${issue.issue_no}.`, image: lead ? img(lead.path, 1200) : (issue.cover_path ? coverSrc(issue, 1200) : ''), url, body, nav: 'balita', ads: a.slug || 'a' });
+  return layout({ title: `${a.title} · Balita ${issue.issue_no}`, description: a.dek || `From the Balita, issue ${issue.issue_no}.`, image: lead ? img(lead.path, 1200) : (issue.cover_path ? coverSrc(issue, 1200) : ''), url, body, nav: 'balita', ads: a.slug || 'a', ld: { '@context': 'https://schema.org', '@type': 'NewsArticle', headline: a.title, description: a.dek || undefined, datePublished: issue.issue_date || undefined, image: lead ? [img(lead.path, 1200)] : undefined, author: a.byline ? { '@type': 'Person', name: a.byline.replace(/^by\s+/i, '') } : { '@type': 'Organization', name: 'Rotary Club of Manila' }, publisher: { '@type': 'Organization', name: 'Rotary Club of Manila', logo: { '@type': 'ImageObject', url: SITE + '/assets/club-logo.png' } }, isPartOf: { '@type': 'PublicationIssue', issueNumber: String(issue.issue_no), name: 'The Rotary Balita' }, mainEntityOfPage: url } });
 }
 
 // ---------- Club events: fellowships, fundraisers, exhibits, with online sign-up and a seat limit ----------
@@ -1080,7 +1093,7 @@ done.addEventListener('click',async function(ev){
 showDone();
 })();
 </script>`;
-  return layout({ title: `${e.title} · Rotary Club of Manila`, description: `${evWhen(e)}${e.time_text ? ', ' + e.time_text : ''}${e.venue ? ' at ' + e.venue : ''}. ${e.summary || ''}`.trim(), image: e.poster_path ? (e.poster_path[0] === '/' ? e.poster_path : img(e.poster_path, 1200)) : '', url, body, nav: 'events' });
+  return layout({ title: `${e.title} · Rotary Club of Manila`, description: `${evWhen(e)}${e.time_text ? ', ' + e.time_text : ''}${e.venue ? ' at ' + e.venue : ''}. ${e.summary || ''}`.trim(), image: e.poster_path ? (e.poster_path[0] === '/' ? e.poster_path : img(e.poster_path, 1200)) : '', url, body, nav: 'events', ld: { '@context': 'https://schema.org', '@type': 'Event', name: e.title, description: e.summary || undefined, startDate: e.event_date, endDate: e.end_date || undefined, eventStatus: 'https://schema.org/EventScheduled', eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode', location: e.venue ? { '@type': 'Place', name: e.venue, address: e.venue } : undefined, image: e.poster_path ? [e.poster_path[0] === '/' ? SITE + e.poster_path : img(e.poster_path, 1200)] : undefined, organizer: { '@type': 'Organization', name: 'Rotary Club of Manila', url: SITE + '/' }, url } });
 }
 async function meetingPage(origin, dateParam) {
   const today = manilaToday();
@@ -1274,7 +1287,7 @@ async function previewPage(req, origin) {
 
 // Old rcmanila.org (WordPress) addresses → where the same content lives now. Returns a path, or null.
 let LEGACY = null;
-const PAGES = { about: '/#club', 'who-we-are': '/#club', 'rostrum-and-bell': '/#club', members: '/join', membership: '/join', 'become-a-member': '/join', projects: '/projects', 'our-projects': '/projects', partners: '/partner', volunteer: '/partner', balita: '/balita', 'rotary-balita': '/balita', contact: '/#contact', 'contact-us': '/#contact', donate: '/donate', home: '/' };
+const PAGES = { about: '/#club', 'who-we-are': '/#club', 'rostrum-and-bell': '/#club', members: '/join', membership: '/join', 'become-a-member': '/join', projects: '/projects', 'our-projects': '/projects', partners: '/partner', volunteer: '/partner', balita: '/balita', 'rotary-balita': '/balita', contact: '/#contact', 'contact-us': '/#contact', donate: '/donate', home: '/', 'about-us': '/#club', 'history-of-the-rotary-club-of-manila': '/library', history: '/library', 'past-presidents': '/past-presidents', 'board-of-directors': '/#club', officers: '/#club', events: '/events', library: '/library', catalog: '/library/collection' };
 async function legacyTarget(raw) {
   const path = String(raw || '').replace(/^\/+|\/+$/g, '');
   if (!path) return '/';
@@ -1290,6 +1303,8 @@ async function legacyTarget(raw) {
   const slug = path.split('/').pop().toLowerCase();
   if (PAGES[slug]) return PAGES[slug];
   if (/^(wp-admin|wp-login\.php)/.test(path)) return '/';
+  if (/^cgi-bin\/koha/i.test(path)) return '/library/collection';   // the old library catalogue
+  if (/^about-us(\/|$)/i.test(path)) return '/#club';
   const no = LEGACY.posts[slug];
   if (no) {
     try {
@@ -1339,6 +1354,34 @@ module.exports = async (req, res) => {
     res.setHeader('Content-Type', 'text/plain; charset=utf-8'); res.setHeader('Cache-Control', 'public, s-maxage=86400');
     return res.end(`User-agent: *\nDisallow: /admin\nDisallow: /secretariat\nDisallow: /library-admin\nDisallow: /api/\nSitemap: ${origin}/sitemap.xml\n`);
   }
+  // A plain-text summary for AI assistants (the llms.txt convention).
+  if (r === 'llms') {
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8'); res.setHeader('Cache-Control', 'public, s-maxage=86400');
+    return res.end(`# Rotary Club of Manila
+
+> The Rotary Club of Manila (RCM), founded in 1919, is the first Rotary club in Asia. It is a service club of business, professional and civic leaders in Manila, Philippines, part of Rotary International District 3810. Members meet every Thursday for a weekly membership meeting with a guest speaker.
+
+- Secretariat: RCM Office, 543 Arquiza St. cor. Grey St., Ermita, Manila. Phone (02) 8527-1885. Email ${MAIL}
+- The Club's foundation is the RCManila Foundation (rcmanilafoundation.com).
+- The Rotary Balita is the Club's weekly publication.
+
+## Main pages
+- [About the Club](${origin}/#club): who we are and what we do
+- [Service projects](${origin}/projects): the Club's current projects in health, education, relief and the environment
+- [Weekly meeting](${origin}/meeting): this week's meeting, guest speaker, venue and sign-up
+- [Events](${origin}/events): fellowships, fundraisers and other Club events
+- [The Balita](${origin}/balita): every issue of the weekly publication, with each story as its own page
+- [Guest speakers](${origin}/speakers): speakers at the weekly meetings
+- [Past presidents](${origin}/past-presidents): every president of the Club since 1919
+- [Heritage Library](${origin}/library): a century of Balita issues, photographs and trophies
+- [Join the Club](${origin}/join): how to become a member
+- [Donate](${origin}/donate): support the Club's projects
+- [Partner or volunteer](${origin}/partner)
+
+## Optional
+- [Sitemap](${origin}/sitemap.xml)
+`);
+  }
   if (r === 'sitemap') {
     try {
       const issues = await q('rcm_issues?select=id,issue_no,issue_date,updated_at&status=eq.published&order=issue_no.desc');
@@ -1346,7 +1389,8 @@ module.exports = async (req, res) => {
       let arts = [], off = 0;
       for (;;) { const page = await q(`rcm_articles?select=slug,issue_id,updated_at&included=eq.true&order=id&limit=1000&offset=${off}`); arts = arts.concat(page); if (page.length < 1000) break; off += 1000; }
       const d = (t) => (t ? String(t).slice(0, 10) : '');
-      const urls = [['/', ''], ['/projects', ''], ...PROJECTS.map((p) => [`/projects/${p.slug}`, '']), ['/meeting', ''], ['/balita', ''], ['/join', ''], ['/partner', ''], ['/donate', '']]
+      const urls = [['/', ''], ['/projects', ''], ...PROJECTS.map((p) => [`/projects/${p.slug}`, '']), ['/meeting', ''], ['/balita', ''], ['/join', ''], ['/partner', ''], ['/donate', ''], ['/past-presidents', ''], ['/events', ''], ['/speakers', ''], ['/library', ''], ['/library/balita', ''], ['/library/photos', ''], ['/library/trophies', ''], ['/library/collection', ''], ['/app', '']]
+        .concat((await q('rcm_events?select=slug,updated_at&status=eq.published').catch(() => [])).map((e) => [`/events/${e.slug}`, d(e.updated_at)]))
         .concat(issues.map((i) => [`/balita/${i.issue_no}`, d(i.updated_at)]))
         .concat(arts.filter((a) => byId.has(a.issue_id)).map((a) => [`/balita/${byId.get(a.issue_id).issue_no}/${a.slug}`, d(a.updated_at)]));
       res.setHeader('Content-Type', 'application/xml; charset=utf-8'); res.setHeader('Cache-Control', 'public, s-maxage=3600');
