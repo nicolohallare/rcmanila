@@ -768,7 +768,8 @@ ${guestName ? `<p class="h-balita-cover-note">On the cover: ${coverStory ? `<a h
 <div class="app-tip" id="app-tip" hidden><a href="/app"><img src="/assets/apple-touch-icon.png" alt="" width="36" height="36"><span><b>Put the Club on your phone</b>One tap to the meeting, events and the Balita.</span></a><button type="button" aria-label="Not now">×</button></div>
 <script>(function(){var t=document.getElementById('app-tip');if(!t)return;var ua=navigator.userAgent;
 if(!/iPhone|Android/.test(ua)||window.matchMedia('(display-mode: standalone)').matches||navigator.standalone)return;
-try{if(localStorage.getItem('rcm-app-tip'))return;}catch(e){}
+// Shown on at most 3 visits, and never again once closed with x (remembered on that phone).
+try{if(localStorage.getItem('rcm-app-tip'))return;var n=+(localStorage.getItem('rcm-app-tip-n')||0);if(n>=3)return;localStorage.setItem('rcm-app-tip-n',String(n+1));}catch(e){return;}
 setTimeout(function(){t.hidden=false;},1500);
 t.querySelector('button').onclick=function(){t.hidden=true;try{localStorage.setItem('rcm-app-tip','1');}catch(e){}};})();</script>
 `;
