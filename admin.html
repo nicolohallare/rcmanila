@@ -206,7 +206,7 @@ main.wide{max-width:1760px}
 <div class="stack" style="gap:10px">
 <label class="f" for="hz">Heyzine flipbook link (optional)<input id="hz" type="url" inputmode="url" placeholder="https://heyzine.com/flip-book/…" autocomplete="off"></label>
 <div class="row"><button class="smallbtn" type="button" id="hz-save">Save link</button><span class="muted" id="hz-msg" role="status"></span></div>
-<div class="row"><button class="smallbtn" type="button" id="th-pick">Pick the best card photos</button><span class="muted" id="th-msg" role="status">Chooses a clean photo for each story's card on the website. Takes about a minute.</span></div>
+<div class="row"><button class="smallbtn" type="button" id="th-recut">Re-cut photos from the PDF</button><input type="file" id="th-recut-file" accept="application/pdf" hidden><button class="smallbtn" type="button" id="th-pick">Pick the best card photos</button><span class="muted" id="th-msg" role="status">Re-cut: choose this issue's PDF again to replace the photos with clean copies (no page text or captions). Photos you cropped by hand are kept.</span></div>
 <div class="sharemsg" id="msg"></div>
 <div class="row"><button class="btn btn-gold" type="button" id="share-go">Share picture and message…</button><button class="btn btn-line" style="color:var(--blue)" type="button" id="copy-msg">Copy message</button><button class="btn btn-line" style="color:var(--blue)" type="button" id="dl-card">Download picture</button></div>
 <p class="muted" style="margin:0;font-size:14px">On a phone, <b>Share picture and message</b> opens the share menu: pick Viber, then the group. The message is also copied, so if Viber sends only the picture, paste the message as the caption.</p>
@@ -227,8 +227,8 @@ main.wide{max-width:1760px}
 <div class="row" style="justify-content:space-between"><button class="smallbtn" id="back-home" type="button">← All issues</button><button class="smallbtn" id="del-issue" type="button" style="color:#a3262a">Delete this issue</button></div>
 </section>
 </main>
-<script src="/assets/extract.js"></script>
-<script src="/assets/admin.js?v=1001b"></script>
+<script src="/assets/extract.js?v=1001c"></script>
+<script src="/assets/admin.js?v=1001c"></script>
 <script src="/assets/admin-cover.js"></script>
 </body>
 </html>

@@ -123,6 +123,7 @@ async function doArticles(rows: { id: string; photos: Photo[] | null; rcm_issues
   for (const a of rows) {
     const photos = Array.isArray(a.photos) ? a.photos : [];
     if (!photos.length || !a.rcm_issues) continue;
+    if (photos.some((x) => x.card && (x.card as Card & { manual?: boolean }).manual)) continue;   // the editor cropped this story's photo by hand: keep it
     try {
       const next = await makeCard(a.rcm_issues.issue_no, a.id, photos);
       await db.from("rcm_articles").update({ photos: next }).eq("id", a.id);

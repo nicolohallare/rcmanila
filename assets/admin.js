@@ -705,6 +705,38 @@ ${a.flag ? `<div class="note stack" role="note" style="gap:8px"><div><strong>The
       }
     } catch (err) { m.textContent = err.message; } finally { b.disabled = false; }
   });
+  // Re-cut: read the issue's PDF again with the clean photo reader and swap in the clean copies.
+  document.addEventListener('click', (e) => { if (e.target && e.target.id === 'th-recut') document.getElementById('th-recut-file').click(); });
+  document.addEventListener('change', async (e) => {
+    if (!e.target || e.target.id !== 'th-recut-file' || !R || !R.issue) return;
+    const file = e.target.files[0]; e.target.value = ''; if (!file) return;
+    const m = document.getElementById('th-msg'), b = document.getElementById('th-recut'); b.disabled = true;
+    try {
+      const want = new Set();
+      R.articles.forEach((a) => (a.photos || []).forEach((p) => { if (p.id && !p.orig_path) want.add(p.id); }));
+      if (!want.size) { m.textContent = 'No photos to re-cut.'; return; }
+      m.textContent = 'Reading the PDF…';
+      const pages = await BalitaExtract.extractPdf(file, (p) => { m.textContent = `Reading page ${p.n} of ${p.total}…`; }, { recut: true, only: want });
+      const ts = Date.now().toString(36);
+      const files = pages.flatMap((pg) => pg.photos).map((ph) => ({ name: `photos/${ph.id}-clean-${ts}.jpg`, blob: ph.blob, id: ph.id, width: ph.width, height: ph.height }));
+      if (!files.length) { m.textContent = 'This PDF does not seem to match this issue: no photos found to replace.'; return; }
+      await uploadAll(R.issue.issue_no, files, (d) => { m.textContent = `Saving clean photos… ${d} of ${files.length}`; });
+      const byId = new Map(files.map((f) => [f.id, f]));
+      let n = 0;
+      for (let i = 0; i < R.articles.length; i++) {
+        const a = R.articles[i]; let changed = false;
+        const photos = (a.photos || []).map((p) => {
+          const f = byId.get(p.id); if (!f || p.orig_path) return p;
+          changed = true; n++;
+          return Object.assign({}, p, { path: f.path, width: f.width, height: f.height, pdf_cut_old: p.pdf_cut_old || p.path });
+        });
+        if (changed) { const { article } = await call('save-article', { id: a.id, fields: { photos } }); R.articles[i] = article; }
+      }
+      renderReview();
+      m.textContent = `Replaced ${n} photos with clean copies. Now picking card photos…`;
+      document.getElementById('th-pick').click();
+    } catch (err) { m.textContent = err.message || 'Could not re-cut the photos.'; } finally { b.disabled = false; }
+  });
   async function libCall(action, payload) {
     const r = await fetch(LIB, { method: 'POST', headers: { 'content-type': 'application/json', 'x-editor-code': code, apikey: PUB }, body: JSON.stringify(Object.assign({ action }, payload || {})) });
     const d = await r.json().catch(() => ({}));
