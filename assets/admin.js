@@ -749,10 +749,13 @@ ${a.flag ? `<div class="note stack" role="note" style="gap:8px"><div><strong>The
     const i = R.issue; if (!i) return '';
     const day = i.issue_date ? new Date(i.issue_date + 'T12:00:00+08:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Manila' }) : '';
     const guest = i.guest ? i.guest.split(/[,;(]/)[0].trim() : '';
+    // Viber can't turn a title into a link, so each story gets a short link (rcmanila.org/b/<issue>/<n>) under it.
+    const live = R.articles.filter((a) => a.included).sort((a, b) => a.sort - b.sort);
+    const top = live.map((a, k) => ({ a, n: k + 1 })).sort((x, y) => (y.a.lead - x.a.lead) || (x.n - y.n)).slice(0, 5);
     const lines = [`📰 *Balita No. ${i.issue_no}*${day ? ' · ' + day : ''}`];
     if (guest) lines.push(`Guest speaker: ${guest}`);
-    lines.push(`${SITE}/balita/${i.issue_no}`);
-    if (R.hz) lines.push('', `📖 Flipbook: ${R.hz}`);
+    lines.push('', `Read the issue: ${SITE}/balita/${i.issue_no}`);
+    if (top.length) { lines.push('', '*In this issue*'); for (const { a, n } of top) lines.push(`▸ ${a.title}`, `${SITE}/b/${i.issue_no}/${n}`); }
     return lines.join('\n');
   }
   // Wide picture (1200×630) that Viber, Facebook and Messenger show when the issue link is shared.

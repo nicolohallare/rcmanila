@@ -1332,6 +1332,17 @@ module.exports = async (req, res) => {
     res.statusCode = 404; res.setHeader('Content-Type', 'text/html; charset=utf-8'); res.setHeader('Cache-Control', 'public, s-maxage=300');
     return res.end(notFoundPage());
   }
+  // Short article links for Viber messages: /b/<issue>/<n> goes to the n-th story of that issue.
+  if (r === 'short') {
+    let to = '/balita';
+    try {
+      const no = Number(u.searchParams.get('no')), n = Number(u.searchParams.get('n'));
+      const iss = (await q(`rcm_issues?select=id,issue_no&issue_no=eq.${no}`))[0];
+      if (iss) { to = `/balita/${iss.issue_no}`; const a = (await articlesOf(iss.id)).filter((x) => x.included !== false)[n - 1]; if (a) to += '/' + encodeURIComponent(a.slug); }
+    } catch (e) { /* fall back to the Balita index */ }
+    res.statusCode = 302; res.setHeader('Location', to); res.setHeader('Cache-Control', 'public, s-maxage=300');
+    return res.end();
+  }
   let html = null;
   try {
     if (r === 'home') html = await home(origin);
