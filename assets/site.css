@@ -992,3 +992,4 @@ mark{background:#fce39b;color:inherit;padding:0 1px}
 .app-card ol{margin:0;padding-left:22px;font-size:18px;line-height:1.6}
 .app-card li{margin-bottom:8px}
 @media (max-width:760px){.app-steps{grid-template-columns:1fr}}
+.sup-one .sup-g{grid-template-columns:1fr;max-width:720px;margin:0 auto}.sup-one .sup-k{text-align:center}

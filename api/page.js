@@ -131,14 +131,17 @@ let SITE = 'https://rcmanila.vercel.app';
 // Supporters band (above the footer on every public page). Artwork supplied by each supporter:
 // a wide 1200x520 for computers and a 300x250 box for phones. Set show:false to hide one.
 const SUPPORTERS = [
-  { key: 'esguerra', show: false, name: 'Esguerra Foods Agriventures', href: 'https://esguerrakurobuta.com/', alt: 'Esguerra Foods Agriventures: Better food. Elevated lifestyle. esguerrakurobuta.com' },
-  { key: 'palawan', show: false, name: 'Palawan for Business', href: 'https://www.palawanpawnshop.com/', alt: 'Palawan for Business: Pang-asenso, pang-negosyo! palawanpawnshop.com' },
+  { key: 'esguerra', show: true, name: 'Esguerra Foods Agriventures', href: 'https://esguerrakurobuta.com/', alt: 'Esguerra Foods Agriventures: Better food. Elevated lifestyle. esguerrakurobuta.com' },
+  { key: 'palawan', show: true, name: 'Palawan for Business', href: 'https://www.palawanpawnshop.com/', alt: 'Palawan for Business: Pang-asenso, pang-negosyo! palawanpawnshop.com' },
 ];
-function supportersBand() {
-  const on = SUPPORTERS.filter((x) => x.show);
-  if (!on.length) return '';
+// Shown only on Balita pages (where these supporters have always advertised), not across the whole site:
+// both ads on an issue page, one ad (taking turns by article) on an article page.
+function supportersBand(ads) {
+  let on = SUPPORTERS.filter((x) => x.show);
+  if (!ads || !on.length) return '';
+  if (typeof ads === 'string' && ads !== 'all') { let h = 0; for (const ch of ads) h = (h * 31 + ch.charCodeAt(0)) >>> 0; on = [on[h % on.length]]; }
   const card = (x) => `<a class="sup-ad" href="${x.href}" target="_blank" rel="sponsored noopener" aria-label="${esc(x.name)} (opens in a new tab)"><picture><source media="(max-width:560px)" srcset="/assets/supporters/${x.key}-box.jpg"><img src="/assets/supporters/${x.key}-wide.jpg" alt="${esc(x.alt)}" width="1200" height="520" loading="lazy"></picture></a>`;
-  return `<section class="sup" aria-label="Supporters of the Rotary Club of Manila"><div class="wrap"><p class="sup-k">With thanks to our supporters</p><div class="sup-g">${on.map(card).join('')}</div></div></section>`;
+  return `<section class="sup${on.length === 1 ? ' sup-one' : ''}" aria-label="Supporters of the Rotary Club of Manila"><div class="wrap"><p class="sup-k">With thanks to our ${on.length === 1 ? 'supporter' : 'supporters'}</p><div class="sup-g">${on.map(card).join('')}</div></div></section>`;
 }
 const WHATSON = ['meeting', 'events', 'speakers'];
 const INVOLVED = ['join', 'partner', 'donate'];
@@ -152,7 +155,7 @@ function subNav(nav) {
   if (!g) return '';
   return `<nav class="lib-nav" aria-label="${g[1]}"><div class="wrap">${g[2].map(([k, h, t]) => `<a href="${h}" class="${k === nav ? 'on' : ''}">${t}</a>`).join('')}</div></nav>`;
 }
-function layout({ title, description, image, url, body, nav = '', type = 'article' }) {
+function layout({ title, description, image, url, body, nav = '', type = 'article', ads = '' }) {
   if (!image) image = '/assets/home/people-of-action.jpg';
   if (image[0] === '/') image = SITE + image;
   if (!description) description = 'The Rotary Club of Manila, the first Rotary club in Asia. Service above self since 1919.';
@@ -195,7 +198,7 @@ ${url ? `<meta property="og:url" content="${esc(url)}">` : ''}
 <a class="btn btn-gold head-cta" href="/meeting">Attend a meeting</a>
 </div></header>
 ${subNav(nav)}<main>${body}</main>
-${supportersBand()}
+${supportersBand(ads)}
 <footer class="foot" id="contact"><div class="wrap">
 <div style="display:flex;flex-direction:column;gap:14px"><span class="foot-lockup"><img class="lk-club" src="/assets/club-logo-white.png" alt="Rotary Club of Manila" width="803" height="286"><span class="lk-rule" aria-hidden="true"></span><img class="lk-msg" src="/assets/msg-2026-white.png" alt="Create Lasting Impact" width="918" height="509"></span><span>The first Rotary club in Asia. Service above self since 1919.</span></div>
 <address style="font-style:normal"><strong>Secretariat</strong>RCM Office, 543 Arquiza St. cor. Grey St.<br>Ermita, Manila<br><a href="${TEL}">(02) 8527-1885</a><br><a href="mailto:${MAIL}">${MAIL}</a></address>
@@ -812,7 +815,7 @@ ${pages.length ? '' : '<p class="empty">The printed pages of this issue are not 
 function show(x){var isA=x===a;a.setAttribute('aria-selected',isA);l.setAttribute('aria-selected',!isA);va.hidden=!isA;vl.hidden=isA;}
 a.onclick=function(){show(a)};l.onclick=function(){show(l)};if(location.hash==='#layout')show(l);})();
 </script>`;
-  return layout({ title, description: issue.summary || `The ${fmtDate(issue.issue_date)} issue of the Rotary Club of Manila's weekly publication.`, image: issue.cover_path ? coverSrc(issue, 1200) : '', url, body, nav: 'balita' });
+  return layout({ title, description: issue.summary || `The ${fmtDate(issue.issue_date)} issue of the Rotary Club of Manila's weekly publication.`, image: issue.cover_path ? coverSrc(issue, 1200) : '', url, body, nav: 'balita', ads: 'all' });
 }
 
 async function articlePage(origin, no, slug) {
@@ -859,7 +862,7 @@ ${lead ? figure(lead, lead.caption || a.title, 1400, false) : ''}
 ${Array.isArray(issue.pages) && issue.pages.length ? `<a href="/balita/${issue.issue_no}#layout">See this story as printed${a.printed_pages ? ', ' + esc(a.printed_pages) : ''}</a>` : (issue.pdf_url ? `<a href="${esc(issue.pdf_url)}">Download the printed issue (PDF)</a>` : '')}<a href="/balita/${issue.issue_no}">Read the whole issue</a></div></div>
 ${others.length ? `<h2 style="font-size:24px;margin-top:12px">More from this issue</h2><div style="display:flex;flex-direction:column;gap:14px">${others.map((o) => { const p = leadPhoto(o); return `<a class="mini" style="background:var(--tint)" href="/balita/${issue.issue_no}/${o.slug}">${p ? `<img src="${img(p.path, 200)}" alt="">` : ''}${esc(o.title)}</a>`; }).join('')}</div>` : ''}
 </article>`;
-  return layout({ title: `${a.title} · Balita ${issue.issue_no}`, description: a.dek || `From the Balita, issue ${issue.issue_no}.`, image: lead ? img(lead.path, 1200) : (issue.cover_path ? coverSrc(issue, 1200) : ''), url, body, nav: 'balita' });
+  return layout({ title: `${a.title} · Balita ${issue.issue_no}`, description: a.dek || `From the Balita, issue ${issue.issue_no}.`, image: lead ? img(lead.path, 1200) : (issue.cover_path ? coverSrc(issue, 1200) : ''), url, body, nav: 'balita', ads: a.slug || 'a' });
 }
 
 // ---------- Club events: fellowships, fundraisers, exhibits, with online sign-up and a seat limit ----------
