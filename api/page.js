@@ -603,8 +603,8 @@ const POA_WALL = [
   { img: '/assets/home/poa-empower-lab-2026.jpg', link: '/projects/aral-scholarships', label: 'Inside the Dualtech workshops · September 2026', alt: 'A trainee shows Rotarians an industrial training rig at Dualtech. Text: Together, we empower. Rotary, People of Action.' },
 ];
 // "This week in Club history": up to three things from this same week in past years (old Balita, event albums, recent Balita).
-function historyWeek(items) {
-  if (!Array.isArray(items) || !items.length) return '';
+function historyPicks(items) {
+  if (!Array.isArray(items) || !items.length) return [];
   const round = (y) => (y % 25 === 0 ? 3 : y % 10 === 0 ? 2 : y % 5 === 0 ? 1 : 0);
   const best = (list) => list.slice().sort((a, b) => (round(b.years_ago) - round(a.years_ago)) || (!!b.blurb - !!a.blurb) || (b.years_ago - a.years_ago))[0];
   const picks = [];
@@ -613,7 +613,13 @@ function historyWeek(items) {
   const gal = best(items.filter((x) => x.kind === 'gallery')); if (gal) picks.push(gal);
   const bal = best(items.filter((x) => x.kind === 'balita' && !picks.some((p) => p.years_ago === x.years_ago))); if (bal) picks.push(bal);
   for (const x of items.slice().sort((a, b) => b.years_ago - a.years_ago)) { if (picks.length >= 3) break; if (!picks.includes(x) && !picks.some((p) => p.years_ago === x.years_ago && p.kind === x.kind)) picks.push(x); }
-  const ARCH = 'https://archive.rcmanila.org/';
+  return picks.slice(0, 3);
+}
+const ARCH = 'https://archive.rcmanila.org/';
+const histPic = (x, w) => !x.image_path ? '' : x.kind === 'gallery' ? ARCH + x.image_path.replace(/(\.[a-z]+)$/i, '-t$1').split('/').map(encodeURIComponent).join('/') : img(x.image_path, w || 480);
+function historyWeek(items) {
+  const picks = historyPicks(items);
+  if (!picks.length) return '';
   const pic = (x) => !x.image_path ? '' : x.kind === 'gallery' ? ARCH + x.image_path.replace(/(\.[a-z]+)$/i, '-t$1').split('/').map(encodeURIComponent).join('/') : img(x.image_path, 480);
   const day = (iso) => new Date(iso + 'T12:00:00+08:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Manila' });
   const card = (x) => {
@@ -888,6 +894,13 @@ async function emailPage(origin, no) {
 ${ph ? `<td width="126" valign="top" style="padding:20px 16px 20px 0"><a href="${aUrl(a)}"><img src="${abs(img(ph.path, 300))}" width="110" alt="" style="display:block;width:110px;height:auto;border:0;border-radius:4px"></a></td>` : ''}
 <td valign="top" style="padding:20px 0">${kick(a)}<a href="${aUrl(a)}" style="font:bold 18px/1.3 ${SERIF};color:${INK};text-decoration:none">${esc(a.title)}</a>${a.dek ? `<p style="font:14px/1.5 ${SANS};color:${MUTED};margin:6px 0 8px">${esc(a.dek.length > 180 ? a.dek.slice(0, 177) + '…' : a.dek)}</p>` : '<div style="height:8px"></div>'}<a href="${aUrl(a)}" style="font:bold 14px ${SANS};color:${NAVY}">Read more &rarr;</a></td></tr></table></td></tr>`; };
   const ads = SUPPORTERS.filter((x) => x.show).map((x) => `<tr><td style="padding:0 32px 14px"><a href="${x.href}"><img src="${origin}/assets/supporters/${x.key}-wide.jpg" width="536" alt="${esc(x.alt)}" style="display:block;width:100%;max-width:536px;height:auto;border:0;border-radius:6px"></a></td></tr>`).join('');
+  const hist = historyPicks(await q(`rpc/rcm_history_week?d=${issue.issue_date}`).catch(() => []))[0];
+  const histHtml = hist ? (() => { const im = histPic(hist, 300); const h = hist.link[0] === '/' ? origin + hist.link : hist.link;
+    return `<tr><td style="padding:0 32px 24px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f4ee;border-left:4px solid ${GOLD}"><tr>
+${im ? `<td width="126" valign="top" style="padding:16px 0 16px 16px"><a href="${h}"><img src="${abs(im)}" width="110" alt="" style="display:block;width:110px;height:auto;border:0"></a></td>` : ''}
+<td valign="top" style="padding:16px"><div style="font:bold 11px ${SANS};letter-spacing:1.5px;text-transform:uppercase;color:${NAVY}">From the Heritage Library &middot; ${hist.years_ago} years ago this week</div>
+<a href="${h}" style="display:block;font:bold 17px/1.3 ${SERIF};color:${INK};text-decoration:none;margin:6px 0">${esc(hist.kind === 'gallery' ? hist.title : hist.blurb || hist.title)}</a>
+<a href="${h}" style="font:bold 14px ${SANS};color:${NAVY}">${hist.kind === 'gallery' ? 'See the photographs' : 'Open the Balita'} &rarr;</a></td></tr></table></td></tr>`; })() : '';
   const heyzine = /^https:\/\/([a-z0-9-]+\.)*heyzine\.com\//i.test(issue.heyzine_url || '') ? issue.heyzine_url : '';
   const email = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef1f6"><tr><td align="center" style="padding:24px 12px">
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#ffffff">
@@ -908,6 +921,7 @@ ${issue.summary ? `<tr><td style="padding:0 32px 24px;font:16px/1.6 ${SERIF};col
 ${leadHtml}
 ${rest.map(row).join('')}
 <tr><td style="padding:12px 32px 28px;border-top:1px solid #e3e7ee" align="center"><table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:16px"><tr><td style="background:${NAVY};border-radius:4px"><a href="${url}" style="display:inline-block;padding:12px 22px;font:bold 15px ${SANS};color:#ffffff;text-decoration:none">See all ${arts.length} stories on rcmanila.org</a></td></tr></table></td></tr>
+${histHtml}
 ${ads ? `<tr><td style="padding:18px 32px 10px;background:#f6f4ee;font:bold 11px ${SANS};letter-spacing:1.5px;text-transform:uppercase;color:${MUTED}">With thanks to our supporters</td></tr><tr><td style="background:#f6f4ee"><table role="presentation" width="100%" cellpadding="0" cellspacing="0">${ads}</table></td></tr><tr><td style="background:#f6f4ee;height:10px;font-size:0">&nbsp;</td></tr>` : ''}
 <tr><td style="background:${NAVY};padding:24px 32px;font:13px/1.6 ${SANS};color:#cfe0f5">
 <b style="color:#ffffff">Rotary Club of Manila</b> &middot; The first Rotary club in Asia, established 1919<br>
@@ -1116,6 +1130,7 @@ async function meetingPage(origin, dateParam) {
   const when = fmtDay(m.meeting_date);
   const title = m.topic ? `${m.topic}${m.speaker ? ' · ' + m.speaker : ''}` : `${m.label || 'Weekly meeting'} · ${when}`;
   const desc = `${when}${m.time_text ? ', ' + m.time_text : ''}${m.venue ? ' at ' + m.venue : ''}. Sign up to attend.`;
+  const hist = historyWeek(await q(`rpc/rcm_history_week?d=${m.meeting_date}`).catch(() => []));
   const poster = m.poster_path ? `<figure class="poster"><a href="${raw(m.poster_path)}" target="_blank" rel="noopener"><img src="${img(m.poster_path, 900)}" alt="Meeting poster: ${esc(m.topic || m.label || '')}"></a><figcaption>Tap the poster to see it full size</figcaption></figure>` : '';
   const body = `
 <section class="issue-head meet-head"><div class="wrap">
@@ -1139,6 +1154,7 @@ ${m.notes ? `<div class="meet-note big">${paras(m.notes)}</div>` : ''}
 ${m.speaker_bio ? `<section class="bio"><h2>About the speaker</h2>${paras(m.speaker_bio)}</section>` : ''}
 ${poster}
 <div class="share-row">${shareBar(url, title, true)}</div>
+${hist}
 </div>
 <aside class="rsvp" id="rsvp">
 <h2>${open ? 'Will you attend?' : 'Sign-ups closed'}</h2>
@@ -1404,6 +1420,11 @@ module.exports = async (req, res) => {
     return res.end(notFoundPage());
   }
   // Short article links for Viber messages: /b/<issue>/<n> goes to the n-th story of that issue.
+  if (r === 'history') {
+    const top = historyPicks(await q('rpc/rcm_history_week').catch(() => []))[0];
+    res.setHeader('Cache-Control', 'public, s-maxage=3600');
+    res.statusCode = 302; res.setHeader('Location', top ? top.link : '/library'); return res.end();
+  }
   if (r === 'short') {
     let to = '/balita';
     try {

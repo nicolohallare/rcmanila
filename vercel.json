@@ -106,6 +106,10 @@
       "destination": "/api/page?r=partner"
     },
     {
+      "source": "/history-week",
+      "destination": "/api/page?r=history"
+    },
+    {
       "source": "/llms.txt",
       "destination": "/api/page?r=llms"
     },

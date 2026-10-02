@@ -795,6 +795,7 @@ ${a.flag ? `<div class="note stack" role="note" style="gap:8px"><div><strong>The
     if (guest) lines.push(`Guest speaker: ${guest}`);
     lines.push('', `Read the issue: ${SITE}/balita/${i.issue_no}`);
     if (top.length) { lines.push('', '*In this issue*'); for (const { a, n } of top) lines.push(`▸ ${a.title}`, `${SITE}/b/${i.issue_no}/${n}`); }
+    lines.push('', '📜 *This week in Club history*', `${SITE}/history-week`);
     return lines.join('\n');
   }
   // Wide picture (1200×630) that Viber, Facebook and Messenger show when the issue link is shared.

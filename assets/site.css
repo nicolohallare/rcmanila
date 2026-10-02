@@ -1013,3 +1013,6 @@ mark{background:#fce39b;color:inherit;padding:0 1px}
 .app-tip button{border:0;background:none;font-size:26px;line-height:1;padding:6px 10px;color:var(--ink-2);cursor:pointer}
 .app-point.right{left:auto;right:10px;transform:none;text-align:right}
 .app-point.right i{text-align:right;padding-right:14px}
+/* "This week in Club history" on a meeting page: a navy panel under the details, one item per row. */
+.meet-main .h-week{margin:36px 0 0;background:#17458f;border:0}
+.meet-main .h-week-row{grid-template-columns:1fr;gap:16px}
