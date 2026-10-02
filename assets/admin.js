@@ -334,18 +334,21 @@
   $('split-load').onclick = async () => {
     $('split-msg').textContent = 'Loading…';
     try {
-      const issues = await rest('rcm_issues?select=id,issue_no,issue_date,pdf_url,page_count&source=eq.legacy&order=issue_no.desc&limit=500');
+      const issues = await rest('rcm_issues?select=id,issue_no,issue_date,pdf_url,page_count&source=eq.legacy&order=issue_no.desc&limit=2000');
       const arts = [];
       for (let i = 0; i < issues.length; i += 20) arts.push(...await rest(`rcm_articles?select=issue_id,first:photos->0&issue_id=in.(${issues.slice(i, i + 20).map((x) => x.id).join(',')})&limit=1000`));
+      // Issues whose pages and photos are already saved, waiting for their articles to be written in the Claude chat.
+      const prepared = new Set(await fetch(`${SB}/rest/v1/rpc/rcm_manifest_nos`, { method: 'POST', headers: { apikey: PUB, 'content-type': 'application/json' }, body: '{}' }).then((r) => (r.ok ? r.json() : [])).catch(() => []));
       const by = new Map();
       for (const a of arts) { const s = by.get(a.issue_id) || { n: 0, ph: 0 }; s.n++; if (a.first) s.ph++; by.set(a.issue_id, s); }
       splitQ = issues.map((i, k) => {
         const s = by.get(i.id) || { n: 0, ph: 0 };
         const now = !s.n ? 'PDF only' : s.ph <= s.n / 3 ? `${s.n} articles, mostly without photos` : null;
         return { k, i, now, onSite: /supabase\.co\/storage/.test(i.pdf_url || ''), file: null, on: true, state: 'Waiting' };
-      }).filter((x) => x.now);
+      }).filter((x) => x.now && !prepared.has(x.i.issue_no));
       drawSplit();
-      $('split-msg').textContent = splitQ.length ? `${splitQ.length} issues could be improved.` : 'Every old issue already has its articles and photos.';
+      const wait = prepared.size ? ` ${prepared.size} more already have their pages saved and are waiting for their articles.` : '';
+      $('split-msg').textContent = (splitQ.length ? `${splitQ.length} issues could be improved.` : 'Every old issue already has its articles and photos.') + wait;
     } catch (err) { $('split-msg').textContent = err.message; }
   };
   function drawSplit() {
