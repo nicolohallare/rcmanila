@@ -1016,3 +1016,40 @@ mark{background:#fce39b;color:inherit;padding:0 1px}
 /* "This week in Club history" on a meeting page: a navy panel under the details, one item per row. */
 .meet-main .h-week{margin:36px 0 0;background:#17458f;border:0}
 .meet-main .h-week-row{grid-template-columns:1fr;gap:16px}
+/* Home: "The Rotary family" band — where the Club sits in Rotary, plus member resources. */
+.rw{background:var(--navy);color:#fff;padding-block:64px;border-bottom:5px solid var(--gold);position:relative;overflow:hidden}
+.rw::after{content:"";position:absolute;right:-180px;top:-180px;width:520px;height:520px;border-radius:50%;border:70px solid rgba(247,168,27,.07);pointer-events:none}
+.rw .kicker{color:var(--gold)}
+.rw-head h2{color:#fff;font-size:clamp(28px,3.2vw,40px);margin:6px 0 10px}
+.rw-head p{color:#cfe0f5;font-size:18px;max-width:640px;margin:0}
+.rw-grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:48px;margin-top:36px;position:relative;z-index:1}
+.rw-chain{list-style:none;margin:0;padding:0;position:relative}
+.rw-chain li:not(.here)::after{content:"";position:absolute;left:15px;top:44px;height:calc(100% - 20px);width:2px;background:#5f86c6}
+.rw-chain li:nth-child(3)::after{background:linear-gradient(#5f86c6,var(--gold))}
+.rw-chain li{position:relative;margin:0 0 12px}
+.rw-chain li:not(.here)>a,.rw-chain li.here>div{display:flex;align-items:center;gap:16px;padding:14px 16px 14px 0;color:#fff;text-decoration:none;border-radius:8px}
+.rw-chain li:not(.here)>a:hover{background:rgba(255,255,255,.06)}
+.rw-chain .dot{flex-shrink:0;width:32px;height:32px;border-radius:50%;background:var(--navy);border:2px solid #5f86c6;position:relative;z-index:1}
+.rw-chain .t{display:flex;flex-direction:column;flex:1;min-width:0}
+.rw-chain small{color:#9fbde6;font-size:13px;letter-spacing:.06em;text-transform:uppercase;font-weight:700}
+.rw-chain b{font-size:20px;line-height:1.25}
+.rw-chain .go{color:#9fbde6;font-size:14px;white-space:nowrap}
+.rw-chain li:not(.here)>a:hover .go{color:#fff}
+.rw-chain li.here{margin-top:6px}
+.rw-chain li.here>div{padding-block:18px}
+.rw-chain li.here .dot{background:var(--gold);border-color:var(--gold);box-shadow:0 0 0 6px rgba(247,168,27,.25)}
+.rw-chain li.here b{font-size:26px;font-family:var(--serif)}
+.rw-chain li.here em{font-style:normal;color:var(--gold);font-size:16px}
+.rw-fdn{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-left:48px;padding:12px 16px;border:1px solid rgba(255,255,255,.25);border-radius:8px;color:#fff;text-decoration:none!important}
+.rw-fdn:hover{border-color:var(--gold)}
+.rw-fdn span:first-child{display:flex;flex-direction:column}.rw-fdn small{color:#9fbde6;font-size:12.5px;text-transform:uppercase;letter-spacing:.06em;font-weight:700}.rw-chain li.here .rw-fdn b{font-size:17px;font-family:var(--sans)}
+.rw-res{background:#fff;color:var(--ink);border-radius:10px;padding:24px 24px 12px;box-shadow:0 20px 40px -24px rgba(0,0,0,.5)}
+.rw-res h3{font-family:var(--sans);font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--blue);margin:0 0 6px}
+.rw-res ul{list-style:none;margin:0;padding:0}
+.rw-res li+li{border-top:1px solid #e3e7ee}
+.rw-res a{display:flex;gap:14px;align-items:center;padding:13px 0;text-decoration:none!important;color:var(--ink)}
+.rw-res .ic{flex-shrink:0;width:42px;height:42px;border-radius:50%;background:#eef3fb;color:var(--navy);display:grid;place-items:center}
+.rw-res a:hover .ic{background:var(--gold);color:var(--navy)}
+.rw-res .t{display:flex;flex-direction:column}.rw-res b{color:var(--navy);font-size:17px}.rw-res small{color:var(--muted);font-size:14.5px}
+.rw-res a:hover b{text-decoration:underline;text-underline-offset:3px}
+@media (max-width:900px){.rw{padding-block:48px}.rw-grid{grid-template-columns:1fr;gap:32px}.rw-chain .go{display:none}.rw-fdn{margin-left:48px}}

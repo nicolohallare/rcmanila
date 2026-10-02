@@ -127,6 +127,41 @@ const FAMILY = [
   { name: 'Philippine Rotary Magazine', href: 'https://www.philippinerotarymagazine.com/', note: 'Rotary’s regional magazine for the Philippines' },
   { name: 'RCManila Foundation', href: 'https://rcmanilafoundation.com/', note: 'The Club’s foundation for its service projects' },
 ];
+// Home page "Rotary world" band: where the Club sits in Rotary (a chain from RI down to RCM), and member resources.
+const RW_ICON = {
+  login: '<path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/><path d="M10 16l4-4-4-4"/><path d="M14 12H4"/>',
+  learn: '<path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5"/>',
+  heart: '<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>',
+  book: '<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5"/>',
+  mag: '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h5"/>',
+  star: '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>',
+};
+function rotaryWorld() {
+  const ico = (k) => `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${RW_ICON[k]}</svg>`;
+  const chain = [
+    { name: 'Rotary International', where: 'Worldwide · since 1905', href: 'https://www.rotary.org/', cta: 'rotary.org' },
+    { name: 'Rotary Zone 10A', where: 'The Philippines', href: 'https://www.facebook.com/Zone10ARotaryVoice/', cta: 'Zone page' },
+    { name: 'Rotary District 3810', where: 'Metro Manila', href: 'https://www.rotaryd3810.org/', cta: 'District site' },
+  ];
+  const res = [
+    { k: 'login', name: 'My Rotary', note: 'Sign in for member and club tools', href: 'https://my.rotary.org/' },
+    { k: 'learn', name: 'Rotary Learning Center', note: 'Free courses, guides and manuals', href: 'https://my.rotary.org/en/learning-reference' },
+    { k: 'heart', name: 'The Rotary Foundation', note: 'Grants, giving and programs', href: 'https://my.rotary.org/en/rotary-foundation' },
+    { k: 'book', name: 'Rotary magazine', note: 'Stories from clubs around the world', href: 'https://www.rotary.org/en/news-and-stories/rotary-magazine' },
+    { k: 'mag', name: 'Philippine Rotary Magazine', note: 'Rotary news from across the country', href: 'https://www.philippinerotarymagazine.com/' },
+    { k: 'star', name: 'Zone 10A Public Image Awards', note: 'Honoring Rotary storytelling in the Philippines', href: 'https://rotaryzone10apublicimageawards.com/' },
+  ];
+  const ext = 'target="_blank" rel="noopener"';
+  return `<section class="rw" aria-labelledby="rw-t"><div class="wrap">
+<div class="rw-head"><span class="kicker">The Rotary family</span><h2 id="rw-t">One club in a worldwide network</h2>
+<p>The Rotary Club of Manila belongs to Rotary International, more than a million neighbors, friends and leaders in clubs around the world.</p></div>
+<div class="rw-grid">
+<ol class="rw-chain">${chain.map((c) => `<li><a href="${c.href}" ${ext}><span class="dot"></span><span class="t"><small>${esc(c.where)}</small><b>${esc(c.name)}</b></span><span class="go">${esc(c.cta)} ↗</span></a></li>`).join('')}
+<li class="here"><div><span class="dot"></span><span class="t"><small>Manila · since 1919</small><b>Rotary Club of Manila</b><em>The first Rotary club in Asia</em></span></div>
+<a class="rw-fdn" href="https://rcmanilafoundation.com/" ${ext}><span><small>Our foundation</small><b>RCManila Foundation</b></span><span class="go">↗</span></a></li></ol>
+<div class="rw-res"><h3>For members</h3><ul>${res.map((r) => `<li><a href="${r.href}" ${ext}><span class="ic">${ico(r.k)}</span><span class="t"><b>${esc(r.name)}</b><small>${esc(r.note)}</small></span></a></li>`).join('')}</ul></div>
+</div></div></section>`;
+}
 let SITE = 'https://rcmanila.vercel.app';
 // Supporters band (above the footer on every public page). Artwork supplied by each supporter:
 // a wide 1200x520 for computers and a 300x250 box for phones. Set show:false to hide one.
@@ -775,16 +810,7 @@ ${guestName ? `<p class="h-balita-cover-note">On the cover: ${coverStory ? `<a h
 <p>Join business, professional and civic leaders working for a stronger Manila. Start by joining us at a Thursday meeting as a guest.</p>
 <div class="h-cta"><a class="btn btn-gold" href="/meeting">Attend as a guest</a><a class="btn btn-ghost" href="/join">How to join</a></div>
 </div></section>
-<section class="h-family h-ri" aria-labelledby="h-ri-t"><div class="wrap">
-<span class="kicker">From Rotary International</span>
-<h2 id="h-ri-t">A wealth of Rotary information for members</h2>
-<p>Rotary International’s website has courses, guides, Foundation grants and news from Rotary clubs around the world.</p>
-<div class="h-family-row">${RI_LINKS.map((f) => `<a href="${f.href}" target="_blank" rel="noopener"><b>${esc(f.name)}</b><span>${esc(f.note)}</span></a>`).join('')}</div>
-</div></section>
-<section class="h-family" aria-label="The Rotary family"><div class="wrap">
-<span class="kicker">Part of the Rotary family</span>
-<div class="h-family-row">${FAMILY.map((f) => `<a href="${f.href}" target="_blank" rel="noopener"><b>${esc(f.name)}</b><span>${esc(f.note)}</span></a>`).join('')}</div>
-</div></section>
+${rotaryWorld()}
 <div class="app-tip" id="app-tip" hidden><a href="/app"><img src="/assets/apple-touch-icon.png" alt="" width="36" height="36"><span><b>Put the Club on your phone</b>One tap to the meeting, events and the Balita.</span></a><button type="button" aria-label="Not now">×</button></div>
 <script>(function(){var t=document.getElementById('app-tip');if(!t)return;var ua=navigator.userAgent;
 if(!/iPhone|Android/.test(ua)||window.matchMedia('(display-mode: standalone)').matches||navigator.standalone)return;
