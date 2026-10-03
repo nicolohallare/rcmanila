@@ -110,6 +110,10 @@
       "destination": "/api/page?r=history"
     },
     {
+      "source": "/d9ca13072ad953191777936aededdca7.txt",
+      "destination": "/api/page?r=indexnow"
+    },
+    {
       "source": "/llms.txt",
       "destination": "/api/page?r=llms"
     },

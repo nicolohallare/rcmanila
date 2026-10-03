@@ -1407,6 +1407,8 @@ module.exports = async (req, res) => {
     return res.end(`User-agent: *\nDisallow: /admin\nDisallow: /secretariat\nDisallow: /library-admin\nDisallow: /api/\nSitemap: ${origin}/sitemap.xml\n`);
   }
   // A plain-text summary for AI assistants (the llms.txt convention).
+  // IndexNow key (Bing and other search engines check this file before accepting our "page changed" pings).
+  if (r === 'indexnow') { res.setHeader('Content-Type', 'text/plain; charset=utf-8'); return res.end('d9ca13072ad953191777936aededdca7'); }
   if (r === 'llms') {
     res.setHeader('Content-Type', 'text/plain; charset=utf-8'); res.setHeader('Cache-Control', 'public, s-maxage=86400');
     return res.end(`# Rotary Club of Manila
