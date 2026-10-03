@@ -28,8 +28,11 @@ const TEL = 'tel:+63285271885';
 // The story's card photo: the one picked as cleanest (thumb), else the largest reasonably shaped photo.
 const cardScore = (p) => { const w = p.width || 400, h = p.height || 300, r = w / h; return Math.log(w * h) - (r < 0.55 ? 3 : 0) - (w < 260 || h < 180 ? 4 : 0); };
 // A story's picture for cards and lists: its clean cropped card picture when there is one.
+// A photo marked thumb without a cut card is used as it is, cropped by the page (focus = [x%, y%] keeps the subject in frame).
 const cardOf = (a) => { const p = (a.photos || []).find((x) => x.thumb && x.card && x.include !== false); return p ? { path: p.card.path, width: p.card.width, height: p.card.height } : null; };
-const leadPhoto = (a) => { const c = cardOf(a); if (c) return c; const ps = (a.photos || []).filter((p) => p.include !== false); return ps.slice().sort((x, y) => cardScore(y) - cardScore(x))[0]; };
+const pickedPhoto = (a) => (a.photos || []).find((x) => x.thumb && !x.card && x.include !== false) || null;
+const leadPhoto = (a) => { const c = cardOf(a) || pickedPhoto(a); if (c) return c; const ps = (a.photos || []).filter((p) => p.include !== false); return ps.slice().sort((x, y) => cardScore(y) - cardScore(x))[0]; };
+const focusCss = (p) => (Array.isArray(p && p.focus) ? `object-position:${Math.round(p.focus[0])}% ${Math.round(p.focus[1])}%` : 'object-position:50% 30%');
 // Show a photo no wider than its real pixel size, so small photos stay sharp instead of being blown up.
 const figure = (p, alt, w = 1400, lazy = true) => {
   const real = p.width || w;
@@ -281,6 +284,10 @@ function storyCard(issue, a) {
   if (ph) {
     const c = ph.card, r = Math.min(1.6, Math.max(0.7, c.width / c.height));
     visual = `<div class="sc-img" style="aspect-ratio:${r.toFixed(3)}"><img src="${img(c.path, Math.min(700, c.width))}" alt="" width="${c.width}" height="${c.height}" loading="lazy"></div>`;
+  } else if (leadPhoto(a) && leadPhoto(a).path && (leadPhoto(a).width || 400) >= 220) {
+    // No cut card yet: show the story's best photo, cropped to a steady 3:2 frame.
+    const p = leadPhoto(a);
+    visual = `<div class="sc-img" style="aspect-ratio:1.5"><img src="${img(p.path, 700)}" alt="" loading="lazy" style="${focusCss(p)}"></div>`;
   } else {
     visual = `<div class="sc-none"><img src="/assets/club-logo-white.png" alt="" aria-hidden="true"><span>${k}</span></div>`;
   }
@@ -994,7 +1001,9 @@ function renderArticle(origin, issue, a, arts) {
     }
   });
   const leftover = rest.slice(pi);
-  if (leftover.length) html += leftover.map((p) => figure(p, p.caption || '')).join('');
+  // Three or more remaining photos (photo pages from print) show as a gallery grid; tap one to see it full size.
+  if (leftover.length >= 3) html += `<div class="art-gallery">${leftover.map((p) => `<a href="${raw(p.path)}" target="_blank" rel="noopener"${p.caption ? ` title="${esc(p.caption)}"` : ''}><img src="${img(p.path, 600)}" alt="${esc(p.caption || '')}" loading="lazy"></a>`).join('')}</div>`;
+  else if (leftover.length) html += leftover.map((p) => figure(p, p.caption || '')).join('');
   const others = arts.filter((x) => x.id !== a.id).slice(0, 3);
   const body = `<article class="article">
 <a href="/balita/${issue.issue_no}" style="font-weight:600;font-size:15px">← Balita · Issue ${issue.issue_no} · ${esc(fmtDate(issue.issue_date))}</a>

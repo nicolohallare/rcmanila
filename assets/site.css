@@ -1053,3 +1053,8 @@ mark{background:#fce39b;color:inherit;padding:0 1px}
 .rw-res .t{display:flex;flex-direction:column}.rw-res b{color:var(--navy);font-size:17px}.rw-res small{color:var(--muted);font-size:14.5px}
 .rw-res a:hover b{text-decoration:underline;text-underline-offset:3px}
 @media (max-width:900px){.rw{padding-block:48px}.rw-grid{grid-template-columns:1fr;gap:32px}.rw-chain .go{display:none}.rw-fdn{margin-left:48px}}
+/* Balita article: photo pages from print shown as a gallery grid */
+.art-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;margin:28px 0}
+.art-gallery a{display:block;aspect-ratio:4/3;overflow:hidden;border-radius:6px;background:#eef2f7}
+.art-gallery img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .2s}
+.art-gallery a:hover img{transform:scale(1.04)}
