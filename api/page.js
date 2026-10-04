@@ -1519,6 +1519,7 @@ module.exports = async (req, res) => {
       const d = (t) => (t ? String(t).slice(0, 10) : '');
       const urls = [['/', ''], ['/projects', ''], ...PROJECTS.map((p) => [`/projects/${p.slug}`, '']), ['/meeting', ''], ['/balita', ''], ['/join', ''], ['/youth', ''], ['/partner', ''], ['/donate', ''], ['/past-presidents', ''], ['/events', ''], ['/speakers', ''], ['/library', ''], ['/library/balita', ''], ['/library/photos', ''], ['/library/trophies', ''], ['/library/collection', ''], ['/library/timeline', ''], ['/library/exhibit', ''], ['/library/name', ''], ['/library/ask', ''], ['/app', '']]
         .concat((await q('rcm_events?select=slug,updated_at&status=eq.published').catch(() => [])).map((e) => [`/events/${e.slug}`, d(e.updated_at)]))
+        .concat([['/library/videos', '']]).concat((await q('rcm_lib_videos?select=slug,updated_at&status=eq.published&path=not.is.null').catch(() => [])).map((v) => [`/library/videos/${v.slug}`, d(v.updated_at)]))
         .concat(issues.map((i) => [`/balita/${i.issue_no}`, d(i.updated_at)]))
         .concat(arts.filter((a) => byId.has(a.issue_id)).map((a) => [`/balita/${byId.get(a.issue_id).issue_no}/${a.slug}`, d(a.updated_at)]));
       res.setHeader('Content-Type', 'application/xml; charset=utf-8'); res.setHeader('Cache-Control', 'public, s-maxage=3600');

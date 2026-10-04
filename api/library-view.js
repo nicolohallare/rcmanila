@@ -27,7 +27,7 @@ module.exports = function libraryModule(ctx) {
     return html;
   }
   const libNav = (on) => `<nav class="lib-nav" aria-label="Heritage Library"><div class="wrap">
-<a href="/library" class="${on === 'home' ? 'on' : ''}">Library</a><a href="/library/exhibit" class="${on === 'exhibit' ? 'on' : ''}">This month’s exhibit</a><a href="/library/timeline" class="${on === 'timeline' ? 'on' : ''}">Timeline</a><a href="/library/era/1919" class="${on === 'eras' ? 'on' : ''}">Decades</a><a href="/library/balita" class="${on === 'balita' ? 'on' : ''}">Reading room</a><a href="/library/photos" class="${on === 'photos' ? 'on' : ''}">Photographs</a><a href="/library/trophies" class="${on === 'trophies' ? 'on' : ''}">Trophy room</a><a href="/library/name" class="${on === 'name' ? 'on' : ''}">Find a name</a><a href="/library/ask" class="${on === 'ask' ? 'on' : ''}">Ask the archive</a><a href="/library/collection" class="${on === 'collection' ? 'on' : ''}">Catalogue</a>
+<a href="/library" class="${on === 'home' ? 'on' : ''}">Library</a><a href="/library/exhibit" class="${on === 'exhibit' ? 'on' : ''}">This month’s exhibit</a><a href="/library/timeline" class="${on === 'timeline' ? 'on' : ''}">Timeline</a><a href="/library/era/1919" class="${on === 'eras' ? 'on' : ''}">Decades</a><a href="/library/balita" class="${on === 'balita' ? 'on' : ''}">Reading room</a><a href="/library/photos" class="${on === 'photos' ? 'on' : ''}">Photographs</a><a href="/library/videos" class="${on === 'videos' ? 'on' : ''}">Video room</a><a href="/library/trophies" class="${on === 'trophies' ? 'on' : ''}">Trophy room</a><a href="/library/name" class="${on === 'name' ? 'on' : ''}">Find a name</a><a href="/library/ask" class="${on === 'ask' ? 'on' : ''}">Ask the archive</a><a href="/library/collection" class="${on === 'collection' ? 'on' : ''}">Catalogue</a>
 <form action="/library/search" method="get" role="search" class="lib-nav-s"><input name="q" type="search" placeholder="Search 100 years" aria-label="Search the library"></form>
 </div></nav>`;
 
@@ -85,7 +85,7 @@ module.exports = function libraryModule(ctx) {
 
   // ---------- landing ----------
   async function landing(origin) {
-    const [vols, gals, objs, exs, tlc] = await Promise.all([volumes(), galleries(), objects(12), exhibits(), safe(() => q('rcm_lib_events?select=id&status=eq.published&limit=1'), [])]);
+    const [vols, gals, objs, exs, tlc, vids] = await Promise.all([volumes(), galleries(), objects(12), exhibits(), safe(() => q('rcm_lib_events?select=id&status=eq.published&limit=1'), []), videos()]);
     const ex = currentExhibit(exs);
     const pages = vols.reduce((s, v) => s + (v.page_count || 0), 0);
     const photos = gals.reduce((s, g) => s + (g.photo_count || 0), 0);
@@ -125,6 +125,9 @@ ${shelf(vols.slice(0, 12), true)}
 ${gals.length ? `<section class="lib-sec"><div class="wrap">
 <div class="section-head"><div><span class="kicker">Photographs</span><h2>The Club at work and in fellowship</h2></div><a class="link-arrow" href="/library/photos">All albums</a></div>
 <div class="lib-gals">${gals.slice(0, 6).map(galCard).join('')}</div></div></section>` : ''}
+${vids.length ? `<section class="lib-sec"><div class="wrap">
+<div class="section-head"><div><span class="kicker">The video room</span><h2>The Club on film</h2></div><a class="link-arrow" href="/library/videos">All ${vids.length} films</a></div>
+<div class="lib-gals">${vids.filter((v) => v.category === 'film' || v.category === 'project').slice(0, 3).map(vidCard).join('')}</div></div></section>` : ''}
 ${objs.length ? `<section class="lib-sec lib-dark"><div class="wrap">
 <div class="section-head"><div><span class="kicker">The trophy room</span><h2>Honors given and received</h2></div><a class="link-arrow" href="/library/trophies">Enter the trophy room</a></div>
 <div class="lib-objs">${objs.slice().sort((a, b) => (b.polished ? 1 : 0) - (a.polished ? 1 : 0)).slice(0, 8).map(objCard).join('')}</div></div></section>` : ''}
@@ -140,6 +143,12 @@ ${objs.length ? `<section class="lib-sec lib-dark"><div class="wrap">
     if (withModern) cards.push(`<a class="lib-vol modern" href="/balita"><span class="lib-vol-cv"><span class="lib-vol-ph">Today</span></span><strong>Recent issues</strong><span>The weekly Balita on this website</span></a>`);
     return cards.length > (withModern ? 1 : 0) ? `<div class="lib-shelf">${cards.join('')}</div>` : `<div class="lib-empty">The first volumes are being prepared. <a href="/balita">Read the recent Balita issues</a> in the meantime.</div>`;
   }
+  const videos = () => safe(() => q('rcm_lib_videos?select=slug,title,category,year,month,speaker,description,poster,duration,width,height,path,links&status=eq.published&path=not.is.null&order=sort.asc,year.asc'), []);
+  const VCAT = [['film', 'Club films', 'Short films about the Club and its history.'], ['project', 'Project films', 'Films the Club made about its service projects for its centennial in 2019.'], ['event', 'Club events', 'Award nights, visits and celebrations.'], ['speaker', 'Guest speakers', 'Guests of honor at the Club’s weekly meetings, 2017 to 2020.'], ['meeting', 'Meetings on Zoom', 'Weekly meetings held online during the pandemic, 2020 and 2021.']];
+  const MONS = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const vWhen = (v) => [v.month ? MONS[v.month] : '', v.year || ''].filter(Boolean).join(' ');
+  const vLen = (d) => { d = Math.round(Number(d) || 0); if (!d) return ''; const h = Math.floor(d / 3600), m = Math.floor(d % 3600 / 60), s = d % 60; return h ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}` : `${m}:${String(s).padStart(2, '0')}`; };
+  const vidCard = (v) => `<a class="lib-gal lib-vid" href="/library/videos/${esc(v.slug)}"><span class="im">${v.poster ? `<img src="${esc(aSrc(v.poster))}" alt="" loading="lazy">` : '<span class="ph"></span>'}<i class="play" aria-hidden="true"></i>${v.duration ? `<em>${vLen(v.duration)}</em>` : ''}</span><small>${esc(vWhen(v))}</small><strong>${esc(v.title)}</strong></a>`;
   const galCard = (g) => `<a class="lib-gal" href="/library/photos/${esc(g.slug)}"><span class="im">${g.cover_path ? `<img src="${esc(aSrc(g.cover_path))}" alt="" loading="lazy">` : ''}</span><small>${esc(g.event_date ? fmtDate(g.event_date) : '')}${g.photo_count ? ` · ${g.photo_count} photos` : ''}</small><strong>${esc(g.title)}</strong></a>`;
   const objCard = (o) => `<button type="button" class="lib-obj${o.polished ? ' pol' : ''}" data-obj="${esc(o.acc)}"><span class="im"><img src="${esc(aSrc(String(o.image_path || '').replace(/\.jpg$/, '-t.jpg')))}" data-full="${esc(aSrc(o.image_path))}" onerror="if(this.dataset.full&&this.src!==this.dataset.full)this.src=this.dataset.full" alt="${esc(o.title || '')}" loading="lazy"></span><strong>${esc(o.title || o.kind || 'Object')}</strong><small>${[o.year, o.giver].filter(Boolean).map(esc).join(' · ')}</small></button>`;
 
@@ -487,6 +496,33 @@ document.getElementById('tag-x').onclick=function(){d.close()};
 f.addEventListener('submit',async function(e){e.preventDefault();var fd=new FormData(f);if(fd.get('website'))return;m.textContent='Sending…';
 try{var r=await fetch('https://unavxknqpibxwcoqemaf.supabase.co/functions/v1/rcm-museum',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'tag',kind:cur.kind,ref:cur.ref,label:cur.label,image:cur.image,names:fd.get('names'),note:fd.get('note'),submitter:fd.get('submitter'),contact:fd.get('contact')})});var j=await r.json();if(!r.ok||j.error)throw new Error(j.error||'Please try again');m.textContent='Thank you. The librarian will check it.';setTimeout(function(){d.close()},1800)}catch(err){m.textContent=err.message}})})();</script>`;
 
+  // ---------- the Video room ----------
+  async function videoRoom(origin) {
+    const L = await videos();
+    const secs = VCAT.map(([k, h, d]) => [k, h, d, L.filter((v) => v.category === k)]).filter((x) => x[3].length);
+    const body = `${libNav('videos')}<section class="wrap lib-page-head"><span class="kicker">The video room</span><h1>The Club on film</h1><p class="dek">${L.length ? `${L.length} films and recordings` : 'Films are being prepared'}: the Club’s own films, the project films made for its centennial, award nights, and guests of honor at its weekly meetings.</p>
+${secs.length > 1 ? `<nav class="lib-vnav" aria-label="Sections">${secs.map(([k, h]) => `<a href="#${k}">${esc(h)}</a>`).join('')}</nav>` : ''}</section>
+<section class="wrap lib-sec" style="padding-top:0">${secs.map(([k, h, d, vs]) => `<h2 class="lib-era-h" id="${k}">${esc(h)}</h2><p class="lib-lede" style="margin:4px 0 0">${esc(d)}</p><div class="lib-gals">${vs.map(vidCard).join('')}</div>`).join('') || '<div class="lib-empty">The first films will appear here soon.</div>'}</section>`;
+    return page('Video room · Heritage Library', 'Films and recordings of the Rotary Club of Manila: Club films, centennial project films, award nights and guest speakers.', body, origin + '/library/videos');
+  }
+  async function videoPage(origin, slug) {
+    const L = await videos();
+    const v = L.find((x) => x.slug === slug);
+    if (!v) return null;
+    const src = aSrc(v.path), when = vWhen(v);
+    const cat = (VCAT.find((c) => c[0] === v.category) || [])[1] || 'Video';
+    const more = L.filter((x) => x.category === v.category && x.slug !== v.slug).slice(0, 6);
+    const iso = (d) => { d = Math.round(Number(d) || 0); return d ? `PT${Math.floor(d / 60)}M${d % 60}S` : undefined; };
+    const ld = { '@context': 'https://schema.org', '@type': 'VideoObject', name: v.title, description: v.description || v.title, thumbnailUrl: v.poster ? aSrc(v.poster) : origin + '/assets/club-logo.png', uploadDate: `${v.year || 2019}-${String(v.month || 1).padStart(2, '0')}-01`, contentUrl: src, duration: iso(v.duration), publisher: { '@type': 'Organization', name: 'Rotary Club of Manila' } };
+    const body = `${libNav('videos')}<section class="wrap lib-page-head lib-vid-page"><a class="lib-back" href="/library/videos#${esc(v.category)}">← Video room</a><span class="kicker">${esc(cat)}${when ? ' · ' + esc(when) : ''}</span><h1>${esc(v.title)}</h1>
+<div class="lib-player" style="aspect-ratio:${v.width && v.height ? `${v.width}/${v.height}` : '16/9'}"><video controls preload="metadata" playsinline${v.poster ? ` poster="${esc(aSrc(v.poster))}"` : ''} src="${esc(src)}"></video></div>
+${v.description ? `<p class="dek">${esc(v.description)}</p>` : ''}
+${(v.links || []).length || v.speaker ? `<p class="lib-vlinks">${(v.links || []).map((l) => `<a class="link-arrow" href="${esc(l.url)}">${esc(l.label || 'Read more')}</a>`).join(' ')}${v.speaker ? ` <a class="link-arrow" href="/library/name?q=${encodeURIComponent(v.speaker)}">${esc(v.speaker)} in the archive</a>` : ''}</p>` : ''}
+<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, '\\u003c')}</script></section>
+${more.length ? `<section class="wrap lib-sec" style="padding-top:8px"><h2 class="lib-era-h">More ${esc(cat.toLowerCase())}</h2><div class="lib-gals">${more.map(vidCard).join('')}</div></section>` : ''}`;
+    return page(`${v.title} · Video room`, v.description || `${v.title}, from the Rotary Club of Manila’s video room.`, body, origin + '/library/videos/' + v.slug, v.poster ? aSrc(v.poster) : null);
+  }
+
   async function route(origin, u) {
     const parts = String(u.searchParams.get('p') || '').split('/').filter(Boolean);
     const [a, b, c] = parts;
@@ -495,6 +531,7 @@ try{var r=await fetch('https://unavxknqpibxwcoqemaf.supabase.co/functions/v1/rcm
     if (a === 'balita') { if (!b) return reading(origin); if (!c) return volume(origin, b); return issue(origin, b, c, u.searchParams.get('hl')); }
     if (a === 'search') return search(origin, u.searchParams.get('q'), u.searchParams.get('v'));
     if (a === 'photos') return b ? gallery(origin, b) : photos(origin);
+    if (a === 'videos') return b ? videoPage(origin, b) : videoRoom(origin);
     if (a === 'trophies') return trophies(origin);
     if (a === 'collection') return collection(origin);
     if (a === 'name') return nameFinder(origin, u.searchParams.get('q'));

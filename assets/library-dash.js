@@ -29,6 +29,17 @@
       const vd = $('vol-done'), vt = $('vol-todo');
       if (vd && vt) { vd.classList.add('hidden'); vt.classList.remove('hidden'); vt.innerHTML = `<b>${v.length} volume${v.length > 1 ? 's' : ''} stopped part-way and ${v.length > 1 ? 'are' : 'is'} not on the website:</b> ${v.map((x) => `${esc(x.acc)} (${esc(x.years)}, ${D.fmt(x.done)} of ${D.fmt(x.pages)} pages)`).join('; ')}. Tick ${v.length > 1 ? 'them' : 'it'} below and click <b>Process ticked volumes</b> to run again. Each takes about 20 minutes.`; }
     }
+    // Video room: videos waiting, missing still frames, and this Rotary year's videos still to come from the Secretariat.
+    let vids = [];
+    try { vids = (await L().video('list', {})).items; } catch (e) { vids = []; }
+    const vWait = vids.filter((v) => v.status === 'draft' || v.status === 'held');
+    const vNoStill = vids.filter((v) => v.status === 'published' && v.path && !v.poster && v.plays !== false);
+    const ryYear = Number(d.today.slice(0, 4)) - (Number(d.today.slice(5, 7)) < 7 ? 1 : 0);
+    const vRecent = vids.filter((v) => (v.year || 0) > ryYear || (v.year === ryYear && (v.month || 7) >= 7));
+    if (vNoStill.length) items.push({ level: 'todo', icon: 'image', count: vNoStill.length, title: vNoStill.length === 1 ? 'published video needs a still frame' : 'published videos need a still frame', text: 'One click makes them from the videos themselves. It takes a few seconds each; keep the page open.', go: 'vid', label: 'Make stills' });
+    if (vWait.length) items.push({ level: 'todo', icon: 'frame', count: vWait.length, title: vWait.length === 1 ? 'video waiting for you' : 'videos waiting for you', text: (() => { const h = vWait.filter((v) => v.status === 'held').length; return (h ? `${h} ${h === 1 ? 'is' : 'are'} held for a check (full Zoom meetings and unnamed speeches). ` : '') + 'Watch, check the title and publish, or hide.'; })(), go: 'vid', label: 'Review' });
+    if (!vRecent.length) items.push({ level: 'info', icon: 'up', title: 'Add this year’s videos from the Secretariat', text: 'Starting with the induction. Ask for the original files, not Viber copies. Then Videos → Add a new video.', go: 'vid', label: 'Open videos' });
+    D.badge($('b-vid'), vWait.length + vNoStill.length);
     $('dh-todo').innerHTML = D.todo(items, 'No suggestions, drafts or checks are waiting. The library runs by itself.');
 
     D.badge($('b-tags'), t.tags_new); D.badge($('b-tl'), t.events_draft); D.badge($('b-held'), t.galleries_held);
@@ -38,8 +49,9 @@
     $('dh-kpis').innerHTML = D.kpis([
       { n: s.volumes, label: 'Bound volumes', sub: '1948–2019' }, { n: s.pages, label: 'Balita pages' },
       { n: s.objects, label: 'Trophy room objects' }, { n: s.galleries, label: 'Photo albums' },
-      { n: s.photos, label: 'Photos' }, { n: s.timeline, label: 'Timeline entries' },
+      { n: s.photos, label: 'Photos' }, { n: s.timeline, label: 'Timeline entries' }, { n: '__V__', label: 'Videos online' },
     ]);
+    $('dh-kpis').innerHTML = $('dh-kpis').innerHTML.replace('__V__', D.fmt(vids.filter((v) => v.status === 'published' && v.path).length));
     $('dh-act').innerHTML = D.kpis([
       { n: a.ask_30d, label: 'Questions asked', sub: 'last 30 days' }, { n: a.names_approved, label: 'Photo names added', sub: 'all time' },
       { n: t.minutes_left, label: 'History minutes ready', sub: t.minutes_last ? 'to ' + D.day(t.minutes_last) : '' },
