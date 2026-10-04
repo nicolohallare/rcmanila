@@ -3,6 +3,14 @@
   const FN = SB + '/functions/v1/rcm-admin';
   const PUB = 'sb_publishable_zebFaErs-sjDwYWQUMfq3g_VuF2DTI6';
   const $ = (id) => document.getElementById(id);
+  // Some PDFs carry null characters or broken characters in their text, which the database refuses
+  // ("unsupported Unicode escape sequence"). Strip them from every page's text right after reading.
+  const cleanText = (t) => String(t || '').replace(/\u0000/g, '').replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '');
+  if (window.BalitaExtract && !window.BalitaExtract._clean) {
+    const orig = window.BalitaExtract.extractPdf;
+    window.BalitaExtract.extractPdf = async (...a) => { const ps = await orig(...a); for (const p of ps) if (p && typeof p.text === 'string') p.text = cleanText(p.text); return ps; };
+    window.BalitaExtract._clean = true;
+  }
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const imgUrl = (path, w) => `${SB}/storage/v1/render/image/public/rcm/${path.split('/').map(encodeURIComponent).join('/')}?width=${w}&resize=contain&quality=75`;
   let code = '';
