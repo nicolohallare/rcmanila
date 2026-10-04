@@ -9,7 +9,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,400;0,600;0,700;0,800;1,700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/site.css">
 <style>
-body{background:#f2f2f2}
 .ed-head{background:var(--navy);color:#fff}
 .ed-head .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:64px}
 .ed-head .chip{background:#fff;border-radius:6px;padding:6px 10px}
@@ -91,13 +90,80 @@ main.wide{max-width:1760px}
 .anote.err{color:#a3262a}
 .share-grid{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:20px;align-items:start}#card{width:100%;height:auto;border-radius:8px;box-shadow:0 8px 24px -12px rgba(0,0,0,.4);background:#17458f}@media (max-width:760px){.share-grid{grid-template-columns:1fr}#card{max-width:320px}}
 .sharemsg{white-space:pre-line;background:#f8fafc;border:1px solid #c7d2df;border-radius:8px;padding:12px;font-size:15px}
+
+/* ---- refreshed look ---- */
+body{background:#eef2f7;color:var(--ink)}
+.ed-head{background:linear-gradient(100deg,#0f2f66,#17458f 60%,#1d56ad);color:#fff;position:sticky;top:0;z-index:20;box-shadow:0 2px 12px rgba(10,30,70,.25)}
+.ed-head .wrap{min-height:66px}
+.brand{display:flex;align-items:center;gap:14px}
+.brand img{height:38px;width:auto}
+.brand-t{font-weight:700;font-size:16px;padding-left:14px;border-left:1px solid rgba(255,255,255,.35);letter-spacing:.02em}
+.ed-nav{display:flex;gap:18px;font-size:14px}
+.ed-nav a{color:#fff;opacity:.85;font-weight:600;text-decoration:none}.ed-nav a:hover{opacity:1;color:var(--gold)}
+@media (max-width:640px){.ed-nav a:first-child{display:none}.brand img{height:30px}}
+.kick{display:block;font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--blue-2)}
+.kick.light{color:var(--gold)}
+.hello{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:22px}
+.hello h1{font-family:var(--serif);font-size:clamp(28px,4vw,38px);margin:4px 0 2px;color:#0f2f66}
+.hello p{margin:0}
+.home-grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(320px,1fr);gap:22px;align-items:start}
+.home-grid .col{display:flex;flex-direction:column;gap:22px;min-width:0}
+@media (max-width:980px){.home-grid{grid-template-columns:1fr}}
+.card,.panel{background:#fff;border:1px solid #e1e7ef;border-radius:14px;padding:22px;box-shadow:0 1px 2px rgba(16,40,80,.04),0 8px 24px -16px rgba(16,40,80,.18)}
+.card{display:flex;flex-direction:column;gap:14px}
+.card-h{display:flex;gap:14px;align-items:flex-start;list-style:none}
+.card-h h2{font-family:var(--serif);font-size:21px;margin:0 0 2px;color:#0f2f66}
+.card-h p{margin:0;font-size:14px;line-height:1.5}
+.ic{flex-shrink:0;width:40px;height:40px;border-radius:11px;background:#e8f0fb;color:var(--blue);display:flex;align-items:center;justify-content:center}
+.ic.gold{background:#fff3db;color:#a36a00}
+.ic svg,.drop-ic svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+details.card>summary{cursor:pointer}
+details.card>summary::-webkit-details-marker{display:none}
+details.card>summary::after{content:"";margin-left:auto;align-self:center;width:10px;height:10px;border-right:2px solid #8aa0bd;border-bottom:2px solid #8aa0bd;transform:rotate(45deg);transition:transform .2s;flex-shrink:0}
+details.card[open]>summary::after{transform:rotate(225deg)}
+details.sub{border-top:1px solid #eef1f5;padding-top:10px}
+details.sub>summary{cursor:pointer;font-weight:700;font-size:14px;color:var(--blue)}
+details.sub[open]>summary{margin-bottom:12px}
+.drop{position:relative;overflow:hidden;border:0;border-radius:16px;padding:40px 28px;text-align:center;cursor:pointer;display:flex;flex-direction:column;gap:10px;align-items:center;color:#fff;
+ background:radial-gradient(120% 140% at 100% 0%,#2a6bc9 0%,rgba(42,107,201,0) 55%),linear-gradient(135deg,#0f2f66,#17458f);box-shadow:0 14px 34px -18px rgba(15,47,102,.7);outline:2px dashed rgba(255,255,255,.35);outline-offset:-12px;transition:transform .15s,outline-color .15s}
+.drop:hover{transform:translateY(-1px);outline-color:rgba(247,168,27,.8)}
+.drop.over{outline-color:var(--gold);background:linear-gradient(135deg,#17458f,#1d56ad)}
+.drop strong{font-family:var(--serif);font-size:clamp(22px,3vw,28px);color:#fff;font-weight:700}
+.drop-sub{max-width:520px;opacity:.85;font-size:15px;line-height:1.55}
+.drop-ic{width:56px;height:56px;border-radius:16px;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;color:var(--gold)}
+.drop-ic svg{width:28px;height:28px}
+.findbar{display:flex;gap:10px}
+.findbar input{height:48px}
+.sec-h{display:flex;align-items:baseline;gap:12px;margin:34px 0 14px;padding-top:6px;border-top:1px solid #d9e1ec}
+.sec-h h2{font-family:var(--serif);font-size:24px;margin:16px 0 0;color:#0f2f66}
+.tool-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:22px;margin-top:22px;align-items:start}
+.small{font-size:14px}
+.check{gap:10px;font-size:15px;align-items:flex-start;background:#f6f8fb;border-radius:10px;padding:10px 12px}
+.check input{margin-top:4px}
+.tablewrap{overflow-x:auto;border:1px solid #e6ebf2;border-radius:10px}
+.otab th{background:#f6f8fb;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.alist li{padding:12px 0}
+.alist li:last-child{border-bottom:0}
+.alist li:hover{background:linear-gradient(90deg,transparent,#f6f9fd 12%,#f6f9fd 88%,transparent)}
+.smallbtn{border-radius:8px;padding:6px 11px;transition:border-color .15s,background .15s}
+.smallbtn:hover{border-color:var(--blue);background:#f3f7fd}
+.btn{border-radius:10px}
+input[type=text],input[type=search],input[type=password],input[type=number],input[type=date],input[type=datetime-local],input[type=month],select,textarea{border-radius:9px;border-color:#cdd7e4}
+input:focus,select:focus,textarea:focus{outline:2px solid #9cc0ef;outline-offset:1px;border-color:var(--blue)}
+#v-login{margin:6vh auto 0;width:100%}
+.card-h p,.hello p,.drop-sub,.small{font-family:var(--sans)}
+.check{flex-wrap:nowrap}
+.brand-t{white-space:nowrap}
+@media (max-width:640px){.ed-nav a{font-size:13px}.brand-t{font-size:14px;padding-left:10px}.card,.panel{padding:16px;border-radius:12px}
+ .alist li{flex-wrap:wrap}.alist li>div{flex:1 1 calc(100% - 70px)!important}.alist li .tag{margin-left:64px}
+ .drop{padding:30px 18px}.sec-h{flex-wrap:wrap}}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 </style>
 </head>
 <body>
 <header class="ed-head"><div class="wrap">
-<span class="chip"><img src="/assets/logo.png" alt="Rotary Club of Manila"></span>
-<strong style="font-size:18px">Balita editor</strong>
-<a href="/" target="_blank" rel="noopener">View the website ↗</a>
+<span class="brand"><img src="/assets/club-logo-white.png" alt="Rotary Club of Manila" width="803" height="286"><span class="brand-t">Balita editor</span></span>
+<nav class="ed-nav"><a href="/balita" target="_blank" rel="noopener">Balita archive ↗</a><a href="/" target="_blank" rel="noopener">View the website ↗</a></nav>
 </div></header>
 
 <main class="wrap" id="main" style="padding-block:28px;display:flex;flex-direction:column;gap:20px">
@@ -111,62 +177,95 @@ main.wide{max-width:1760px}
 </form>
 </section>
 
-<section id="v-home" class="stack hidden">
-<div class="row" style="justify-content:space-between"><h1 style="font-size:30px">Upload this week's Balita</h1><button class="smallbtn" id="signout" type="button">Sign out</button></div>
+<section id="v-home" class="hidden">
+<div class="hello">
+<div><span class="kick">Balita editor</span><h1 id="hello-h">Welcome back</h1><p class="muted" id="hello-d"></p></div>
+<button class="smallbtn" id="signout" type="button">Sign out</button>
+</div>
+
+<div class="home-grid">
+<div class="col">
 <label class="drop" id="drop" for="file">
+<span class="drop-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0-5 5m5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg></span>
+<span class="kick light">This week's issue</span>
 <strong>Drop the final Balita PDF here</strong>
-<span class="muted">or tap to choose the file. The AI reads it on this computer, pulls out each article and its photos, and gets them ready for you to check.</span>
-<span class="btn btn-blue" style="margin-top:6px">Choose PDF</span>
+<span class="drop-sub">or tap to choose the file. The AI reads it on this computer, pulls out each article and its photos, and gets them ready for you to check.</span>
+<span class="btn btn-gold" style="margin-top:6px">Choose PDF</span>
 </label>
 <input id="file" type="file" accept="application/pdf" class="hidden">
-<div class="panel stack"><h2 style="font-size:22px">Recent issues</h2><ul id="issues" class="alist"><li class="muted">Loading…</li></ul></div>
-<div class="panel stack"><h2 style="font-size:22px">Fix something in a past issue</h2>
-<p class="muted">Search by issue number, date (e.g. 2025-04-24), guest or a word from the story. Open it with Edit, change the text, photo or caption, and save.</p>
-<form id="find-form" class="row" role="search"><label class="f" style="flex:1;min-width:220px"><span class="sr-only">Find an issue</span><input id="find-q" type="search" style="font-weight:400" placeholder="4048, 2025-04-24, Banaguas…" autocomplete="off"></label><button class="btn btn-blue" type="submit">Find</button></form>
-<ul id="find-list" class="alist" aria-live="polite"></ul></div>
-<div class="panel stack"><h2 style="font-size:22px">Clean up photos in past issues</h2>
-<p class="muted">Choose the PDFs of past issues (you can select several at once). Each is matched to its issue on the site, and its article photos are replaced with clean copies without page text or captions. Photos you cropped by hand are kept. Takes a minute or two per issue; keep this page open.</p>
-<div class="row"><button class="btn btn-blue" type="button" id="rc-btn">Choose PDFs…</button><input id="rc-files" type="file" accept="application/pdf" multiple hidden></div>
-<ul id="rc-log" class="alist" aria-live="polite"></ul></div>
-<div class="panel stack" id="cover-panel"><h2 style="font-size:22px">Cover photo of the month</h2>
-<p class="muted">One People of Action photo across the top of the homepage, changed every month. Use a wide photo of members doing the work, not a posed group, with no text or logos on it (the site adds the words). At least 2000 pixels wide is best. It goes live on the first day of the month you choose.</p>
+
+<div class="card">
+<div class="card-h"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h11l3 3v13H5zM9 10h7M9 14h7M9 18h4"/></svg></span><div><h2>Recent issues</h2><p class="muted">Open one to check, publish or edit it.</p></div></div>
+<ul id="issues" class="alist"><li class="muted">Loading…</li></ul>
+</div>
+</div>
+
+<aside class="col">
+<div class="card">
+<div class="card-h"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="m20 20-4.2-4.2"/></svg></span><div><h2>Fix a past issue</h2><p class="muted">Search by number, date (2025-04-24), guest or a word from the story.</p></div></div>
+<form id="find-form" class="findbar" role="search"><label style="flex:1"><span class="sr-only">Find an issue</span><input id="find-q" type="search" placeholder="4048, 2025-04-24, Banaguas…" autocomplete="off"></label><button class="btn btn-blue" type="submit">Find</button></form>
+<ul id="find-list" class="alist" aria-live="polite"></ul>
+</div>
+
+<div class="card" id="cover-panel">
+<div class="card-h"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-8 8"/></svg></span><div><h2>Cover photo of the month</h2><p class="muted">One People of Action photo across the top of the homepage, changed monthly.</p></div></div>
 <div id="cover-now" class="muted">Loading…</div>
+<details class="sub"><summary>Set or change a cover</summary>
+<p class="muted small">Use a wide photo of members doing the work, not a posed group, with no text or logos on it (the site adds the words). At least 2000 pixels wide is best. It goes live on the first day of the month you choose.</p>
 <form id="cover-form" class="stack" novalidate>
 <div class="row" style="gap:12px;align-items:flex-end;flex-wrap:wrap">
-<label class="f" style="min-width:180px">Month<input id="cv-month" type="month" required></label>
-<label class="f" style="flex:1;min-width:240px">Photo (JPG or PNG)<input id="cv-file" type="file" accept="image/jpeg,image/png,image/webp"></label>
+<label class="f" style="min-width:160px;flex:1">Month<input id="cv-month" type="month" required></label>
+<label class="f" style="flex:2;min-width:200px">Photo (JPG or PNG)<input id="cv-file" type="file" accept="image/jpeg,image/png,image/webp"></label>
 </div>
-<img id="cv-preview" alt="" style="display:none;max-width:420px;width:100%;border-radius:6px;border:1px solid var(--line)">
+<img id="cv-preview" alt="" style="display:none;width:100%;border-radius:8px;border:1px solid var(--line)">
 <label class="f">People of Action line, shown large on the photo<input id="cv-tagline" type="text" maxlength="80" placeholder="Together, we save lives."></label>
-<label class="f" style="max-width:340px">Which part of the photo matters most<select id="cv-focus"><option value="center">The middle</option><option value="center 25%">The top (faces near the top)</option><option value="center 75%">The bottom</option></select></label>
+<label class="f">Which part of the photo matters most<select id="cv-focus"><option value="center">The middle</option><option value="center 25%">The top (faces near the top)</option><option value="center 75%">The bottom</option></select></label>
 <label class="f">Caption: what members are doing, where, and when<textarea id="cv-caption" rows="2" maxlength="400" placeholder="Members of the Rotary Clubs of Manila and Calumpit wade through floodwater to bring relief to three cut-off barangays in Calumpit, Bulacan."></textarea></label>
 <label class="f">Describe the photo for people who cannot see it<textarea id="cv-alt" rows="2" maxlength="400" placeholder="Rotarians in life vests carry relief bags through waist-deep floodwater."></textarea></label>
 <label class="f">Link to the story (optional)<input id="cv-link" type="text" placeholder="/projects/typhoon-relief-2025 or /balita/4106/kalinga-sa-kalumpit"></label>
 <div class="row"><button class="btn btn-blue" type="submit" id="cv-save">Save cover</button><span id="cv-msg" class="muted" role="status"></span></div>
 </form>
-<details><summary style="cursor:pointer">Past and scheduled covers</summary><ul id="cover-list" class="alist"></ul></details>
+</details>
+<details class="sub"><summary>Past and scheduled covers</summary><ul id="cover-list" class="alist"></ul></details>
 </div>
-<details class="panel stack" id="tools-panel"><summary style="cursor:pointer;font-size:18px;font-weight:700;font-family:var(--serif)">Back-issue tools <span class="muted" style="font-weight:400;font-size:14px;font-family:var(--sans)">· rarely needed</span></summary>
-<p class="muted" style="margin-top:10px">Only for adding or rebuilding old issues. New weekly issues always go in the box at the top.</p>
-<details class="stack" id="old-panel" style="border-top:1px solid var(--line,#ddd);padding-top:12px"><summary style="cursor:pointer;font-size:17px;font-weight:700;font-family:var(--serif)">Add old issues to the archive</summary>
-<p class="muted" style="margin-top:10px">For back issues. Choose many PDFs at once. Each one is added with its cover, a page-by-page reader and searchable text, and goes live straight away. No AI, nothing to check, no cost. Issues already on the website are skipped.</p>
+</aside>
+</div>
+
+<div class="sec-h"><h2>Past issues</h2><span class="muted">Tools for the Balita archive</span></div>
+
+<details class="card tool" id="split-panel" open>
+<summary class="card-h"><span class="ic gold"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 20 11-11M14 4v3M19 9h-3M17.5 5.5l-2 2M18 14v2M20 15h-4"/></svg></span><div><h2>Improve old issues</h2><p class="muted">Back issues that still need photos, articles or page images. Each is saved and stays online throughout.</p></div></summary>
+<div class="stack" style="margin-top:14px">
+<label class="row check"><input type="checkbox" id="split-ai"> Also write the articles with the website's AI now (about US$0.50–1 of API credit per issue). Leave unticked if the articles are being written in the Claude chat.</label>
+<div class="row"><button class="btn btn-blue" type="button" id="split-load">Show the issues that need it</button><span id="split-msg" class="muted" aria-live="polite"></span></div>
+<div id="split-table" class="hidden stack">
+<div class="tablewrap"><table class="otab"><thead><tr><th><input type="checkbox" id="split-all" aria-label="Select all" checked></th><th>Issue</th><th>Now on the website</th><th>PDF</th><th>Status</th></tr></thead><tbody id="split-rows"></tbody></table></div>
+<div class="row"><label class="btn btn-line" style="color:var(--blue)">Add PDFs from this computer<input id="split-files" type="file" accept="application/pdf" multiple class="hidden"></label><span class="muted small">Choose several at once; each is matched to its issue by number or date.</span></div>
+<div class="row"><button class="btn btn-gold" type="button" id="split-start">Start with the ticked issues</button><span id="split-sum" class="muted"></span></div>
+</div>
+</div>
+</details>
+
+<div class="tool-grid">
+<div class="card tool">
+<div class="card-h"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"/></svg></span><div><h2>Clean up photos</h2><p class="muted">Replace a past issue's article photos with clean copies, without page text or captions. Hand-cropped photos are kept.</p></div></div>
+<div class="row"><button class="btn btn-blue" type="button" id="rc-btn">Choose PDFs…</button><input id="rc-files" type="file" accept="application/pdf" multiple hidden><span class="muted small">Several at once is fine. Keep this page open.</span></div>
+<ul id="rc-log" class="alist" aria-live="polite"></ul>
+</div>
+
+<details class="card tool" id="old-panel">
+<summary class="card-h"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7l9-4 9 4-9 4zM3 7v10l9 4 9-4V7M12 11v10"/></svg></span><div><h2>Add old issues to the archive</h2><p class="muted">Add back issues with a cover, page reader and searchable text. No AI, no cost.</p></div></summary>
+<div class="stack" style="margin-top:14px">
+<p class="muted small">Choose many PDFs at once. Each goes live straight away. Issues already on the website are skipped.</p>
 <label class="btn btn-blue" style="align-self:flex-start">Choose old Balita PDFs<input id="old-files" type="file" accept="application/pdf" multiple class="hidden"></label>
 <div id="old-table" class="hidden stack">
-<table class="otab"><thead><tr><th>File</th><th>Issue no.</th><th>Date</th><th>Status</th></tr></thead><tbody id="old-rows"></tbody></table>
+<div class="tablewrap"><table class="otab"><thead><tr><th>File</th><th>Issue no.</th><th>Date</th><th>Status</th></tr></thead><tbody id="old-rows"></tbody></table></div>
 <div class="row"><button class="btn btn-blue" type="button" id="old-start">Add these issues</button><span id="old-msg" class="muted"></span></div>
 </div>
-</details>
-<details class="stack" id="split-panel" style="border-top:1px solid var(--line,#ddd);padding-top:12px"><summary style="cursor:pointer;font-size:17px;font-weight:700;font-family:var(--serif)">Split old issues into articles with photos</summary>
-<p class="muted" style="margin-top:10px">Some back issues came from the old website as a PDF only, or as text without photos. This saves each one's pages, photos and text so it can be split into articles. Leave this page open while it runs; the issues stay online throughout.</p>
-<label class="row" style="gap:8px;font-size:15px"><input type="checkbox" id="split-ai"> Also write the articles with the website's AI now (about US$0.50–1 of API credit per issue). Leave unticked if the articles are being written in the Claude chat.</label>
-<div class="row"><button class="btn btn-line" style="color:var(--blue)" type="button" id="split-load">Show the issues that need it</button><span id="split-msg" class="muted" aria-live="polite"></span></div>
-<div id="split-table" class="hidden stack">
-<table class="otab"><thead><tr><th><input type="checkbox" id="split-all" aria-label="Select all" checked></th><th>Issue</th><th>Now on the website</th><th>PDF</th><th>Status</th></tr></thead><tbody id="split-rows"></tbody></table>
-<div class="row"><label class="btn btn-line" style="color:var(--blue)">Add PDFs from this computer<input id="split-files" type="file" accept="application/pdf" multiple class="hidden"></label><span class="muted" style="font-size:14px">Choose several at once; each is matched to its issue by number or date.</span></div>
-<div class="row"><button class="btn btn-blue" type="button" id="split-start">Start with the ticked issues</button><span id="split-sum" class="muted"></span></div>
 </div>
 </details>
-</details>
+</div>
+<script>(function(){var h=+new Date().toLocaleString('en-GB',{hour:'numeric',hour12:false,timeZone:'Asia/Manila'});document.getElementById('hello-h').textContent=h<12?'Good morning':h<18?'Good afternoon':'Good evening';document.getElementById('hello-d').textContent=new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric',timeZone:'Asia/Manila'});})();</script>
 </section>
 
 <section id="v-run" class="stack hidden">
