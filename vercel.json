@@ -98,6 +98,10 @@
       "destination": "/api/page?r=lib&p=:a/:b/:c"
     },
     {
+      "source": "/privacy",
+      "destination": "/api/page?r=privacy"
+    },
+    {
       "source": "/join",
       "destination": "/api/page?r=join"
     },

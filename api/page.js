@@ -246,7 +246,7 @@ ${supportersBand(ads)}
 <address style="font-style:normal"><strong>Secretariat</strong>RCM Office, 543 Arquiza St. cor. Grey St.<br>Ermita, Manila<br><a href="${TEL}">(02) 8527-1885</a><br><a href="mailto:${MAIL}">${MAIL}</a></address>
 <div><strong>Explore</strong><a href="/projects">Service projects</a><br><a href="/past-presidents">Past presidents</a><br><a href="/meeting">Weekly meeting</a> · <a href="/events">Events</a> · <a href="/speakers">Guest speakers</a><br><a href="/balita">Balita archive</a><br><a href="/library">Heritage Library</a><br><a href="/join">Join</a> · <a href="/partner">Partner</a> · <a href="/donate">Donate</a><br><a href="/app">Put the Club on your phone</a><br><a href="https://www.facebook.com/RotaryClubofManila" target="_blank" rel="noopener">Facebook</a> · <a href="https://www.linkedin.com/company/rotary-club-of-manila/" target="_blank" rel="noopener">LinkedIn</a></div>
 <div><strong>Rotary family</strong>${FAMILY.map((f) => `<a href="${f.href}" target="_blank" rel="noopener">${esc(f.name)}</a>`).join('<br>')}</div>
-<div class="copy">© ${new Date().getFullYear()} Rotary Club of Manila</div>
+<div class="copy">© ${new Date().getFullYear()} Rotary Club of Manila · <a href="/privacy">Privacy</a></div>
 </div></footer>
 <script>document.addEventListener('click',function(e){var a=e.target.closest('.menu-panel a');if(a){var d=a.closest('details');if(d)d.open=false;}});</script>
 <script>
@@ -570,6 +570,27 @@ function joinPage(origin) {
 </div></section>
 ${routesStrip('More ways to take part')}`;
   return layout({ title: 'Join · Rotary Club of Manila', description: 'How to become a member of the Rotary Club of Manila, Asia’s first Rotary club: attend a meeting, get to know the Club, and be proposed by a member.', image: origin + H('people-of-action'), url: origin + '/join', body, nav: 'join' });
+}
+
+function privacyPage(origin) {
+  const body = `<section class="wrap pj-index-head"><span class="kicker">Privacy</span><h1>Privacy policy</h1>
+<p class="lead-p">How the Rotary Club of Manila handles the information you give us on rcmanila.org.</p></section>
+<section class="wrap section prose" style="padding-top:8px;max-width:760px">
+<h2>What we collect</h2>
+<p>We only collect what you type into a form on this website: your name, email address, phone number, company or Rotary club, and any message, when you sign up for a meeting or event, send a membership or partnership inquiry, or tell us about a donation. Pages you read are not tied to your name.</p>
+<h2>How we use it</h2>
+<p>The Club Secretariat uses it to confirm your sign-up, prepare meetings and events, reply to your inquiry and acknowledge donations. Names of people signed up for a meeting or event may be shown on that page only when the sign-up form says so.</p>
+<h2>Who sees it</h2>
+<p>Only the Secretariat and the Club officers who need it. We never sell or rent your information. It is stored with our hosting providers (Supabase and Vercel) and is not shared with anyone else.</p>
+<h2>Facebook</h2>
+<p>The Club’s Facebook Page shares new Balita issues and events from this website. The website does not receive or store any information about Facebook users.</p>
+<h2>Your choices</h2>
+<p>You can remove yourself from a meeting or event list on the same page you signed up on, or ask the Secretariat to correct or delete anything you sent us. Your device may remember small settings (such as a dismissed tip or your own sign-ups) in its browser storage; clearing your browser data removes them.</p>
+<h2>Contact</h2>
+<p>RCM Office, 543 Arquiza St. cor. Grey St., Ermita, Manila · <a href="${TEL}">(02) 8527-1885</a> · <a href="mailto:${MAIL}">${MAIL}</a></p>
+<p class="muted-p">This policy follows the Philippine Data Privacy Act of 2012. Last updated October 2026.</p>
+</section>`;
+  return layout({ title: 'Privacy policy · Rotary Club of Manila', description: 'How the Rotary Club of Manila handles information submitted on rcmanila.org.', image: origin + '/assets/club-logo.png', url: origin + '/privacy', body });
 }
 
 function partnerPage(origin, interest) {
@@ -1485,6 +1506,7 @@ module.exports = async (req, res) => {
     else if (r === 'projects') html = projectsIndex(origin);
     else if (r === 'project') { html = projectPage(origin, u.searchParams.get('slug')); if (!html) { res.statusCode = 301; res.setHeader('Location', '/projects'); return res.end(); } }
     else if (r === 'join') html = joinPage(origin);
+    else if (r === 'privacy') html = privacyPage(origin);
     else if (r === 'app') html = appPage(origin);
     else if (r === 'presidents') html = presidentsPage(origin);
     else if (r === 'speakers') html = await speakersPage(origin);

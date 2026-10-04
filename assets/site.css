@@ -1058,3 +1058,7 @@ mark{background:#fce39b;color:inherit;padding:0 1px}
 .art-gallery a{display:block;aspect-ratio:4/3;overflow:hidden;border-radius:6px;background:#eef2f7}
 .art-gallery img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .2s}
 .art-gallery a:hover img{transform:scale(1.04)}
+
+/* Plain text pages (privacy) */
+.prose h2{font-size:1.25rem;margin:28px 0 8px;color:var(--blue,#17458f)}
+.prose p{margin:0 0 12px;line-height:1.65}
