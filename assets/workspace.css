@@ -1,0 +1,64 @@
+/* Shared look for the staff pages: Balita editor, Secretariat, Heritage Library workshop.
+   Loaded after each page's own styles so it sets the common look; page-specific layout stays in the page. */
+body{background:#eef2f7;color:var(--ink)}
+.ed-head{background:linear-gradient(100deg,#0f2f66,#17458f 60%,#1d56ad);color:#fff;position:sticky;top:0;z-index:30;box-shadow:0 2px 12px rgba(10,30,70,.25)}
+.ed-head .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:66px}
+.brand{display:flex;align-items:center;gap:14px;color:#fff;text-decoration:none}
+.brand img{height:38px;width:auto}
+.brand-t{font-weight:700;font-size:16px;padding-left:14px;border-left:1px solid rgba(255,255,255,.35);letter-spacing:.02em;white-space:nowrap}
+.ed-nav{display:flex;gap:18px;align-items:center;font-size:14px}
+.ed-nav a,.ed-nav button{color:#fff;opacity:.85;font:inherit;font-weight:600;text-decoration:none;background:none;border:0;cursor:pointer;padding:0}
+.ed-nav a:hover,.ed-nav button:hover{opacity:1;color:var(--gold)}
+@media (max-width:640px){.brand img{height:30px}.brand-t{font-size:14px;padding-left:10px}.ed-nav{gap:12px;font-size:13px}.ed-nav .wide-only{display:none}}
+
+main h1{font-family:var(--serif);color:#0f2f66;letter-spacing:-.01em}
+main h2,main h3{font-family:var(--serif);color:#0f2f66}
+.kick{display:block;font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--blue-2)}
+.page-h{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.page-h h1{margin:4px 0 4px;font-size:clamp(26px,3.4vw,34px)}
+.page-h p{margin:0;max-width:760px;font-family:var(--sans)}
+
+.panel,.card{background:#fff;border:1px solid #e1e7ef;border-radius:14px;padding:22px;box-shadow:0 1px 2px rgba(16,40,80,.04),0 8px 24px -16px rgba(16,40,80,.18)}
+details.panel>summary{list-style:none}
+details.panel>summary::-webkit-details-marker{display:none}
+details.panel>summary::before{content:"";display:inline-block;width:8px;height:8px;margin-right:12px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(-45deg) translateY(-2px);transition:transform .2s}
+details.panel[open]>summary::before{transform:rotate(45deg) translateY(-3px)}
+.quick{background:#f2f7fd;border:1px solid #dbe7f6;border-radius:12px}
+
+.btn{border-radius:10px}
+.smallbtn{font:inherit;font-size:13px;font-weight:700;border:1px solid #cdd7e4;background:#fff;border-radius:8px;padding:6px 11px;cursor:pointer;transition:border-color .15s,background .15s}
+.smallbtn:hover{border-color:var(--blue);background:#f3f7fd}
+input[type=text],input[type=search],input[type=password],input[type=number],input[type=date],input[type=datetime-local],input[type=month],input[type=url],select,textarea{border-radius:9px;border:1px solid #cdd7e4}
+input:focus,select:focus,textarea:focus{outline:2px solid #9cc0ef;outline-offset:1px;border-color:var(--blue)}
+select{font:inherit;padding:8px 10px;background:#fff}
+
+/* Section tabs: a pill bar that stays under the header */
+.sec-tabs,.tabs{position:sticky;top:66px;z-index:20;display:flex;gap:4px;align-items:center;overflow-x:auto;white-space:nowrap;scrollbar-width:thin;
+ background:rgba(255,255,255,.92);backdrop-filter:blur(8px);border:1px solid #e1e7ef;border-radius:14px;padding:6px;box-shadow:0 6px 18px -14px rgba(16,40,80,.35)}
+.sec-tabs button,.tabs button{display:inline-flex;align-items:center;gap:8px;font:inherit;font-weight:700;font-size:15px;border:0;border-radius:10px;background:none;padding:9px 14px;cursor:pointer;color:#3d4a5c;border-bottom:0}
+.sec-tabs button:hover,.tabs button:hover{background:#f1f5fb;color:#0f2f66}
+.sec-tabs button[aria-current="true"],.tabs button[aria-current="true"]{background:#17458f;color:#fff;border-bottom:0}
+.sec-tabs svg,.tabs svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.tabs .tab-sep{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#8a97a8;padding:0 6px 0 14px;margin-left:6px;border-left:1px solid #e1e7ef}
+.tabs button.done{color:#6b7787;font-weight:600}
+.tabs button.done::after{content:"✓";color:#1d7a46;font-weight:800}
+.tabs button.done[aria-current="true"]{color:#fff}.tabs button.done[aria-current="true"]::after{color:#bfe8cf}
+.tab-end{margin-left:auto;display:flex;align-items:center;gap:6px;padding-left:10px}
+@media (max-width:640px){.sec-tabs,.tabs{top:58px;border-radius:12px}.sec-tabs button,.tabs button{padding:8px 11px;font-size:14px}}
+
+.stats{display:flex;gap:10px;flex-wrap:wrap}
+.stat{background:#f2f7fd;border:1px solid #dbe7f6;border-radius:12px;padding:10px 14px;font-size:13px;color:#4b5a6e;min-width:96px}
+.stat b{font-size:22px;display:block;color:#0f2f66;font-family:var(--serif)}
+.alist li{padding:12px 0}
+.alist li:last-child{border-bottom:0}
+table th{text-transform:uppercase;letter-spacing:.05em}
+.scroll,.tablewrap{border:1px solid #e6ebf2;border-radius:10px}
+.note{border-radius:10px}
+.okbox{border-radius:12px}
+#v-login{margin:6vh auto 0;width:100%}
+#v-login h1{font-family:var(--serif)}
+.done-note{display:flex;gap:10px;align-items:flex-start;background:#e8f5ec;border:1px solid #b9dcc6;color:#1d5a37;border-radius:12px;padding:12px 14px;font-size:15px}
+.done-note b{color:#14532d}
+main p,main li,main td,main label,main dd,main dt{font-family:var(--sans)}
+.preview:empty{display:none}
+@media (max-width:640px){.sec-tabs,.tabs{flex-wrap:wrap;position:static;white-space:normal}.tab-end{margin-left:0}.tabs .tab-sep{border-left:0;margin-left:0;padding-left:8px;width:100%}}

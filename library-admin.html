@@ -4,16 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<title>Heritage Library workshop · Rotary Club of Manila</title>
+<title>Heritage Library · Rotary Club of Manila</title>
 <link rel="icon" href="/assets/logo.png">
 <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,400;0,600;0,700;0,800;1,700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/site.css">
 <style>
-body{background:#f2f2f2}
-.ed-head{background:var(--navy);color:#fff}
 .ed-head .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:64px}
-.ed-head .chip{background:#fff;border-radius:6px;padding:6px 10px}.ed-head .chip img{height:34px;width:auto}
-.ed-head a{color:var(--gold);font-weight:600}
 .panel{background:#fff;border:1px solid var(--line);border-radius:10px;padding:22px}
 .stack{display:flex;flex-direction:column;gap:14px}
 .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
@@ -21,9 +17,6 @@ label.f{display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:70
 input[type=password],input[type=search],input[type=number]{font:inherit;font-size:16px;border:1px solid #c7d2df;border-radius:6px;padding:10px 12px;background:#fff}
 .hidden{display:none!important}
 .muted{color:var(--muted)}.err{color:#a3262a;font-weight:600}.ok{color:#1d7a46;font-weight:700}
-.tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);overflow-x:auto}
-.tabs button{font:inherit;font-weight:700;font-size:16px;border:0;background:none;padding:10px 16px;border-bottom:3px solid transparent;cursor:pointer;color:var(--ink-2);white-space:nowrap}
-.tabs button[aria-current="true"]{color:var(--navy);border-bottom-color:var(--gold)}
 .stats{display:flex;gap:10px;flex-wrap:wrap}.stat{background:#eef3fb;border-radius:8px;padding:8px 12px;font-size:14px}.stat b{font-size:20px;display:block;color:var(--navy)}
 table{width:100%;border-collapse:collapse;font-size:14px}
 th,td{padding:7px 8px;border-bottom:1px solid #eef1f5;text-align:left;vertical-align:top}
@@ -35,24 +28,28 @@ th{background:#f8fafc;font-size:12.5px;color:var(--ink-2);position:sticky;top:0}
 .st.done{background:#e2f4e8;color:#1d7a46}.st.run{background:#dbe9fb;color:#17458f}.st.fail{background:#f3e3e3;color:#8a2b2b}.st.wait{background:#eef1f5;color:var(--muted)}
 .note{background:#fdf0d5;border:1px solid #f0cf8a;border-radius:8px;padding:12px 14px;color:#5c3a00}
 .preview{display:flex;gap:8px;overflow:hidden;height:120px}.preview img{height:120px;border:1px solid var(--line);border-radius:3px}
+.lw-hero{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:center}
+@media (max-width:760px){.lw-hero{grid-template-columns:1fr}}
 </style>
+<link rel="stylesheet" href="/assets/workspace.css?v=1">
 </head>
 <body>
-<header class="ed-head"><div class="wrap"><span class="chip"><img src="/assets/logo.png" alt="Rotary Club of Manila"></span><strong style="font-size:18px">Heritage Library workshop <span style="font-weight:400;font-size:13px;opacity:.75">version 29 Sept (f)</span></strong><span style="display:flex;gap:18px"><a href="/library" target="_blank" rel="noopener">Open the library ↗</a><a href="#" id="signout">Sign out</a></span></div></header>
+<header class="ed-head"><div class="wrap"><span class="brand"><img src="/assets/club-logo-white.png" alt="Rotary Club of Manila" width="803" height="286"><span class="brand-t">Heritage Library</span></span><nav class="ed-nav"><a href="/library" target="_blank" rel="noopener">Open the library ↗</a><a href="#" id="signout">Sign out</a></nav></div></header>
 <main class="wrap" style="padding-block:28px;display:flex;flex-direction:column;gap:18px">
 
 <section id="v-login" class="panel stack" style="max-width:420px">
-<h1 style="font-size:26px;margin:0">Sign in</h1>
+<span class="kick">Heritage Library</span><h1 style="font-size:26px;margin:0">Sign in</h1>
 <form id="login-form" class="stack"><label class="f">Librarian or editor passcode<input id="code" type="password" autocomplete="current-password" required></label><button class="btn btn-blue" type="submit">Continue</button><p id="login-err" class="err hidden"></p></form>
 </section>
 
 <section id="v-main" class="stack hidden">
 <div class="panel stack">
-<div class="row" style="justify-content:space-between"><h1 style="font-size:28px;margin:0">Heritage Library workshop</h1><button class="smallbtn" id="refresh" type="button">Refresh</button></div>
-<p class="muted" style="margin:0">This page reads the Club’s private archive, makes web-sized copies, removes members’ home addresses, and saves the result to the public library. Keep this tab open while a job runs; you can leave it running overnight. A job can be stopped and started again at any time; finished items are skipped.</p>
+<div class="lw-hero"><div><span class="kick">Librarian's workshop</span><h1 style="font-size:clamp(26px,3.4vw,34px);margin:4px 0 6px">Heritage Library</h1>
+<p class="muted" style="margin:0;max-width:760px">Turns the Club’s private archive into the public library: web-sized copies, with members’ home addresses removed. Keep this tab open while a job runs (overnight is fine). Jobs can be stopped and restarted; finished items are skipped.</p></div>
+<button class="smallbtn" id="refresh" type="button">Refresh</button></div>
 <div class="stats" id="stats"></div><p id="storage" class="muted" style="margin:0"></p>
 </div>
-<nav class="tabs" id="tabs"><button data-t="obj" aria-current="true">Trophy room</button><button data-t="vol">Bound Balita volumes</button><button data-t="dig">Digital Balita 2015–2025</button><button data-t="gal">Photo galleries</button><button data-t="browse">Storage</button></nav>
+<nav class="tabs" id="tabs" aria-label="Library jobs"><button data-t="obj" aria-current="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4"/></svg>Trophy room</button><button data-t="gal"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-8 8"/></svg>Photo galleries</button><button data-t="browse"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Files</button><span class="tab-sep">Finished</span><button data-t="vol" class="done">Bound Balita volumes</button><button data-t="dig" class="done">Digital Balita 2015–2025</button></nav>
 
 <div id="t-obj" class="panel stack">
 <h2 style="margin:0">Trophy room: plaques, trophies and medals</h2>
@@ -64,6 +61,7 @@ th{background:#f8fafc;font-size:12.5px;color:var(--ink-2);position:sticky;top:0}
 
 <div id="t-vol" class="panel stack hidden">
 <h2 style="margin:0">Bound Balita volumes, 1948–2009</h2>
+<div class="done-note"><span>✓</span><span><b>Finished.</b> All bound volumes are in the library. Use this only to add a newly scanned volume or redo one.</span></div>
 <p class="muted" style="margin:0">Each volume is read page by page: a web image of every page, the page text (read by machine where the scan has none), and the issues found inside. Pages that print home addresses have those lines blanked; member directories are withheld. Volumes with the same issues are grouped; the best copy is ticked.</p>
 <div class="note">A volume takes about 5 to 20 minutes. The whole shelf can take a few nights. Use a computer that stays on, with a good connection.</div>
 <div class="row"><button class="btn btn-blue" id="vol-start" type="button">Process ticked volumes</button><button class="btn btn-line" id="vol-stop" type="button" style="color:var(--navy)" disabled>Stop after this page</button><label class="row" style="gap:6px;font-weight:600"><input type="checkbox" id="vol-pub" checked> Publish each volume when done</label><span id="vol-msg" class="muted"></span></div>
@@ -74,6 +72,7 @@ th{background:#f8fafc;font-size:12.5px;color:var(--ink-2);position:sticky;top:0}
 
 <div id="t-dig" class="panel stack hidden">
 <h2 style="margin:0">Digital Balita issues, 2015–2025</h2>
+<div class="done-note"><span>✓</span><span><b>Finished.</b> These issues are in the Balita archive. New and missing issues are now added from the Balita editor.</span></div>
 <p class="muted" style="margin:0">These go into the regular Balita archive on the website (reader and search), like the back issues added from the editor. Issues already on the website are skipped.</p>
 <div class="row"><button class="btn btn-line" id="dig-find" type="button" style="color:var(--navy)">Find the issues in storage</button><button class="btn btn-blue" id="dig-start" type="button" disabled>Add them to the Balita archive</button><button class="btn btn-line" id="dig-stop" type="button" style="color:var(--navy)" disabled>Stop</button><span id="dig-msg" class="muted"></span></div>
 <div class="bar"><i id="dig-bar"></i></div>
@@ -92,7 +91,8 @@ th{background:#f8fafc;font-size:12.5px;color:var(--ink-2);position:sticky;top:0}
 </div>
 
 <div id="t-browse" class="panel stack hidden">
-<h2 style="margin:0">Storage</h2>
+<h2 style="margin:0">Files in the archive storage</h2>
+<p class="muted" style="margin:0">Look up what is in the private archive, by folder.</p>
 <div class="row"><input type="search" id="br-prefix" placeholder="Folder, e.g. wordpress/ or RAW/" style="flex:1;min-width:240px"><button class="btn btn-blue" id="br-go" type="button">List</button></div>
 <p id="br-msg" class="muted"></p>
 <div class="scroll"><table><thead><tr><th>File</th><th>Size</th></tr></thead><tbody id="br-rows"></tbody></table></div>
