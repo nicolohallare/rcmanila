@@ -316,7 +316,7 @@
         const v = Date.now().toString(36);
         const files = pages.map((p) => ({ name: `pages/page-${String(p.n).padStart(3, '0')}-${v}.jpg`, blob: p.thumbBlob, kind: 'page' }));
         files.push({ name: `cover-${v}.jpg`, blob: await BalitaExtract.coverFrom(pages[0]), kind: 'cover' });
-        if (it.f.size <= 19.5 * 1048576) files.push({ name: `balita-${no}-${v}.pdf`, blob: it.f, kind: 'pdf' });
+        if (it.f.size <= 49 * 1048576) files.push({ name: `balita-${no}-${v}.pdf`, blob: it.f, kind: 'pdf' });
         await uploadAll(no, files, (n) => setOld(it, `Saving ${n} of ${files.length} files…`));
         const text = pages.map((p) => p.text || '').join('\n\n').slice(0, 400000);
         const pdf = files.find((f) => f.kind === 'pdf');
@@ -341,9 +341,10 @@
       const prepared = new Set(await fetch(`${SB}/rest/v1/rpc/rcm_manifest_nos`, { method: 'POST', headers: { apikey: PUB, 'content-type': 'application/json' }, body: '{}' }).then((r) => (r.ok ? r.json() : [])).catch(() => []));
       const by = new Map();
       for (const a of arts) { const s = by.get(a.issue_id) || { n: 0, ph: 0 }; s.n++; if (a.first) s.ph++; by.set(a.issue_id, s); }
+      const NOPAGES = 'Articles done, page images missing';
       splitQ = issues.map((i, k) => {
         const s = by.get(i.id) || { n: 0, ph: 0 };
-        const now = !s.n ? 'PDF only' : s.ph <= s.n / 3 ? `${s.n} articles, mostly without photos` : null;
+        const now = !s.n ? (i.page_count ? 'Pages only: photos and articles missing' : 'PDF only') : !i.page_count ? NOPAGES : s.ph <= s.n / 3 ? `${s.n} articles, mostly without photos` : null;
         return { k, i, now, onSite: /supabase\.co\/storage/.test(i.pdf_url || ''), file: null, on: true, state: 'Waiting' };
       }).filter((x) => x.now && !prepared.has(x.i.issue_no));
       drawSplit();
@@ -393,6 +394,7 @@
       blob = await r.blob();
     }
     setSplit(x, 'Reading pages…');
+    if (/page images missing/.test(x.now)) return pagesOnly(x, blob);
     const pages = await BalitaExtract.extractPdf(blob, ({ n, total }) => setSplit(x, `Reading page ${n} of ${total}…`));
     if (!$('split-ai').checked) return prepareOnly(x, blob, pages);
     setSplit(x, 'The AI is finding the articles…');
@@ -409,7 +411,7 @@
         p.photos.forEach((ph) => files.push({ name: `photos/${ph.id}-${v}.jpg`, blob: ph.blob, photo: ph, kind: 'photo' }));
       });
       files.push({ name: `cover-${v}.jpg`, blob: await BalitaExtract.coverFrom(pages[0]), kind: 'cover' });
-      if (!x.onSite && blob.size <= 19.5 * 1048576) files.push({ name: `balita-${no}-${v}.pdf`, blob, kind: 'pdf' });
+      if (!x.onSite && blob.size <= 49 * 1048576) files.push({ name: `balita-${no}-${v}.pdf`, blob, kind: 'pdf' });
       await uploadAll(no, files, (n) => setSplit(x, `Saving ${n} of ${files.length} pages and photos…`));
       const pathOf = new Map(files.filter((f) => f.photo).map((f) => [f.photo.id, f.path]));
       let done = 0, flagged = 0, failed = 0;
@@ -441,6 +443,18 @@
       throw err;
     }
   }
+  // Issues whose articles and photos are already done but have no page images: add the pages and text only.
+  async function pagesOnly(x, blob) {
+    const no = x.i.issue_no;
+    const pages = await BalitaExtract.extractPdf(blob, ({ n, total }) => setSplit(x, `Reading page ${n} of ${total}…`), { pagesOnly: true });
+    const { issue } = await call('start', { issue_no: no, issue_date: x.i.issue_date, page_count: pages.length, source: 'legacy', keep: true });
+    const v = Date.now().toString(36);
+    const files = pages.map((p) => ({ name: `pages/page-${String(p.n).padStart(3, '0')}-${v}.jpg`, blob: p.thumbBlob, kind: 'page' }));
+    files.push({ name: `cover-${v}.jpg`, blob: await BalitaExtract.coverFrom(pages[0]), kind: 'cover' });
+    await uploadAll(no, files, (n) => setSplit(x, `Saving ${n} of ${files.length} pages…`));
+    await call('legacy-finish', { issue_id: issue.id, fields: { issue_date: x.i.issue_date, cover_path: files.find((f) => f.kind === 'cover').path, pages: files.filter((f) => f.kind === 'page').map((f) => f.path), page_count: pages.length, search_text: pages.map((p) => p.text || '').join('\n\n').slice(0, 400000) } });
+    return `Done ✓ ${pages.length} pages added`;
+  }
   // Without the website's AI: save pages, photos and the page text; the articles are then written in the Claude chat.
   async function prepareOnly(x, blob, pages) {
     const no = x.i.issue_no;
@@ -452,7 +466,7 @@
       p.photos.forEach((ph) => files.push({ name: `photos/${ph.id}-${v}.jpg`, blob: ph.blob, photo: ph, kind: 'photo' }));
     });
     files.push({ name: `cover-${v}.jpg`, blob: await BalitaExtract.coverFrom(pages[0]), kind: 'cover' });
-    if (!x.onSite && blob.size <= 19.5 * 1048576) files.push({ name: `balita-${no}-${v}.pdf`, blob, kind: 'pdf' });
+    if (!x.onSite && blob.size <= 49 * 1048576) files.push({ name: `balita-${no}-${v}.pdf`, blob, kind: 'pdf' });
     await uploadAll(no, files, (n) => setSplit(x, `Saving ${n} of ${files.length} pages and photos…`));
     const pdf = files.find((f) => f.kind === 'pdf');
     await call('legacy-finish', { issue_id: issue.id, fields: { issue_date: x.i.issue_date, cover_path: files.find((f) => f.kind === 'cover').path, pages: files.filter((f) => f.kind === 'page').map((f) => f.path), page_count: pages.length, search_text: pages.map((p) => p.text || '').join('\n\n').slice(0, 400000), ...(pdf ? { pdf_url: `${SB}/storage/v1/object/public/rcm/${pdf.path}` } : {}) } });
