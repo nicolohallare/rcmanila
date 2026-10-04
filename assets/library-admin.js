@@ -23,7 +23,7 @@
     return d;
   }
   const call = (a, p) => post(LIB, a, p);
-  window.RCMLib = { call, review: (a, p) => post(SB + '/functions/v1/rcm-museum-review', a, p) };
+  window.RCMLib = { call, review: (a, p) => post(SB + '/functions/v1/rcm-museum-review', a, p), code: () => code, show: (v) => show(v), tab: (t) => tab(t) };
   const admin = (a, p) => post(ADM, a, p);
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   async function retry(fn, n = 3) { let e; for (let i = 0; i < n; i++) { try { return await fn(); } catch (x) { e = x; if (x.auth) throw x; await sleep(1500 * (i + 1)); } } throw e; }
@@ -77,8 +77,8 @@
   }
   $('refresh').onclick = open;
   $('signout').onclick = (e) => { e.preventDefault(); try { sessionStorage.removeItem('rcm-library-code'); } catch (x) {} code = ''; $('code').value = ''; show('login'); };
-  let current = 'obj';
-  function tab(t) { current = t; document.querySelectorAll('#tabs [data-t]').forEach((b) => b.setAttribute('aria-current', String(b.getAttribute('data-t') === t))); for (const k of ['obj', 'vol', 'dig', 'gal', 'browse', 'tl', 'ex', 'tags', 'min']) { const el = $('t-' + k); if (el) el.classList.toggle('hidden', k !== t); } document.dispatchEvent(new CustomEvent('rcmlib:tab', { detail: t })); if (t === 'obj') objList(); if (t === 'vol') volList(); if (t === 'gal') heldList(); }
+  let current = 'home';
+  function tab(t) { current = t; document.querySelectorAll('#tabs [data-t]').forEach((b) => b.setAttribute('aria-current', String(b.getAttribute('data-t') === t))); for (const k of ['home', 'obj', 'vol', 'dig', 'gal', 'held', 'browse', 'tl', 'ex', 'tags', 'min']) { const el = $('t-' + k); if (el) el.classList.toggle('hidden', k !== t); } document.dispatchEvent(new CustomEvent('rcmlib:tab', { detail: t })); if (t === 'obj') objList(); if (t === 'vol') volList(); if (t === 'held') heldList(); window.scrollTo(0, 0); }
   $('tabs').onclick = (e) => { const b = e.target.closest('[data-t]'); if (b) tab(b.getAttribute('data-t')); };
 
   // ---------- trophy room ----------
@@ -564,10 +564,15 @@
   };
 
   // ---------- albums kept back for a check ----------
+  const heldRow = (g) => `<tr data-row="${g.id}"><td>${g.cover_path ? `<img src="${ARCH}/${esc(g.cover_path.replace(/\.jpg$/, '-t.jpg'))}" alt="" style="height:54px;border-radius:3px">` : ''}</td><td><b>${esc(g.title.replace(/ \| The Rotary Club of Manila$/, ''))}</b><br><span class="muted">${esc(g.event_date || 'no date')} · ${g.photo_count} photos</span><div class="preview hidden" id="hp-${g.id}" style="height:90px;margin-top:6px;flex-wrap:wrap;overflow:auto"></div></td><td style="white-space:nowrap"><button class="smallbtn" type="button" data-look="${g.id}" data-slug="${esc(g.slug)}">Look</button> ${g.kept_private ? `<button class="smallbtn" type="button" data-priv="${g.id}" data-v="0">Check again</button>` : `<button class="smallbtn" type="button" data-pubg="${g.id}">Publish</button> <button class="smallbtn" type="button" data-priv="${g.id}" data-v="1">Keep private</button>`}</td></tr>`;
   async function heldList() {
+    $('held').innerHTML = '<tr><td class="muted">Loading…</td></tr>';
     try {
-      const { galleries } = await call('gal-list'); const drafts = galleries.filter((g) => g.status !== 'published' && g.photo_count);
-      $('held').innerHTML = drafts.length ? drafts.map((g) => `<tr><td>${g.cover_path ? `<img src="${ARCH}/${esc(g.cover_path.replace(/\.jpg$/, '-t.jpg'))}" alt="" style="height:54px;border-radius:3px">` : ''}</td><td><b>${esc(g.title)}</b><br><span class="muted">${esc(g.event_date || 'no date')} · ${g.photo_count} photos</span><div class="preview hidden" id="hp-${g.id}" style="height:90px;margin-top:6px;flex-wrap:wrap;overflow:auto"></div></td><td style="white-space:nowrap"><button class="smallbtn" type="button" data-look="${g.id}" data-slug="${esc(g.slug)}">Look</button> <button class="smallbtn" type="button" data-pubg="${g.id}">Publish</button></td></tr>`).join('') : '<tr><td class="muted">No albums waiting.</td></tr>';
+      const { items } = await window.RCMLib.review('held-list', {});
+      const todo = items.filter((g) => !g.kept_private), kept = items.filter((g) => g.kept_private);
+      $('held').innerHTML = (todo.length ? todo.map(heldRow).join('') : '<tr><td class="muted">No albums waiting for a check.</td></tr>')
+        + (kept.length ? `<tr><td colspan="3" style="padding-top:18px"><b>Kept private (${kept.length})</b> <span class="muted">· not on the website and no longer on your to-do list</span></td></tr>` + kept.map(heldRow).join('') : '');
+      $('held-msg').textContent = todo.length ? `${todo.length} to check. Use Look to see the photos, then Publish, or Keep private if children or patients can be identified and there is no consent.` : '';
     } catch (err) { if (err.auth) return show('login'); $('held').innerHTML = `<tr><td class="err">${esc(err.message)}</td></tr>`; }
   }
   const ARCH = 'https://archive.rcmanila.org';
@@ -575,7 +580,9 @@
     const lk = e.target.closest('[data-look]');
     if (lk) { const box = $('hp-' + lk.dataset.look); box.classList.toggle('hidden'); if (!box.children.length) { const r = await call('r2-list', { bucket: 'rcm-library', prefix: 'gal/' + lk.dataset.slug + '/' }); box.innerHTML = r.keys.filter((k) => /-t\.jpg$/.test(k.key)).map((k) => `<img src="${ARCH}/${esc(k.key)}" alt="" loading="lazy" style="height:84px">`).join(''); } return; }
     const pb = e.target.closest('[data-pubg]');
-    if (pb) { pb.disabled = true; try { await call('publish', { kind: 'gallery', id: pb.dataset.pubg, status: 'published' }); pb.closest('tr').remove(); } catch (err) { pb.disabled = false; alertMsg(err.message); } }
+    if (pb) { pb.disabled = true; try { await call('publish', { kind: 'gallery', id: pb.dataset.pubg, status: 'published' }); pb.closest('tr').remove(); $('held-msg').textContent = 'Published ✓'; } catch (err) { pb.disabled = false; $('held-msg').textContent = err.message; } return; }
+    const pv = e.target.closest('[data-priv]');
+    if (pv) { pv.disabled = true; try { await window.RCMLib.review('gallery-private', { id: pv.dataset.priv, private: pv.dataset.v === '1' }); heldList(); } catch (err) { pv.disabled = false; $('held-msg').textContent = err.message; } }
   };
   const alertMsg = (t) => { $('gal-msg').textContent = t; };
 

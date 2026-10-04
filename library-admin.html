@@ -42,10 +42,10 @@ th{background:#f8fafc;font-size:12.5px;color:var(--ink-2);position:sticky;top:0}
 .lw-hero{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:center}
 @media (max-width:760px){.lw-hero{grid-template-columns:1fr}}
 </style>
-<link rel="stylesheet" href="/assets/workspace.css?v=1">
+<link rel="stylesheet" href="/assets/workspace.css?v=1005a">
 </head>
 <body>
-<header class="ed-head"><div class="wrap"><span class="brand"><img src="/assets/club-logo-white.png" alt="Rotary Club of Manila" width="803" height="286"><span class="brand-t">Heritage Library</span></span><nav class="ed-nav"><a href="/library" target="_blank" rel="noopener">Open the library ↗</a><a href="#" id="signout">Sign out</a></nav></div></header>
+<header class="ed-head"><div class="wrap"><span class="brand"><img src="/assets/club-logo-white.png" alt="Rotary Club of Manila" width="803" height="286"><span class="brand-t">Heritage Library</span></span><nav class="ed-nav"><a class="wide-only" href="/library" target="_blank" rel="noopener">Open the library ↗</a><a href="#" id="signout">Sign out</a></nav></div></header>
 <main class="wrap" style="padding-block:28px;display:flex;flex-direction:column;gap:18px">
 
 <section id="v-login" class="panel stack" style="max-width:420px">
@@ -54,16 +54,26 @@ th{background:#f8fafc;font-size:12.5px;color:var(--ink-2);position:sticky;top:0}
 </section>
 
 <section id="v-main" class="stack hidden">
-<div class="panel stack">
-<div class="lw-hero"><div><span class="kick">Librarian's workshop</span><h1 style="font-size:clamp(26px,3.4vw,34px);margin:4px 0 6px">Heritage Library</h1>
-<p class="muted" style="margin:0;max-width:760px">Turns the Club’s private archive into the public library: web-sized copies, with members’ home addresses removed. Keep this tab open while a job runs (overnight is fine). Jobs can be stopped and restarted; finished items are skipped.</p></div>
-<button class="smallbtn" id="refresh" type="button">Refresh</button></div>
-<div class="stats" id="stats"></div><p id="storage" class="muted" style="margin:0"></p>
-</div>
-<nav class="tabs" id="tabs" aria-label="Library jobs"><button data-t="obj" aria-current="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4"/></svg>Trophy room</button><button data-t="gal"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-8 8"/></svg>Photo galleries</button><button data-t="tl"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h10M4 18h13"/></svg>Timeline</button><button data-t="ex"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 15l5-5 4 4 3-3 6 6"/></svg>Exhibits</button><button data-t="tags"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>Photo names</button><button data-t="min"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>History minutes</button><button data-t="browse"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Files</button><span class="tab-sep">Finished</span><button data-t="vol" class="done">Bound Balita volumes</button><button data-t="dig" class="done">Digital Balita 2015–2025</button></nav>
+<nav class="tabs" id="tabs" aria-label="Library sections"><button data-t="home" aria-current="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7v9H3z"/><path d="M9 20v-6h6v6"/></svg>Today</button><span class="tab-sep">To review</span><button data-t="tags"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>Photo names <span class="badge" id="b-tags" hidden></span></button><button data-t="tl"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h10M4 18h13"/></svg>Timeline <span class="badge" id="b-tl" hidden></span></button><button data-t="ex"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 15l5-5 4 4 3-3 6 6"/></svg>Exhibits <span class="badge" id="b-ex" hidden></span></button><button data-t="min"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>History minutes</button><button data-t="held"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-8 8"/></svg>Albums to check <span class="badge" id="b-held" hidden></span></button><span class="tab-sep">Collections</span><button data-t="obj" class="done">Trophy room</button><button data-t="gal" class="done">Photo albums</button><button data-t="vol" class="done" id="tab-vol">Bound Balita</button><button data-t="dig" class="done">Digital Balita</button><button data-t="browse">Files</button></nav>
 
-<div id="t-obj" class="panel stack">
+<div id="t-home" class="stack">
+<div class="dash-hello"><div><span class="kick">Heritage Library</span><h1 id="dh-h">Welcome back</h1><p id="dh-d"></p></div><div class="row"><a class="smallbtn" href="/library" target="_blank" rel="noopener">Open the library ↗</a><button class="smallbtn" id="refresh" type="button">Refresh</button></div></div>
+<div class="dash">
+<section class="card"><h2>Needs your attention</h2><p class="muted">Things waiting for you, most urgent first. Everything else in the library runs by itself.</p><div id="dh-todo"><p class="skeleton">Checking…</p></div></section>
+<aside class="dash-col">
+<section class="card"><h2>The library at a glance</h2><div id="dh-kpis"><p class="skeleton">Loading…</p></div>
+<h3 class="dash-h3">Visitors this month</h3><div id="dh-act"></div>
+<h3 class="dash-h3">Recently asked in Ask the archive</h3><ul class="dmini" id="dh-q"></ul>
+<h3 class="dash-h3">Quick tools</h3><div class="quicklinks"><button class="smallbtn" type="button" id="dh-qr">Print trophy QR labels</button><a class="smallbtn" href="/library/timeline" target="_blank" rel="noopener">Timeline ↗</a><a class="smallbtn" href="/library/exhibit" target="_blank" rel="noopener">This month's exhibit ↗</a><a class="smallbtn" href="/library/ask" target="_blank" rel="noopener">Ask the archive ↗</a></div>
+<p id="storage" class="muted small" style="margin:14px 0 0"></p><div class="stats hidden" id="stats"></div>
+</section>
+</aside>
+</div>
+</div>
+
+<div id="t-obj" class="panel stack hidden">
 <h2 style="margin:0">Trophy room: plaques, trophies and medals</h2>
+<div class="done-note"><span>✓</span><span><b>Finished.</b> All 452 objects are in the online trophy room. Use this only to add newly photographed objects. <b>Print QR labels</b> is below.</span></div>
 <p class="muted" style="margin:0">Step 1 (<b>Start</b>) makes a web copy of each photographed plaque or trophy. Step 2 (<b>Polish photos and read labels</b>) cuts each object out of its background, sets it on the gallery backdrop, and reads the text printed on it for a clean title, the giver and the year. It takes about 15 seconds an item; the original photos are kept. Then check a few and click <b>Publish all</b>.</p>
 <div class="row"><button class="btn btn-blue" id="obj-start" type="button">Start</button><button class="btn btn-line" id="obj-stop" type="button" style="color:var(--navy)" disabled>Stop</button><button class="btn btn-blue" id="obj-polish" type="button">Polish photos and read labels</button><button class="btn btn-line" id="obj-pub" type="button" style="color:var(--navy)">Publish all to the trophy room</button><button class="btn btn-line" id="obj-qr" type="button" style="color:var(--navy)">Print QR labels</button><span id="obj-msg" class="muted"></span></div>
 <div class="bar"><i id="obj-bar"></i></div><div class="preview" id="obj-prev"></div>
@@ -72,7 +82,8 @@ th{background:#f8fafc;font-size:12.5px;color:var(--ink-2);position:sticky;top:0}
 
 <div id="t-vol" class="panel stack hidden">
 <h2 style="margin:0">Bound Balita volumes, 1948–2009</h2>
-<div class="done-note"><span>✓</span><span><b>Finished.</b> All bound volumes are in the library. Use this only to add a newly scanned volume or redo one.</span></div>
+<div class="done-note" id="vol-done"><span>✓</span><span><b>Finished.</b> All bound volumes are in the library. Use this only to add a newly scanned volume or redo one.</span></div>
+<div class="note hidden" id="vol-todo"></div>
 <p class="muted" style="margin:0">Each volume is read page by page: a web image of every page, the page text (read by machine where the scan has none), and the issues found inside. Pages that print home addresses have those lines blanked; member directories are withheld. Volumes with the same issues are grouped; the best copy is ticked.</p>
 <div class="note">A volume takes about 5 to 20 minutes. The whole shelf can take a few nights. Use a computer that stays on, with a good connection.</div>
 <div class="row"><button class="btn btn-blue" id="vol-start" type="button">Process ticked volumes</button><button class="btn btn-line" id="vol-stop" type="button" style="color:var(--navy)" disabled>Stop after this page</button><label class="row" style="gap:6px;font-weight:600"><input type="checkbox" id="vol-pub" checked> Publish each volume when done</label><span id="vol-msg" class="muted"></span></div>
@@ -91,16 +102,22 @@ th{background:#f8fafc;font-size:12.5px;color:var(--ink-2);position:sticky;top:0}
 </div>
 
 <div id="t-gal" class="panel stack hidden">
-<h2 style="margin:0">Photo galleries, 2017–2022</h2>
+<h2 style="margin:0">Photo albums, 2017–2022</h2>
+<div class="done-note"><span>✓</span><span><b>Finished.</b> All albums are processed. Albums held back for a consent check are under <b>Albums to check</b>.</span></div>
 <p class="muted" style="margin:0" id="gal-intro">Event albums from the old website. Each album gets web-sized photos and thumbnails.</p>
 <div class="row"><button class="btn btn-line" id="gal-find" type="button" style="color:var(--navy)">Find the albums in storage</button><button class="btn btn-blue" id="gal-start" type="button" disabled>Process ticked albums</button><button class="btn btn-line" id="gal-stop" type="button" style="color:var(--navy)" disabled>Stop</button><label class="row" style="gap:6px;font-weight:600"><input type="checkbox" id="gal-pub" checked> Publish each album when done</label><span id="gal-msg" class="muted"></span></div>
 <div class="bar"><i id="gal-bar"></i></div><div class="preview" id="gal-prev"></div>
 <div class="scroll"><table><thead><tr><th></th><th>Album</th><th>Date</th><th>Photos</th><th>Status</th></tr></thead><tbody id="gal-rows"></tbody></table></div>
-<h3 style="margin:10px 0 0">Albums kept back for a check</h3>
-<p class="muted" style="margin:0">Albums from outreach events (medical missions, schools, homes for the aged, relief work) are prepared but not shown until someone has looked through them. Publish only when no child or patient can be identified, or the Club has consent.</p>
-<div class="scroll" style="max-height:40vh"><table><tbody id="held"></tbody></table></div>
+
 </div>
 
+
+<div id="t-held" class="panel stack hidden">
+<h2 style="margin:0">Albums to check before publishing</h2>
+<p class="muted" style="margin:0">Albums from outreach events (medical missions, schools, homes for the aged, relief work) are prepared but not shown until someone has looked through them. Publish only when no child or patient can be identified, or the Club has consent.</p>
+<div class="scroll" style="max-height:70vh"><table><tbody id="held"></tbody></table></div>
+<p id="held-msg" class="muted" style="margin:0"></p>
+</div>
 
 <div id="t-tl" class="panel stack hidden">
 <h2 style="margin:0">Club timeline</h2>
@@ -137,7 +154,9 @@ th{background:#f8fafc;font-size:12.5px;color:var(--ink-2);position:sticky;top:0}
 </section>
 </main>
 <script src="/assets/extract.js?v=0929f"></script>
-<script src="/assets/library-admin.js?v=1004m"></script>
-<script src="/assets/library-museum.js?v=1004m"></script>
+<script src="/assets/dash.js?v=1005a"></script>
+<script src="/assets/library-admin.js?v=1005a"></script>
+<script src="/assets/library-museum.js?v=1005a"></script>
+<script src="/assets/library-dash.js?v=1005a"></script>
 </body>
 </html>

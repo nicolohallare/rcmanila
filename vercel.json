@@ -106,6 +106,10 @@
       "destination": "/api/page?r=join"
     },
     {
+      "source": "/youth",
+      "destination": "/api/page?r=youth"
+    },
+    {
       "source": "/partner",
       "destination": "/api/page?r=partner"
     },

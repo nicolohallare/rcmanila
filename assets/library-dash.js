@@ -1,0 +1,52 @@
+/* Heritage Library workshop: the Today dashboard (what is waiting for the librarian, and the library in numbers). */
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const D = window.RCMDash, L = () => window.RCMLib;
+  const esc = D.esc;
+  const monthName = (iso) => D.day(iso, { day: undefined, month: 'long', year: 'numeric' });
+
+  async function draw() {
+    const h = D.hello(); $('dh-h').textContent = h.greet; $('dh-d').textContent = h.date;
+    let d;
+    try { d = await D.load('library', L().code()); }
+    catch (e) { if (e.auth) return L().show('login'); $('dh-todo').innerHTML = `<p class="err">${esc(e.message)}</p>`; return; }
+    const t = d.todo, items = [];
+    if (t.tags_new) items.push({ level: 'urgent', icon: 'user', count: t.tags_new, title: t.tags_new === 1 ? 'name suggested for an old photo' : 'names suggested for old photos', text: 'Visitors say who is in a photo or on a Balita page. Approve only when you are sure; you can correct the names first.', go: 'tags', label: 'Review' });
+    if (t.events_flagged) items.push({ level: 'todo', icon: 'line', count: t.events_flagged, title: 'timeline entries need a quick check', text: 'Each card says what to check, usually a year taken from a later issue. Fix it and publish, or hide it. The other entries are already on the website.', go: 'tl', label: 'Check' });
+    if (t.events_draft > t.events_flagged) items.push({ level: 'todo', icon: 'line', count: t.events_draft - t.events_flagged, title: 'timeline drafts to publish', go: 'tl', label: 'Review' });
+    const ex = (m) => (t.exhibits || []).find((x) => x.month.slice(0, 7) === m.slice(0, 7));
+    const now = ex(d.today), next = ex(t.next_month);
+    if (!now || now.status !== 'published') items.push({ level: 'urgent', icon: 'frame', title: `No exhibit is showing for ${monthName(d.today)}`, text: now ? `“${now.title}” is still a draft.` : 'The library and home page fall back to the last exhibit.', go: 'ex', label: now ? 'Publish' : 'Open exhibits' });
+    const daysToNext = D.daysUntil(t.next_month);
+    if (!next) items.push({ level: daysToNext <= 10 ? 'urgent' : 'info', icon: 'frame', title: `No exhibit yet for ${monthName(t.next_month)}`, text: `It starts in ${daysToNext} days. Ask Claude to draft one from the archive.`, go: 'ex', label: 'Open exhibits' });
+    else if (next.status !== 'published') items.push({ level: daysToNext <= 10 ? 'urgent' : 'todo', icon: 'frame', title: `${monthName(t.next_month)} exhibit is ready to read: “${next.title}”`, text: `Read it and publish it before ${D.day(t.next_month)} (in ${daysToNext} days). It only shows from the first of the month.`, go: 'ex', label: 'Read' });
+    if (t.minutes_left <= 4) items.push({ level: t.minutes_left ? 'todo' : 'urgent', icon: 'clock', title: t.minutes_left ? `History minutes run out after ${D.day(t.minutes_last)}` : 'No history minutes are ready for coming meetings', text: 'The Secretariat shows one at each meeting. Ask Claude to write the next set.', go: 'min', label: 'Open' });
+    if (t.galleries_held) items.push({ level: 'todo', icon: 'photo', count: t.galleries_held, title: t.galleries_held === 1 ? 'photo album is held for a consent check' : 'photo albums are held for a consent check', text: 'Outreach albums: medical missions, homes, schools. Publish when no child or patient can be identified, or keep an album private so it leaves this list.', go: 'held', label: 'Check' });
+    if ((t.volumes_draft || []).length) {
+      const v = t.volumes_draft;
+      items.push({ level: 'todo', icon: 'book', count: v.length, title: v.length === 1 ? 'bound volume stopped part-way' : 'bound volumes stopped part-way', html: true, text: v.map((x) => `${esc(x.acc)} (${esc(x.years)}): ${D.fmt(x.done)} of ${D.fmt(x.pages)} pages`).join('<br>') + '<br>Run them again from Bound Balita (tick them, then Process) on a computer that can stay on, or leave them out if they are spare copies.', go: 'vol', label: 'Open' });
+      const tv = $('tab-vol'); if (tv) tv.classList.remove('done');
+      const vd = $('vol-done'), vt = $('vol-todo');
+      if (vd && vt) { vd.classList.add('hidden'); vt.classList.remove('hidden'); vt.innerHTML = `<b>${v.length} volume${v.length > 1 ? 's' : ''} stopped part-way and ${v.length > 1 ? 'are' : 'is'} not on the website:</b> ${v.map((x) => `${esc(x.acc)} (${esc(x.years)}, ${D.fmt(x.done)} of ${D.fmt(x.pages)} pages)`).join('; ')}. Tick ${v.length > 1 ? 'them' : 'it'} below and click <b>Process ticked volumes</b> to run again. Each takes about 20 minutes.`; }
+    }
+    $('dh-todo').innerHTML = D.todo(items, 'No suggestions, drafts or checks are waiting. The library runs by itself.');
+
+    D.badge($('b-tags'), t.tags_new); D.badge($('b-tl'), t.events_draft); D.badge($('b-held'), t.galleries_held);
+    D.badge($('b-ex'), (t.exhibits || []).filter((x) => x.status !== 'published').length);
+
+    const s = d.stats, a = d.activity;
+    $('dh-kpis').innerHTML = D.kpis([
+      { n: s.volumes, label: 'Bound volumes', sub: '1948–2019' }, { n: s.pages, label: 'Balita pages' },
+      { n: s.objects, label: 'Trophy room objects' }, { n: s.galleries, label: 'Photo albums' },
+      { n: s.photos, label: 'Photos' }, { n: s.timeline, label: 'Timeline entries' },
+    ]);
+    $('dh-act').innerHTML = D.kpis([
+      { n: a.ask_30d, label: 'Questions asked', sub: 'last 30 days' }, { n: a.names_approved, label: 'Photo names added', sub: 'all time' },
+      { n: t.minutes_left, label: 'History minutes ready', sub: t.minutes_last ? 'to ' + D.day(t.minutes_last) : '' },
+    ]);
+    $('dh-q').innerHTML = (a.recent_questions || []).length ? a.recent_questions.map((q) => `<li><span>${esc(q.question)}</span><span>${esc(D.ago(q.created_at))}</span></li>`).join('') : '<li class="muted">No questions yet.</li>';
+  }
+
+  document.addEventListener('rcmlib:tab', (e) => { if (e.detail === 'home') draw(); });
+  document.addEventListener('click', (e) => { const b = e.target.closest('[data-go]'); if (b && $('t-home').contains(b)) L().tab(b.getAttribute('data-go')); });
+})();

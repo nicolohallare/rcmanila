@@ -45,6 +45,7 @@
   const STATUS = { processing: ['Processing', 'run'], draft: ['Ready to check', 'flag'], scheduled: ['Scheduled', 'ok'], published: ['Live', 'ok'] };
   async function openHome() {
     show('v-home');
+    document.dispatchEvent(new Event('rcmed:home'));
     return openHomeList();
   }
   async function openHomeList() {
@@ -69,6 +70,7 @@
     const when = i.status === 'scheduled' && i.publish_at ? ' · goes live ' + new Date(i.publish_at).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Manila' }) : '';
     return `<li>${i.cover_path ? `<img class="icov${i.issue_date && i.issue_date < '2024-07-01' ? ' pg' : ''}" src="${imgUrl(i.cover_path, 200)}&v=${Date.parse(i.updated_at || 0)}" alt="">` : '<img class="icov" alt="">'}<div style="flex:1"><b>Issue ${i.issue_no}</b><br><span class="muted">${esc(i.issue_date || '')}${esc(when)}${i.guest ? ' · ' + esc(i.guest.length > 70 ? i.guest.slice(0, 68) + '…' : i.guest) : ''}</span></div><span class="tag ${s[1]}">${s[0]}</span><button class="smallbtn" data-open="${i.id}" type="button">${i.status === 'published' ? 'Edit' : 'Check and publish'}</button>${i.status === 'published' || i.status === 'scheduled' ? `<a class="smallbtn" href="/balita/${i.issue_no}" target="_blank" rel="noopener">View</a>` : ''}</li>`;
   }
+  window.RCMEditor = { open: (id) => openReview(id), code: () => code, signin: () => show('v-login') };
   ['issues', 'find-list'].forEach((id) => $(id).addEventListener('click', (e) => { const b = e.target.closest('[data-open]'); if (b) openReview(b.getAttribute('data-open')); }));
   // Find any past issue: by number, date, guest, or a word in the issue or an article title.
   $('find-form').addEventListener('submit', async (e) => {

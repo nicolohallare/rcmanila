@@ -1175,3 +1175,8 @@ mark{background:#ffe7a8;color:inherit;padding:0 1px;border-radius:2px}
 .h-exhibit .t>span:not(.kicker){color:#dfe8f7;font-size:15px}
 .h-exhibit em{font-style:normal;font-weight:700;color:var(--gold);margin-top:auto}
 @media (max-width:760px){.h-exhibit{flex-direction:column}.h-exhibit .im{flex:none;height:180px}.h-exhibit .t{padding:0 18px 18px}}
+/* Skip link: hidden until a keyboard user tabs to it */
+.skip{position:absolute;left:12px;top:-60px;z-index:1000;background:#0f2f66;color:#fff;font-weight:700;padding:10px 16px;border-radius:0 0 8px 8px;text-decoration:none;transition:top .15s}
+.skip:focus{top:0;outline:3px solid #f7a81b}
+main:focus{outline:none}
+a:focus-visible,button:focus-visible,summary:focus-visible,[tabindex]:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid #f7a81b;outline-offset:2px}

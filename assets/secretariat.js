@@ -12,13 +12,14 @@
   let state = { meeting: null, signups: [], posterPath: null, lastVenue: null };
 
   function show(v) {
-    for (const id of ['v-login', 'v-list', 'v-edit', 'v-att', 'v-don', 'v-camp', 'v-inq', 'v-ev']) $(id).classList.toggle('hidden', id !== v);
+    for (const id of ['v-login', 'v-home', 'v-list', 'v-edit', 'v-att', 'v-don', 'v-camp', 'v-inq', 'v-ev']) $(id).classList.toggle('hidden', id !== v);
     $('sec-tabs').classList.toggle('hidden', v === 'v-login');
     const tab = v === 'v-edit' ? 'v-list' : v;
     document.querySelectorAll('[data-tab]').forEach((b) => b.setAttribute('aria-current', String(b.getAttribute('data-tab') === tab)));
     window.scrollTo(0, 0);
   }
-  window.RCMSec = { call: (a, p) => call(a, p), show: (v) => show(v), esc, openList: () => openList(), code: () => code };
+  window.RCMSec = { call: (a, p) => call(a, p), show: (v) => show(v), esc, openList: () => openList(), openMeeting: (id) => openMeeting(id), newMeeting: async () => { await openList(); $('new-meeting').click(); }, home: () => openHome(), code: () => code };
+  function openHome() { show('v-home'); document.dispatchEvent(new Event('rcmsec:home')); }
 
   async function call(action, payload) {
     const r = await fetch(FN, { method: 'POST', headers: { 'content-type': 'application/json', 'x-editor-code': code, apikey: PUB }, body: JSON.stringify(Object.assign({ action }, payload || {})) });
@@ -46,7 +47,7 @@
     e.preventDefault();
     code = $('code').value.trim();
     $('login-err').classList.add('hidden');
-    try { await call('login', { need: 'meetings' }); try { localStorage.setItem('rcm-sec-code', code); } catch (x) {} openList(); }
+    try { await call('login', { need: 'meetings' }); try { localStorage.setItem('rcm-sec-code', code); } catch (x) {} openHome(); }
     catch (err) { $('login-err').textContent = err.auth ? 'That passcode is not right. Check it and try again.' : err.message; $('login-err').classList.remove('hidden'); }
   });
   $('signout').onclick = () => { try { localStorage.removeItem('rcm-sec-code'); } catch (e) {} code = ''; show('v-login'); };
@@ -350,5 +351,5 @@
     document.body.appendChild(a); a.click(); a.remove();
   };
 
-  if (code) call('login', { need: 'meetings' }).then(openList).catch(() => show('v-login')); else show('v-login');
+  if (code) call('login', { need: 'meetings' }).then(openHome).catch(() => show('v-login')); else show('v-login');
 })();

@@ -84,6 +84,17 @@ Deno.serve(async (req) => {
       const { error } = await db.from("rcm_lib_tags").update({ status, names, reviewed_at: new Date().toISOString() }).eq("id", body.id); if (error) throw error;
       return json({ ok: true });
     }
+    // ---------- photo albums held back for a consent check ----------
+    if (a === "held-list") {
+      const { data, error } = await db.from("rcm_lib_galleries").select("id,slug,title,event_date,photo_count,cover_path,kept_private").eq("status", "draft").gt("photo_count", 0).order("event_date");
+      if (error) throw error;
+      return json({ items: data || [] });
+    }
+    if (a === "gallery-private") {
+      const { error } = await db.from("rcm_lib_galleries").update({ kept_private: !!body.private, updated_at: new Date().toISOString() }).eq("id", body.id).eq("status", "draft");
+      if (error) throw error;
+      return json({ ok: true });
+    }
     if (a === "minutes-list") {
       const { data, error } = await db.from("rcm_lib_minutes").select("*").order("week"); if (error) throw error;
       return json({ items: data || [] });

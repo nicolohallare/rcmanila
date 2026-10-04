@@ -228,6 +228,7 @@ ${ld ? `<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, '\
 <script>window.va=window.va||function(){(window.vaq=window.vaq||[]).push(arguments)};</script><script defer src="/_vercel/insights/script.js"></script>
 </head>
 <body class="pub">
+<a class="skip" href="#main">Skip to content</a>
 <div class="topbar"><div class="wrap"><span class="tb-l">The first Rotary club in Asia · Established 1919</span><span class="tb-r"><a href="/secretariat">Secretariat login</a><a href="/admin">Editor login</a><a href="/library-admin">Librarian login</a></span></div></div>
 <header class="site-head"><div class="wrap">
 <a class="logo lockup" href="/" aria-label="Rotary Club of Manila home"><img class="lk-club" src="/assets/club-logo.png" alt="Rotary Club of Manila" width="803" height="286"><span class="lk-rule" aria-hidden="true"></span><img class="lk-msg" src="/assets/msg-2026.png" alt="Create Lasting Impact" width="918" height="509"></a>
@@ -235,16 +236,16 @@ ${ld ? `<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, '\
 <a href="/#club">Our Club</a><a href="/projects" class="${nav === 'projects' ? 'on' : ''}">Projects</a><a href="/meeting" class="${WHATSON.includes(nav) ? 'on' : ''}">What’s On</a><a href="/balita" class="${nav === 'balita' ? 'on' : ''}">Balita</a><a href="/library" class="${nav === 'library' ? 'on' : ''}">Library</a><a href="/join" class="${INVOLVED.includes(nav) ? 'on' : ''}">Get Involved</a>
 </nav>
 <details class="menu"><summary>Menu</summary><div class="menu-panel">
-<a href="/#club">Our Club</a><a href="/past-presidents">Past presidents</a><a href="/speakers">Guest speakers</a><a href="/projects">Service projects</a><a href="/meeting">Meetings</a><a href="/events">Events</a><a href="/balita">Balita</a><a href="/library">Heritage Library</a><a href="/join">Join the Club</a><a href="/partner">Partner or volunteer</a><a href="/donate">Donate</a><a href="#contact">Contact</a>
+<a href="/#club">Our Club</a><a href="/past-presidents">Past presidents</a><a href="/speakers">Guest speakers</a><a href="/projects">Service projects</a><a href="/youth">Rotaract and Interact</a><a href="/meeting">Meetings</a><a href="/events">Events</a><a href="/balita">Balita</a><a href="/library">Heritage Library</a><a href="/join">Join the Club</a><a href="/partner">Partner or volunteer</a><a href="/donate">Donate</a><a href="#contact">Contact</a>
 </div></details>
 <a class="btn btn-gold head-cta" href="/meeting">Attend a meeting</a>
 </div></header>
-${subNav(nav)}<main>${body}</main>
+${subNav(nav)}<main id="main" tabindex="-1">${body}</main>
 ${supportersBand(ads)}
 <footer class="foot" id="contact"><div class="wrap">
 <div style="display:flex;flex-direction:column;gap:14px"><span class="foot-lockup"><img class="lk-club" src="/assets/club-logo-white.png" alt="Rotary Club of Manila" width="803" height="286"><span class="lk-rule" aria-hidden="true"></span><img class="lk-msg" src="/assets/msg-2026-white.png" alt="Create Lasting Impact" width="918" height="509"></span><span>The first Rotary club in Asia. Service above self since 1919.</span></div>
 <address style="font-style:normal"><strong>Secretariat</strong>RCM Office, 543 Arquiza St. cor. Grey St.<br>Ermita, Manila<br><a href="${TEL}">(02) 8527-1885</a><br><a href="mailto:${MAIL}">${MAIL}</a></address>
-<div><strong>Explore</strong><a href="/projects">Service projects</a><br><a href="/past-presidents">Past presidents</a><br><a href="/meeting">Weekly meeting</a> · <a href="/events">Events</a> · <a href="/speakers">Guest speakers</a><br><a href="/balita">Balita archive</a><br><a href="/library">Heritage Library</a><br><a href="/join">Join</a> · <a href="/partner">Partner</a> · <a href="/donate">Donate</a><br><a href="/app">Put the Club on your phone</a><br><a href="https://www.facebook.com/RotaryClubofManila" target="_blank" rel="noopener">Facebook</a> · <a href="https://www.linkedin.com/company/rotary-club-of-manila/" target="_blank" rel="noopener">LinkedIn</a></div>
+<div><strong>Explore</strong><a href="/projects">Service projects</a><br><a href="/youth">Rotaract, Interact and RYLA</a><br><a href="/past-presidents">Past presidents</a><br><a href="/meeting">Weekly meeting</a> · <a href="/events">Events</a> · <a href="/speakers">Guest speakers</a><br><a href="/balita">Balita archive</a><br><a href="/library">Heritage Library</a><br><a href="/join">Join</a> · <a href="/partner">Partner</a> · <a href="/donate">Donate</a><br><a href="/app">Put the Club on your phone</a><br><a href="https://www.facebook.com/RotaryClubofManila" target="_blank" rel="noopener">Facebook</a> · <a href="https://www.linkedin.com/company/rotary-club-of-manila/" target="_blank" rel="noopener">LinkedIn</a></div>
 <div><strong>Rotary family</strong>${FAMILY.map((f) => `<a href="${f.href}" target="_blank" rel="noopener">${esc(f.name)}</a>`).join('<br>')}</div>
 <div class="copy">© ${new Date().getFullYear()} Rotary Club of Manila · <a href="/privacy">Privacy</a></div>
 </div></footer>
@@ -550,6 +551,39 @@ var ev=null,b=document.getElementById('app-add');window.addEventListener('before
   return layout({ title: 'Put the Club on your phone · Rotary Club of Manila', description: 'Add rcmanila.org to your phone’s home screen: one tap to the weekly meeting, events, the Balita and the library.', url: `${origin}/app`, body, type: 'website' });
 }
 
+// New Generations: the Rotaract, Interact and RYLA work the Club sponsors, with the latest Balita stories about it.
+async function youthPage(origin) {
+  let stories = [];
+  try {
+    const arts = await q(`rcm_articles?select=id,issue_id,slug,kicker,title,dek,photos,printed_pages&included=eq.true&or=(title.ilike.*rotaract*,title.ilike.*interact*,title.ilike.*ryla*,title.ilike.*youth*)&order=id.desc&limit=60`);
+    const keep = arts.filter((a) => /\b(rotaract|interact|ryla|youth)\b/i.test(a.title) && !/grant/i.test(a.title));
+    const ids = [...new Set(keep.map((a) => a.issue_id))];
+    const iss = ids.length ? await q(`rcm_issues?select=id,issue_no,issue_date&status=eq.published&id=in.(${ids.join(',')})`) : [];
+    const by = new Map(iss.map((i) => [i.id, i]));
+    stories = keep.filter((a) => by.has(a.issue_id)).map((a) => ({ a, i: by.get(a.issue_id) })).sort((x, y) => String(y.i.issue_date).localeCompare(String(x.i.issue_date))).slice(0, 9);
+  } catch (e) { stories = []; }
+  const st = (slug) => { const x = stories.find((s) => s.a.slug === slug); return x ? `/balita/${x.i.issue_no}/${x.a.slug}` : null; };
+  const more = (href, t) => href ? `<a class="link-arrow" href="${href}">${t}</a>` : '';
+  const body = `<section class="h-join pg-hero"><img class="bg" src="${H('people-of-action')}" alt="" aria-hidden="true"><div class="wrap">
+<span class="kicker">New Generations</span><h1>Young leaders in Rotary</h1>
+<p>The Rotary Club of Manila sponsors and works alongside Rotaract and Interact clubs, and supports young people at RYLA, Rotary’s youth leadership programme.</p>
+<div class="h-cta"><a class="btn btn-gold" href="/partner">Bring Rotary to your school</a><a class="btn btn-ghost" href="#stories">Latest stories</a></div>
+</div></section>
+
+<section class="wrap section">
+<div class="section-head"><h2>Three ways young people take part</h2></div>
+<div class="pg-three">
+<div><b>Rotaract: young adults, 18 and up</b><p>The Rotaract Club of Manila, chartered with the Club as its sponsor, marked 25 years of service in July 2025 and was named Overall Most Outstanding Club in District 3810 that year. In 2025 the Club also began sponsoring a new Rotaract Club of San Beda University.</p>${more(st('rotaract-club-of-manila-marks-25-years'), '25 years of Rotaract Manila')}${more(st('rcm-sponsors-chartering-of-rotaract-club-of-san-beda-university'), 'Rotaract at San Beda')}</div>
+<div><b>Interact: students, 12 to 18</b><p>Interact clubs give high school students their first taste of service. The Club co-hosted the District 3810 Interact Assembly in September 2025 and joins the district’s yearly Interact sportsfest.</p>${more(st('rc-manila-receives-certificate-as-co-host-of-district-interact-assembly'), 'The 2025 Interact Assembly')}</div>
+<div><b>RYLA: leadership for youth</b><p>The Rotary Youth Leadership Awards is the district’s leadership programme for young people. Club members help run it and cheer on its graduates.</p>${more(st('youth-service-ryla-2026'), 'RYLA 2026')}</div>
+</div>
+<p class="muted-p" style="margin-top:22px;max-width:760px">Every Rotary club works under Rotary International’s youth protection policy, which sets how adults and young people work together safely.</p>
+</section>
+
+${stories.length ? `<section class="h-sec alt" id="stories" style="padding-block:56px"><div class="wrap"><div class="section-head"><h2>From the Balita</h2><a class="link-arrow" href="/balita?q=rotaract">More stories</a></div><div class="sgrid">${stories.map((x) => storyCard(x.i, x.a)).join('')}</div></div></section>` : ''}
+${routesStrip('More ways to take part')}`;
+  return layout({ title: 'Rotaract, Interact and RYLA · Rotary Club of Manila', description: 'How the Rotary Club of Manila supports young leaders: the Rotaract and Interact clubs it sponsors and the RYLA leadership programme.', image: origin + H('people-of-action'), url: origin + '/youth', body, nav: 'join' });
+}
 function joinPage(origin) {
   const body = `<section class="h-join pg-hero"><img class="bg" src="${H('people-of-action')}" alt="" aria-hidden="true"><div class="wrap">
 <span class="kicker">Membership</span><h1>Join the Rotary Club of Manila</h1>
@@ -594,6 +628,9 @@ function privacyPage(origin) {
 <p>The Club Secretariat uses it to confirm your sign-up, prepare meetings and events, reply to your inquiry and acknowledge donations. Names of people signed up for a meeting or event may be shown on that page only when the sign-up form says so.</p>
 <h2>Who sees it</h2>
 <p>Only the Secretariat and the Club officers who need it. We never sell or rent your information. It is stored with our hosting providers (Supabase and Vercel) and is not shared with anyone else.</p>
+<h2>Photos</h2>
+<p>We publish photos of Club meetings, projects and events so the community can see Rotary’s work. We ask people who can be clearly recognised for their permission before a close-up photo of them is published. We do not publish photos in which a child or a patient can be identified unless a parent, guardian or the person has agreed. Photo albums from the Club’s archive are checked before they go online, and albums from medical missions, homes and schools are held back until someone has looked through them.</p>
+<p>If you see a photo of yourself or your child that you would like removed, write to the Secretariat at <a href="mailto:${MAIL}">${MAIL}</a> and we will take it down.</p>
 <h2>Facebook</h2>
 <p>The Club’s Facebook Page shares new Balita issues and events from this website. The website does not receive or store any information about Facebook users.</p>
 <h2>Your choices</h2>
@@ -1480,7 +1517,7 @@ module.exports = async (req, res) => {
       let arts = [], off = 0;
       for (;;) { const page = await q(`rcm_articles?select=slug,issue_id,updated_at&included=eq.true&order=id&limit=1000&offset=${off}`); arts = arts.concat(page); if (page.length < 1000) break; off += 1000; }
       const d = (t) => (t ? String(t).slice(0, 10) : '');
-      const urls = [['/', ''], ['/projects', ''], ...PROJECTS.map((p) => [`/projects/${p.slug}`, '']), ['/meeting', ''], ['/balita', ''], ['/join', ''], ['/partner', ''], ['/donate', ''], ['/past-presidents', ''], ['/events', ''], ['/speakers', ''], ['/library', ''], ['/library/balita', ''], ['/library/photos', ''], ['/library/trophies', ''], ['/library/collection', ''], ['/library/timeline', ''], ['/library/exhibit', ''], ['/library/name', ''], ['/library/ask', ''], ['/app', '']]
+      const urls = [['/', ''], ['/projects', ''], ...PROJECTS.map((p) => [`/projects/${p.slug}`, '']), ['/meeting', ''], ['/balita', ''], ['/join', ''], ['/youth', ''], ['/partner', ''], ['/donate', ''], ['/past-presidents', ''], ['/events', ''], ['/speakers', ''], ['/library', ''], ['/library/balita', ''], ['/library/photos', ''], ['/library/trophies', ''], ['/library/collection', ''], ['/library/timeline', ''], ['/library/exhibit', ''], ['/library/name', ''], ['/library/ask', ''], ['/app', '']]
         .concat((await q('rcm_events?select=slug,updated_at&status=eq.published').catch(() => [])).map((e) => [`/events/${e.slug}`, d(e.updated_at)]))
         .concat(issues.map((i) => [`/balita/${i.issue_no}`, d(i.updated_at)]))
         .concat(arts.filter((a) => byId.has(a.issue_id)).map((a) => [`/balita/${byId.get(a.issue_id).issue_no}/${a.slug}`, d(a.updated_at)]));
@@ -1522,6 +1559,7 @@ module.exports = async (req, res) => {
     else if (r === 'projects') html = projectsIndex(origin);
     else if (r === 'project') { html = await projectPage(origin, u.searchParams.get('slug')); if (!html) { res.statusCode = 301; res.setHeader('Location', '/projects'); return res.end(); } }
     else if (r === 'join') html = joinPage(origin);
+    else if (r === 'youth') html = await youthPage(origin);
     else if (r === 'privacy') html = privacyPage(origin);
     else if (r === 'app') html = appPage(origin);
     else if (r === 'presidents') html = presidentsPage(origin);

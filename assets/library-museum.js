@@ -27,7 +27,7 @@
     const L = EV.filter((e) => (st === 'all' || e.status === st) && (!dec || (e.year >= dec && e.year < dec + 10)));
     $('tl-list').innerHTML = L.length ? L.map((e) => `<li class="mu-card" data-id="${e.id}">
 <div class="mu-row"><input class="mu-y" data-f="year" type="number" value="${e.year}" aria-label="Year"><select data-f="month" aria-label="Month">${MON.map((m, k) => `<option value="${k || ''}"${(e.month || 0) === k ? ' selected' : ''}>${k ? m : '—'}</option>`).join('')}</select><span class="st ${e.status === 'published' ? 'done' : e.status === 'hidden' ? 'fail' : 'wait'}">${e.status === 'published' ? 'On the website' : e.status === 'hidden' ? 'Hidden' : 'Draft'}</span></div>
-<input data-f="headline" value="${esc(e.headline)}" aria-label="Headline" class="mu-h">
+${e.check_note && e.status === 'draft' ? `<p class="note small" style="margin:0"><b>Check:</b> ${esc(e.check_note)}</p>` : ''}<input data-f="headline" value="${esc(e.headline)}" aria-label="Headline" class="mu-h">
 <textarea data-f="body" rows="2" aria-label="Text">${esc(e.body || '')}</textarea>
 <div class="mu-row small">${(e.links || []).map((l) => `<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label || l.url)} ↗</a>`).join(' · ')}${e.source ? `<span class="muted">· Source: ${esc(e.source)}</span>` : ''}</div>
 <div class="mu-row"><button class="btn btn-blue mu-b" data-do="published" type="button">${e.status === 'published' ? 'Save' : 'Publish'}</button>${e.status !== 'draft' ? '<button class="smallbtn" data-do="draft" type="button">Back to draft</button>' : ''}${e.status !== 'hidden' ? '<button class="smallbtn" data-do="hidden" type="button">Hide</button>' : ''}<span class="muted mu-m"></span></div></li>`).join('') : '<li class="muted">Nothing here.</li>';
@@ -48,7 +48,8 @@
     const st = $('tl-show').value, dec = Number($('tl-dec').value) || 0;
     const ids = EV.filter((e) => e.status === 'draft' && (st === 'all' || st === 'draft') && (!dec || (e.year >= dec && e.year < dec + 10))).map((e) => e.id);
     if (!ids.length) return msg('tl-msg', 'No drafts in this view.');
-    if (!confirm(`Publish ${ids.length} draft entries to the website?`)) return;
+    const fl = EV.filter((e) => ids.includes(e.id) && e.check_note).length;
+    if (!confirm(`Publish ${ids.length} draft entries to the website?` + (fl ? `\n\n${fl} of them are marked “Check” and have not been checked yet.` : ''))) return;
     try { await call('events-status', { ids, status: 'published' }); EV.forEach((e) => { if (ids.includes(e.id)) e.status = 'published'; }); drawTl(); msg('tl-msg', `${ids.length} published ✓`); } catch (e) { msg('tl-msg', e.message, true); }
   }
 
@@ -121,10 +122,10 @@ ${t.status === 'new' ? `<div class="mu-row"><button class="btn btn-blue" data-do
   }
 
   // ---------- wiring ----------
-  document.addEventListener('rcmlib:tab', (e) => { const t = e.detail; if (t === 'tl') tl(); if (t === 'ex') ex(); if (t === 'tags') tags(); if (t === 'min') min(); });
+  document.addEventListener('rcmlib:tab', (e) => { const t = e.detail; if (t === 'home') { /* drawn by library-dash.js */ } if (t === 'tl') tl(); if (t === 'ex') ex(); if (t === 'tags') tags(); if (t === 'min') min(); });
   document.addEventListener('DOMContentLoaded', () => {
     $('tl-list').addEventListener('click', onTl); $('ex-list').addEventListener('click', onEx); $('tags-list').addEventListener('click', onTags); $('min-list').addEventListener('click', onMin);
     $('tl-show').onchange = drawTl; $('tl-dec').onchange = drawTl; $('tl-pub').onclick = publishShown;
-    $('tags-show').onchange = tags; $('obj-qr').onclick = qrLabels;
+    $('tags-show').onchange = tags; $('obj-qr').onclick = qrLabels; if ($('dh-qr')) $('dh-qr').onclick = qrLabels;
   });
 })();

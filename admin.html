@@ -157,9 +157,10 @@ input:focus,select:focus,textarea:focus{outline:2px solid #9cc0ef;outline-offset
 @media (max-width:640px){.ed-nav a{font-size:13px}.brand-t{font-size:14px;padding-left:10px}.card,.panel{padding:16px;border-radius:12px}
  .alist li{flex-wrap:wrap}.alist li>div{flex:1 1 calc(100% - 70px)!important}.alist li .tag{margin-left:64px}
  .drop{padding:30px 18px}.sec-h{flex-wrap:wrap}}
+details.arch-tools>summary{list-style:none;cursor:pointer}details.arch-tools>summary::-webkit-details-marker{display:none}details.arch-tools>summary h2::after{content:" ▸";color:#8aa0bd;font-size:18px}details.arch-tools[open]>summary h2::after{content:" ▾"}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 </style>
-<link rel="stylesheet" href="/assets/workspace.css?v=1">
+<link rel="stylesheet" href="/assets/workspace.css?v=1005a">
 </head>
 <body>
 <header class="ed-head"><div class="wrap">
@@ -186,6 +187,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid #9cc0ef;outline-offset
 
 <div class="home-grid">
 <div class="col">
+<section class="card"><h2 style="font-family:var(--serif);font-size:21px;margin:0;color:#0f2f66">This week</h2><div id="ed-todo"><p class="skeleton">Checking…</p></div></section>
 <label class="drop" id="drop" for="file">
 <span class="drop-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0-5 5m5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg></span>
 <span class="kick light">This week's issue</span>
@@ -202,6 +204,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid #9cc0ef;outline-offset
 </div>
 
 <aside class="col">
+<section class="card"><h2 style="font-family:var(--serif);font-size:21px;margin:0;color:#0f2f66">At a glance</h2><div id="ed-kpis"><p class="skeleton">Loading…</p></div><p class="muted small" id="ed-fb" style="margin:0"></p></section>
 <div class="card">
 <div class="card-h"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="m20 20-4.2-4.2"/></svg></span><div><h2>Fix a past issue</h2><p class="muted">Search by number, date (2025-04-24), guest or a word from the story.</p></div></div>
 <form id="find-form" class="findbar" role="search"><label style="flex:1"><span class="sr-only">Find an issue</span><input id="find-q" type="search" placeholder="4048, 2025-04-24, Banaguas…" autocomplete="off"></label><button class="btn btn-blue" type="submit">Find</button></form>
@@ -232,9 +235,9 @@ input:focus,select:focus,textarea:focus{outline:2px solid #9cc0ef;outline-offset
 </aside>
 </div>
 
-<div class="sec-h"><h2>Past issues</h2><span class="muted">Tools for the Balita archive</span></div>
+<details class="arch-tools" id="arch-tools"><summary class="sec-h"><h2>Archive tools</h2><span class="muted">Back issues are finished. Open only to fix or add old issues.</span></summary>
 
-<details class="card tool" id="split-panel" open>
+<details class="card tool" id="split-panel">
 <summary class="card-h"><span class="ic gold"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 20 11-11M14 4v3M19 9h-3M17.5 5.5l-2 2M18 14v2M20 15h-4"/></svg></span><div><h2>Improve old issues</h2><p class="muted">Back issues that still need photos, articles or page images. Each is saved and stays online throughout.</p></div></summary>
 <div class="stack" style="margin-top:14px">
 <label class="row check"><input type="checkbox" id="split-ai"> Also write the articles with the website's AI now (about US$0.50–1 of API credit per issue). Leave unticked if the articles are being written in the Claude chat.</label>
@@ -266,6 +269,8 @@ input:focus,select:focus,textarea:focus{outline:2px solid #9cc0ef;outline-offset
 </div>
 </details>
 </div>
+</details>
+
 <script>(function(){var h=+new Date().toLocaleString('en-GB',{hour:'numeric',hour12:false,timeZone:'Asia/Manila'});document.getElementById('hello-h').textContent=h<12?'Good morning':h<18?'Good afternoon':'Good evening';document.getElementById('hello-d').textContent=new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric',timeZone:'Asia/Manila'});})();</script>
 </section>
 
@@ -332,7 +337,9 @@ input:focus,select:focus,textarea:focus{outline:2px solid #9cc0ef;outline-offset
 </section>
 </main>
 <script src="/assets/extract.js?v=1001c"></script>
-<script src="/assets/admin.js?v=1001k"></script>
-<script src="/assets/admin-cover.js"></script>
+<script src="/assets/admin.js?v=1005a"></script>
+<script src="/assets/admin-cover.js?v=1005a"></script>
+<script src="/assets/dash.js?v=1005a"></script>
+<script src="/assets/editor-dash.js?v=1005a"></script>
 </body>
 </html>
