@@ -326,7 +326,18 @@ const ORG_LD = (origin) => ({
 const PROJECTS = require('./projects.js');
 const PRES = require('./presidents.js');
 const pSrc = (src, w) => (src && src[0] === '/' ? src : img(src, w));
-const LIB = require('./library-view.js')({ layout: (o) => layout(o), esc, q, fmtDate, PRES, searchBalita });
+const LIB = require('./library-view.js')({ layout: (o) => layout(o), esc, q, fmtDate, PRES, searchBalita, img });
+// "From the archive": old Balita pages about the same subject, shown on stories and project pages.
+const ARCHIVE_TOPICS = [[/alay lakad/i, 'Alay Lakad'], [/polio/i, 'polio'], [/hospicio/i, 'Hospicio de San Jose'], [/tower award/i, 'TOWER awards'], [/pasig river/i, 'Pasig River'], [/medical mission/i, 'medical mission'], [/typhoon|flood/i, 'typhoon relief'], [/scholar/i, 'scholarship'], [/chorale/i, 'chorale'], [/blood/i, 'blood donation'], [/paul harris/i, 'Paul Harris'], [/malnutrition|feeding program/i, 'feeding program'], [/christmas/i, 'Christmas party'], [/induction|turnover/i, 'induction'], [/anniversary/i, 'anniversary']];
+const archiveTopic = (text) => { for (const [re, t] of ARCHIVE_TOPICS) if (re.test(text || '')) return t; return null; };
+async function archiveBox(topic, intro) {
+  if (!topic) return '';
+  const rows = await q(`rpc/rcm_lib_related?q=${encodeURIComponent(topic)}&lim=3&before_year=2012`).catch(() => []);
+  if (!rows.length) return '';
+  return `<aside class="from-arch"><div class="fa-head"><span class="kicker">From the archive</span><h2>${esc(intro || 'The Club has done this before')}</h2></div>
+<div class="fa-row">${rows.map((r) => `<a href="/library/balita/${esc(r.vol)}/${r.issue_no}#p${r.rel}"><span class="im"><img src="${esc(LIB.anySrc(r.image_path, 500))}" alt="" loading="lazy"></span><span class="t"><b>${r.year}</b><small>Balita No. ${r.issue_no}</small><span>${esc(String(r.snippet || '').replace(/[«»]/g, '').replace(/\s+/g, ' ').slice(0, 140))}…</span></span></a>`).join('')}</div>
+<a class="link-arrow" href="/library/search?q=${encodeURIComponent(topic)}">More in the Heritage Library</a></aside>`;
+}
 const INQ = `${SB}/functions/v1/rcm-inquiry`;
 
 // The five things a visitor can do, shown near the top of the homepage and at the end of key pages.
@@ -346,7 +357,7 @@ function projectCard(p, lazy = true) {
   return `<a class="pj-card" href="/projects/${p.slug}"><span class="im"><img src="${esc(pSrc(p.hero.src, 720))}" alt="" ${lazy ? 'loading="lazy"' : ''}></span><span class="kicker">${esc(p.kicker.split(' · ')[0])}</span><strong>${esc(p.title)}</strong><span class="pj-card-dek">${esc(p.dek)}</span><span class="link-arrow">Read the story</span></a>`;
 }
 
-function projectPage(origin, slug) {
+async function projectPage(origin, slug) {
   const p = PROJECTS.find((x) => x.slug === slug);
   if (!p) return null;
   const others = PROJECTS.filter((x) => x !== p).slice(0, 3);
@@ -368,6 +379,7 @@ ${shareBar(url, p.title, true)}</aside>
 <section><h2>Partners</h2><ul class="pj-partners">${p.partners.map((t) => `<li>${esc(t)}</li>`).join('')}</ul></section>
 <section><h2>What happens next</h2><p>${esc(p.next)}</p></section>
 ${p.gallery.length ? `<section class="pj-gallery">${p.gallery.map((g) => `<figure><img src="${esc(pSrc(g.src, 1400))}" alt="${esc(g.caption)}" loading="lazy">${g.caption ? `<figcaption>${esc(g.caption)}</figcaption>` : ''}</figure>`).join('')}</section>` : ''}
+${await archiveBox(p.archive, 'The Club’s earlier work on this').catch(() => '')}
 <section class="pj-sources"><h2>Sources</h2><ul>${p.sources.map(([href, t]) => `<li>${href ? `<a href="${href}">${esc(t)}</a>` : esc(t)}</li>`).join('')}</ul></section>
 </div></div>
 <section class="pj-more"><div class="wrap"><div class="section-head"><h2>More service projects</h2><a class="link-arrow" href="/projects">All projects</a></div>
@@ -424,7 +436,7 @@ function presidentsPage(origin) {
     const src = [x.profile ? 'Presidential profiles, Rotary Club of Manila (2026)' : x.book || !x.summary ? '“The Work That Endures”, the Club’s 107th anniversary history (2026)' : '', ...x.balita.map(([u, t]) => `<a href="${esc(u)}">Balita: ${esc(t)}</a>`)].filter(Boolean);
     return `<template id="pt-${i}"><img src="${x.img}" alt="Portrait of ${esc(x.name)}" width="320" height="320"><div><span class="kicker">${x === current ? 'President, ' : ''}${esc(x.years)}</span><h2>${esc(x.name)}</h2>
 ${x.summary ? `<p>${esc(x.summary)}</p>` : `<p class="muted-p">The Club’s centennial history lists ${esc(x.name)} as president for ${esc(x.years)} but does not describe his term in detail.</p>`}
-<p class="pres-src">Source: ${src.join(' · ')}</p></div></template>`;
+<p class="pres-src">Source: ${src.join(' · ')}</p><p><a class="link-arrow" href="/library/name?q=${encodeURIComponent(x.name)}">See him in the archive</a></p></div></template>`;
   };
   const body = `<section class="wrap pj-index-head"><span class="kicker">107 years of leadership</span><h1>Presidents of the Rotary Club of Manila</h1>
 <p class="lead-p">${list.length} terms since Leon J. Lambert called the first meeting of Asia’s first Rotary club in 1919. Select a portrait to read about that president’s year.</p>
@@ -709,6 +721,7 @@ async function home(origin) {
   const mt = await nextMeeting().catch(() => null);
   const cover = await currentCover().catch(() => null);
   const hist = await q('rpc/rcm_history_week').catch(() => []);
+  const exNow = LIB.currentExhibit(await LIB.exhibits().catch(() => []));
   const mtCount = mt ? await signupCount(mt.id) : 0;
   const nextThu = (() => { const d = new Date(Date.now() + 8 * 3600 * 1000); const add = (4 - d.getUTCDay() + 7) % 7; d.setUTCDate(d.getUTCDate() + add); return d.toISOString().slice(0, 10); })();
   const dBlock = (iso) => { const d = new Date(iso + 'T12:00:00+08:00'); const o = { timeZone: 'Asia/Manila' };
@@ -819,6 +832,7 @@ ${routesStrip()}
 <section class="h-heritage" id="history"><div class="wrap">
 <div class="h-head"><div><span class="kicker">107 years</span><h2>A century of service</h2><p>Through war, reconstruction and renewal, the Club has kept meeting and kept serving.</p></div></div>
 ${historyWeek(hist)}
+${exNow ? `<a class="h-exhibit" href="/library/exhibit/${esc(exNow.slug)}">${exNow.cover ? `<span class="im"><img src="${esc(LIB.anySrc(exNow.cover, 900))}" alt="" loading="lazy"></span>` : ''}<span class="t"><span class="kicker">From the Heritage Library · This month’s exhibit</span><strong>${esc(exNow.title)}</strong><span>${esc((exNow.intro || '').slice(0, 170))}${(exNow.intro || '').length > 170 ? '…' : ''}</span><em>Visit the exhibit →</em></span></a>` : ''}
 <div class="h-years">${YEARS.map((y) => `<figure class="h-year" style="margin:0"><img src="${H(y.img)}" alt="" loading="lazy"><b>${y.year}</b><p>${esc(y.text)}</p></figure>`).join('')}</div>
 <div class="h-pres"><div class="h-pres-head"><h3>${PRES.presidents.length} presidential terms since 1919</h3><a class="link-arrow" href="/past-presidents">See every president and his term</a></div>
 <div class="h-pres-row">${PRES.presidents.slice(-8).reverse().map((x) => `<a href="/past-presidents#${presId(x)}"><img src="${x.img}" alt="" width="400" height="600" loading="lazy"><b>${esc(x.name)}</b><span>${esc(x.years)}</span></a>`).join('')}</div></div>
@@ -1001,7 +1015,9 @@ async function articlePage(origin, no, slug) {
   const arts = await articlesOf(issue.id);
   const a = arts.find((x) => x.slug === slug);
   if (!a) return null;
-  return renderArticle(origin, issue, a, arts);
+  const html = renderArticle(origin, issue, a, arts);
+  const box = await archiveBox(archiveTopic(`${a.title} ${a.kicker || ''}`), 'Earlier years in the Balita').catch(() => '');
+  return box ? html.replace('</article>', box + '</article>') : html;
 }
 
 // One renderer for the live article page and the editor's preview, so the preview is exactly what goes live.
@@ -1464,7 +1480,7 @@ module.exports = async (req, res) => {
       let arts = [], off = 0;
       for (;;) { const page = await q(`rcm_articles?select=slug,issue_id,updated_at&included=eq.true&order=id&limit=1000&offset=${off}`); arts = arts.concat(page); if (page.length < 1000) break; off += 1000; }
       const d = (t) => (t ? String(t).slice(0, 10) : '');
-      const urls = [['/', ''], ['/projects', ''], ...PROJECTS.map((p) => [`/projects/${p.slug}`, '']), ['/meeting', ''], ['/balita', ''], ['/join', ''], ['/partner', ''], ['/donate', ''], ['/past-presidents', ''], ['/events', ''], ['/speakers', ''], ['/library', ''], ['/library/balita', ''], ['/library/photos', ''], ['/library/trophies', ''], ['/library/collection', ''], ['/app', '']]
+      const urls = [['/', ''], ['/projects', ''], ...PROJECTS.map((p) => [`/projects/${p.slug}`, '']), ['/meeting', ''], ['/balita', ''], ['/join', ''], ['/partner', ''], ['/donate', ''], ['/past-presidents', ''], ['/events', ''], ['/speakers', ''], ['/library', ''], ['/library/balita', ''], ['/library/photos', ''], ['/library/trophies', ''], ['/library/collection', ''], ['/library/timeline', ''], ['/library/exhibit', ''], ['/library/name', ''], ['/library/ask', ''], ['/app', '']]
         .concat((await q('rcm_events?select=slug,updated_at&status=eq.published').catch(() => [])).map((e) => [`/events/${e.slug}`, d(e.updated_at)]))
         .concat(issues.map((i) => [`/balita/${i.issue_no}`, d(i.updated_at)]))
         .concat(arts.filter((a) => byId.has(a.issue_id)).map((a) => [`/balita/${byId.get(a.issue_id).issue_no}/${a.slug}`, d(a.updated_at)]));
@@ -1504,7 +1520,7 @@ module.exports = async (req, res) => {
     else if (r === 'meeting') html = await meetingPage(origin, u.searchParams.get('date'));
     else if (r === 'donate') html = await donatePage(origin, u.searchParams.get('for'));
     else if (r === 'projects') html = projectsIndex(origin);
-    else if (r === 'project') { html = projectPage(origin, u.searchParams.get('slug')); if (!html) { res.statusCode = 301; res.setHeader('Location', '/projects'); return res.end(); } }
+    else if (r === 'project') { html = await projectPage(origin, u.searchParams.get('slug')); if (!html) { res.statusCode = 301; res.setHeader('Location', '/projects'); return res.end(); } }
     else if (r === 'join') html = joinPage(origin);
     else if (r === 'privacy') html = privacyPage(origin);
     else if (r === 'app') html = appPage(origin);

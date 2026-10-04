@@ -5,6 +5,7 @@
 module.exports = [
   {
     slug: 'typhoon-relief-2025',
+    archive: 'typhoon relief',
     card: 'Typhoon and flood relief',
     title: 'Relief for families hit by typhoons and floods',
     kicker: 'Disaster response · OPLAN CARE',
@@ -54,6 +55,7 @@ module.exports = [
   },
   {
     slug: 'pgh-neonatal-care',
+    archive: 'Philippine General Hospital',
     card: 'Newborn care at PGH',
     title: 'Life-saving equipment for newborns at PGH',
     kicker: 'Maternal and child health · Rotary Global Grant',
@@ -98,6 +100,7 @@ module.exports = [
   },
   {
     slug: 'bayanan-elementary-school',
+    archive: 'elementary school',
     card: 'Bayanan Elementary School',
     title: 'A safer school for the children of Bayanan',
     kicker: 'Basic education and literacy',
@@ -136,6 +139,7 @@ module.exports = [
   },
   {
     slug: 'project-river',
+    archive: 'Pasig River',
     card: 'Project R.I.V.E.R.',
     title: 'Project R.I.V.E.R. at Hospicio de San Jose',
     kicker: 'Water, sanitation and hygiene',
@@ -169,6 +173,7 @@ module.exports = [
   },
   {
     slug: 'aral-scholarships',
+    archive: 'scholarship',
     card: 'A.R.A.L. scholarships',
     title: 'A.R.A.L.: study now, pay later',
     kicker: 'Basic education and livelihood',

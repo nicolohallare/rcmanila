@@ -7,7 +7,9 @@ const ARCH = 'https://archive.rcmanila.org';
 const LAUNCHED = true; // linked from the menu and open to search engines (set false to hide it again)
 
 module.exports = function libraryModule(ctx) {
-  const { layout, esc, q, fmtDate, PRES, searchBalita } = ctx;
+  const { layout, esc, q, fmtDate, PRES, searchBalita, img } = ctx;
+  // Pictures from the archive (archive.rcmanila.org) or from the website's own storage (Balita photos).
+  const anySrc = (p, w = 900) => (!p ? '' : /^(issues|legacy|covers|events|projects)\//.test(p) ? img(p, w) : aSrc(p));
   const aSrc = (p) => (!p ? '' : /^https?:|^\//.test(p) ? p : `${ARCH}/${p.split('/').map(encodeURIComponent).join('/')}`);
   const safe = async (fn, dflt) => { try { return await fn(); } catch (e) { return dflt; } };
   const yearsAgo = (y) => new Date().getFullYear() - y;
@@ -25,7 +27,7 @@ module.exports = function libraryModule(ctx) {
     return html;
   }
   const libNav = (on) => `<nav class="lib-nav" aria-label="Heritage Library"><div class="wrap">
-<a href="/library" class="${on === 'home' ? 'on' : ''}">Library</a><a href="/library/era/1919" class="${on === 'eras' ? 'on' : ''}">A century, decade by decade</a><a href="/library/balita" class="${on === 'balita' ? 'on' : ''}">Reading room</a><a href="/library/photos" class="${on === 'photos' ? 'on' : ''}">Photographs</a><a href="/library/trophies" class="${on === 'trophies' ? 'on' : ''}">Trophy room</a><a href="/library/collection" class="${on === 'collection' ? 'on' : ''}">The collection</a>
+<a href="/library" class="${on === 'home' ? 'on' : ''}">Library</a><a href="/library/exhibit" class="${on === 'exhibit' ? 'on' : ''}">This month’s exhibit</a><a href="/library/timeline" class="${on === 'timeline' ? 'on' : ''}">Timeline</a><a href="/library/era/1919" class="${on === 'eras' ? 'on' : ''}">Decades</a><a href="/library/balita" class="${on === 'balita' ? 'on' : ''}">Reading room</a><a href="/library/photos" class="${on === 'photos' ? 'on' : ''}">Photographs</a><a href="/library/trophies" class="${on === 'trophies' ? 'on' : ''}">Trophy room</a><a href="/library/name" class="${on === 'name' ? 'on' : ''}">Find a name</a><a href="/library/ask" class="${on === 'ask' ? 'on' : ''}">Ask the archive</a><a href="/library/collection" class="${on === 'collection' ? 'on' : ''}">Catalogue</a>
 <form action="/library/search" method="get" role="search" class="lib-nav-s"><input name="q" type="search" placeholder="Search 100 years" aria-label="Search the library"></form>
 </div></nav>`;
 
@@ -65,7 +67,9 @@ module.exports = function libraryModule(ctx) {
     return 'other';
   };
   const objects = (limit = 2000) => safe(() => q(`rcm_lib_objects?select=acc,title,giver,kind,year,image_path,width,height,note,polished,recipient,inscription,featured,original_path,source_group&status=eq.published&order=year.desc.nullslast&limit=${limit}`), []).then((r) => r.map(tidyO));
-  const timeline = () => safe(() => q('rcm_lib_timeline?select=*&order=year'), []);
+  const timeline = () => safe(() => q('rcm_lib_events?select=id,year,month,headline,body,links,image_path&status=eq.published&order=year,month.nullsfirst,id'), []);
+  const exhibits = () => safe(() => q('rcm_lib_exhibits?select=*&status=eq.published&order=month.desc'), []);
+  const currentExhibit = (list) => { const m = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 7) + '-01'; return list.find((x) => x.month <= m) || list[list.length - 1] || null; };
   async function thisWeek(vols) {
     if (!vols.length) return null;
     const ids = vols.map((v) => v.id).join(',');
@@ -81,7 +85,8 @@ module.exports = function libraryModule(ctx) {
 
   // ---------- landing ----------
   async function landing(origin) {
-    const [vols, gals, objs] = await Promise.all([volumes(), galleries(), objects(12)]);
+    const [vols, gals, objs, exs, tlc] = await Promise.all([volumes(), galleries(), objects(12), exhibits(), safe(() => q('rcm_lib_events?select=id&status=eq.published&limit=1'), [])]);
+    const ex = currentExhibit(exs);
     const pages = vols.reduce((s, v) => s + (v.page_count || 0), 0);
     const photos = gals.reduce((s, g) => s + (g.photo_count || 0), 0);
     const wk = await thisWeek(vols);
@@ -96,6 +101,11 @@ module.exports = function libraryModule(ctx) {
 <form action="/library/search" method="get" role="search" class="lib-search"><input name="q" type="search" placeholder="Search a name, a project, a year: “Quirino”, “Pinatubo”, “polio”" aria-label="Search the Heritage Library"><button class="btn btn-gold" type="submit">Search</button></form>
 <div class="lib-stats">${stats.map(([n, l]) => `<div><b>${n}</b><span>${l}</span></div>`).join('')}</div>
 <p class="lib-growing">The library is growing: volumes, issues and albums are being added from the Club’s archive every week.</p>
+</div></section>
+<section class="lib-museum"><div class="wrap lib-museum-in">
+${ex ? `<a class="lib-mcard ex" href="/library/exhibit/${esc(ex.slug)}">${ex.cover ? `<span class="im"><img src="${esc(anySrc(ex.cover, 900))}" alt="" loading="lazy"></span>` : ''}<span class="tx"><span class="lib-eyebrow dark">This month’s exhibit</span><strong>${esc(ex.title)}</strong><span>${esc((ex.intro || '').slice(0, 150))}${(ex.intro || '').length > 150 ? '…' : ''}</span><em>Visit the exhibit →</em></span></a>` : ''}
+<div class="lib-mcard"><span class="lib-eyebrow dark">Find a name</span><strong>Is your family in the Balita?</strong><span>Search a name and see every page it was printed on since 1948, year by year.</span><form action="/library/name" method="get" class="lib-mform"><input name="q" type="search" placeholder="A name" aria-label="A name"><button class="btn btn-navy" type="submit">Find</button></form></div>
+<div class="lib-mcard"><span class="lib-eyebrow dark">Ask the archive</span><strong>Ask a question about the Club’s history</strong><span>Answered from the Balita, with links to the pages.</span><form action="/library/ask" method="get" class="lib-mform"><input name="q" type="search" placeholder="e.g. How has the Club helped fight polio?" aria-label="Your question"><button class="btn btn-navy" type="submit">Ask</button></form>${tlc.length ? '<a class="link-arrow" href="/library/timeline" style="margin-top:6px">Or walk through the timeline</a>' : ''}</div>
 </div></section>
 ${wk ? `<section class="lib-week"><div class="wrap lib-week-in">
 <a class="lib-week-cover" href="/library/balita/${volSlug(wk.vol)}/${wk.issue_no}"><img src="${esc(aSrc(wk.cover))}" alt="Cover of Balita No. ${wk.issue_no}" loading="lazy"></a>
@@ -151,7 +161,7 @@ ${objs.length ? `<section class="lib-sec lib-dark"><div class="wrap">
       return `<li class="lib-yr" id="${presId(p)}"><div class="lib-yr-y">${esc(p.years)}</div><div class="lib-yr-b">
 <a class="lib-yr-p" href="/past-presidents#${presId(p)}"><img src="${p.img}" alt="" width="72" height="72" loading="lazy"><span><small>President</small><strong>${esc(p.name)}</strong></span></a>
 ${p.summary ? `<p>${esc(p.summary)}</p>` : ''}
-${t.map((x) => `<div class="lib-yr-note"><strong>${esc(x.headline || '')}</strong>${x.body ? ` ${esc(x.body)}` : ''}</div>`).join('')}
+${t.map((x) => `<div class="lib-yr-note"><strong>${esc(x.headline || '')}</strong>${x.body ? ` ${esc(x.body)}` : ''}${(x.links || [])[0] ? ` <a href="${esc(x.links[0].url)}">${esc(x.links[0].label || 'Read more')}</a>` : ''}</div>`).join('')}
 ${vs.length || gs.length || its.length || ob.length || (p.balita || []).length ? `<div class="lib-yr-links">${(p.balita || []).map(([u, t]) => `<a href="${esc(u)}">📰 ${esc(t)}</a>`).join('')}${vs.map((v) => `<a href="/library/balita/${volSlug(v)}">📖 Balita ${esc(v.years || '')}, Nos. ${v.issue_from}–${v.issue_to}</a>`).join('')}${gs.map((g) => `<a href="/library/photos/${esc(g.slug)}">📷 ${esc(g.title)}</a>`).join('')}${ob.length ? `<a href="/library/trophies#y=${ys}">🏆 ${ob.length} plaque${ob.length > 1 ? 's' : ''} and trophies</a>` : ''}${its.map((c) => `<a href="/library/collection#q=${encodeURIComponent(c.a)}">📚 ${esc(c.d.split(' — ').slice(1, 2).join('') || c.d).slice(0, 90)}</a>`).join('')}</div>` : ''}
 </div></li>`;
     }).join('');
@@ -197,12 +207,14 @@ ${vs.length || gs.length || its.length || ob.length || (p.balita || []).length ?
     const all = await safe(() => q(`rcm_lib_issues?select=issue_no,issue_date,label,start_page,end_page,cover_page,is_read,blurb,note&volume_id=eq.${v.id}&order=issue_no`), []);
     const k = all.findIndex((x) => x.issue_no === Number(no)); if (k < 0) return null;
     const i = all[k], prev = all[k - 1], next = all[k + 1];
-    const [pg, arts] = await Promise.all([
+    const [pg, arts, named] = await Promise.all([
       safe(() => q(`rcm_lib_pages?select=n,image_path,width,height,text,flags&volume_id=eq.${v.id}&n=gte.${i.start_page}&n=lte.${i.end_page}&order=n`), []),
+      safe(() => q(`rpc/rcm_lib_page_names?v=${encodeURIComponent(volSlug(v))}`), []),
       safe(() => q(`rcm_lib_articles?select=id,title,kind,pages,body,summary,people&volume_id=eq.${v.id}&issue_no=eq.${i.issue_no}&order=sort`), []),
     ]);
     const byN = new Map(pg.map((p) => [p.n, p]));
-    const pages = []; for (let n = i.start_page; n <= i.end_page; n++) { const p = byN.get(n); pages.push(p ? { n, src: aSrc(p.image_path), w: p.width, h: p.height, t: (p.text || '').slice(0, 6000), f: !!(p.flags && p.flags.length) } : { n, held: true }); }
+    const nm = new Map((named || []).map((x) => [x.n, x.names]));
+    const pages = []; for (let n = i.start_page; n <= i.end_page; n++) { const p = byN.get(n); pages.push(p ? { n, src: aSrc(p.image_path), w: p.width, h: p.height, t: (p.text || '').slice(0, 6000), f: !!(p.flags && p.flags.length), nm: nm.get(n) || '' } : { n, held: true }); }
     const rel = (n) => n - i.start_page + 1;
     const title = `Balita No. ${i.issue_no}${i.issue_date ? ', ' + fmtDate(i.issue_date) : ''}`;
     const artHtml = arts.map((a) => `<details class="lib-art" id="a-${esc(a.id)}" data-pages="${(a.pages || []).join(',')}"><summary><span class="k">${esc(a.kind || '')}</span><strong>${esc(a.title || '')}</strong>${a.summary ? `<span class="s">${esc(a.summary)}</span>` : ''}<span class="pg">p. ${(a.pages || []).map(rel).join(', ')}</span></summary>
@@ -211,20 +223,21 @@ ${vs.length || gs.length || its.length || ob.length || (p.balita || []).length ?
 <h1>No. ${i.issue_no} <small>${esc(i.issue_date ? fmtDate(i.issue_date) : i.label || '')}</small></h1>${i.blurb ? `<p class="dek">${esc(i.blurb)}</p>` : ''}
 <nav class="lib-issue-pager">${prev ? `<a href="/library/balita/${volSlug(v)}/${prev.issue_no}">← No. ${prev.issue_no}</a>` : '<span></span>'}${next ? `<a href="/library/balita/${volSlug(v)}/${next.issue_no}">No. ${next.issue_no} →</a>` : ''}</nav></section>
 <section class="wrap lib-reader">
-<div class="lib-viewer" id="viewer"><div class="lib-vbar"><button type="button" data-go="-1" aria-label="Previous page">←</button><span id="where"></span><button type="button" data-go="1" aria-label="Next page">→</button><button type="button" id="zoom">Zoom</button></div><div class="lib-vpage" id="vpage"></div><div class="lib-vnote" id="vnote" hidden>Home addresses on this page have been removed.</div></div>
+<div class="lib-viewer" id="viewer"><div class="lib-vbar"><button type="button" data-go="-1" aria-label="Previous page">←</button><span id="where"></span><button type="button" data-go="1" aria-label="Next page">→</button><button type="button" id="zoom">Zoom</button><button type="button" id="tagp" title="Help name the people in a photo on this page">Who’s on this page?</button></div><div class="lib-vpage" id="vpage"></div><div class="lib-vnote" id="vnote" hidden>Home addresses on this page have been removed.</div><div class="lib-vnames" id="vnames" hidden></div></div>
 <div class="lib-side">${arts.length ? `<h2>${arts.length} articles</h2><p class="muted" style="margin-top:0">Read from the page scans. Open one to read it; the page viewer follows along.</p>${artHtml}` : `<h2>Page text</h2><p class="muted" style="margin-top:0">This issue has not been read into articles yet. The machine-read text of the page is below, and it is searchable.</p><pre class="lib-ocr" id="ocr"></pre>`}</div>
 </section>
 <script>(function(){var P=${JSON.stringify(pages).replace(/</g, '\\u003c')},HL=${JSON.stringify(String(hl || '').slice(0, 60)).replace(/</g, '\\u003c')},k=0,z=false;var vp=document.getElementById('vpage'),wh=document.getElementById('where'),no=document.getElementById('vnote'),oc=document.getElementById('ocr');
 function esc(s){return String(s).replace(/[&<>]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;'}[c]})}
 function mark(t){if(!HL)return esc(t);var h=HL.replace(/"/g,'').trim();if(!h)return esc(t);var re=new RegExp('('+h.replace(/[.*+?^\${}()|[\\]\\\\]/g,'\\\\$&')+')','ig');return esc(t).replace(re,'<mark>$1</mark>')}
 function show(i){if(i<0||i>=P.length)return;k=i;var p=P[k];wh.textContent='Page '+(k+1)+' of '+P.length;document.querySelector('[data-go="-1"]').disabled=k===0;document.querySelector('[data-go="1"]').disabled=k===P.length-1;
-vp.className='lib-vpage'+(z?' zoom':'');vp.innerHTML=p.held?'<div class="lib-held"><strong>Page withheld</strong><p>This page prints members’ home addresses, so the scan stays in the Club’s private archive.</p></div>':!p.src?'<div class="lib-held"><strong>No scan of this page</strong><p>Only its text survives in the archive.</p></div>':'<img src="'+p.src+'" alt="Page '+(k+1)+' of this issue"'+(p.w?' width="'+p.w+'" height="'+p.h+'"':'')+'>';no.hidden=!p.f;if(oc)oc.innerHTML=p.held?'':mark(p.t||'(No text was read from this page.)');
+vp.className='lib-vpage'+(z?' zoom':'');vp.innerHTML=p.held?'<div class="lib-held"><strong>Page withheld</strong><p>This page prints members’ home addresses, so the scan stays in the Club’s private archive.</p></div>':!p.src?'<div class="lib-held"><strong>No scan of this page</strong><p>Only its text survives in the archive.</p></div>':'<img src="'+p.src+'" alt="Page '+(k+1)+' of this issue"'+(p.w?' width="'+p.w+'" height="'+p.h+'"':'')+'>';no.hidden=!p.f;var vn=document.getElementById('vnames');vn.hidden=!p.nm;vn.textContent=p.nm?'Named by members: '+p.nm:'';if(oc)oc.innerHTML=p.held?'':mark(p.t||'(No text was read from this page.)');
 document.querySelectorAll('.lib-art').forEach(function(d){d.classList.toggle('here',(','+d.getAttribute('data-pages')+',').indexOf(','+p.n+',')>=0)});try{history.replaceState(null,'','#p'+(k+1))}catch(e){}}
 document.querySelectorAll('[data-go]').forEach(function(b){b.onclick=function(){show(k+Number(b.getAttribute('data-go')))}});
 document.getElementById('zoom').onclick=function(){z=!z;this.textContent=z?'Fit':'Zoom';show(k)};
+document.getElementById('tagp').onclick=function(){var p=P[k];if(!p||!p.src)return;window.RCMTag({kind:'page',ref:'${esc(volSlug(v))}:'+p.n,label:'Balita No. ${i.issue_no}, page '+(k+1),image:p.src})};
 document.addEventListener('keydown',function(e){if(e.target.closest('input,textarea'))return;if(e.key==='ArrowRight')show(k+1);if(e.key==='ArrowLeft')show(k-1)});
 document.querySelectorAll('.lib-art').forEach(function(d){d.addEventListener('toggle',function(){if(d.open){var f=Number((d.getAttribute('data-pages')||'').split(',')[0]);var j=P.findIndex(function(p){return p.n===f});if(j>=0)show(j)}})});
-var m=location.hash.match(/^#p(\\d+)$/),a=location.hash.match(/^#a-(.+)$/);if(a){var el=document.getElementById('a-'+a[1]);if(el){el.open=true;el.scrollIntoView()}}show(m?Number(m[1])-1:0)})();</script>`;
+var m=location.hash.match(/^#p(\\d+)$/),a=location.hash.match(/^#a-(.+)$/);if(a){var el=document.getElementById('a-'+a[1]);if(el){el.open=true;el.scrollIntoView()}}show(m?Number(m[1])-1:0)})();</script>${TAG_FORM}`;
     const cover = pages.find((p) => p.n === i.cover_page && !p.held);
     return page(`${title} · Heritage Library`, i.blurb || `The Rotary Balita, No. ${i.issue_no}, as printed.`, body, `${origin}/library/balita/${volSlug(v)}/${i.issue_no}`, cover && cover.src);
   }
@@ -289,14 +302,15 @@ ${!rows.length && !modernRows.length && !cat.length ? `<div class="lib-empty">No
     const gs = await safe(() => q(`rcm_lib_galleries?select=*&slug=eq.${encodeURIComponent(slug)}&status=eq.published&limit=1`), []);
     const g = gs[0]; if (!g) return null;
     const ph = await safe(() => q(`rcm_lib_photos?select=n,path,width,height,caption&gallery_id=eq.${g.id}&order=n&limit=1000`), []);
-    const list = ph.map((p) => ({ s: aSrc(p.path), t: aSrc(p.path.replace(/(\.[a-z]+)$/i, '-t$1')), w: p.width, h: p.height, c: p.caption || '' }));
+    const list = ph.map((p) => ({ n: p.n, s: aSrc(p.path), t: aSrc(p.path.replace(/(\.[a-z]+)$/i, '-t$1')), w: p.width, h: p.height, c: p.caption || '' }));
     const body = `${libNav('photos')}<section class="wrap lib-page-head"><a class="lib-back" href="/library/photos">← All albums</a><span class="kicker">${esc(g.event_date ? fmtDate(g.event_date) : '')}${g.place ? ' · ' + esc(g.place) : ''}</span><h1>${esc(g.title)}</h1>${g.note ? `<p class="dek">${esc(g.note)}</p>` : ''}${g.balita_url ? `<p><a class="link-arrow" href="${esc(g.balita_url)}">Read about it in the Balita</a></p>` : ''}</section>
 <section class="wrap lib-sec" style="padding-top:0"><div class="lib-photos">${list.map((p, k) => `<button type="button" data-k="${k}" style="aspect-ratio:${p.w && p.h ? `${p.w}/${p.h}` : '4/3'}"><img src="${esc(p.t)}" alt="${esc(p.c)}" loading="lazy" onerror="this.onerror=null;this.src='${esc(p.s)}'"></button>`).join('')}</div></section>
-<dialog class="lib-lightbox" id="lb"><button type="button" class="x" aria-label="Close">×</button><button type="button" class="nv" data-s="-1" aria-label="Previous">‹</button><figure><img id="lbi" alt=""><figcaption id="lbc"></figcaption></figure><button type="button" class="nv" data-s="1" aria-label="Next">›</button></dialog>
-<script>(function(){var L=${JSON.stringify(list).replace(/</g, '\\u003c')},d=document.getElementById('lb'),im=document.getElementById('lbi'),cp=document.getElementById('lbc'),k=0;
+<dialog class="lib-lightbox" id="lb"><button type="button" class="x" aria-label="Close">×</button><button type="button" class="nv" data-s="-1" aria-label="Previous">‹</button><figure><img id="lbi" alt=""><figcaption id="lbc"></figcaption><button type="button" class="lib-tagbtn" id="lbt">Know who’s in this photo?</button></figure><button type="button" class="nv" data-s="1" aria-label="Next">›</button></dialog>${TAG_FORM}
+<script>(function(){var G=${JSON.stringify({ id: g.id, t: g.title })},L=${JSON.stringify(list).replace(/</g, '\\u003c')},d=document.getElementById('lb'),im=document.getElementById('lbi'),cp=document.getElementById('lbc'),k=0;
 function show(i){if(i<0||i>=L.length)return;k=i;im.src=L[k].s;im.alt=L[k].c;cp.textContent=(k+1)+' of '+L.length+(L[k].c?' · '+L[k].c:'');if(!d.open)d.showModal()}
 document.querySelector('.lib-photos').onclick=function(e){var b=e.target.closest('[data-k]');if(b)show(Number(b.getAttribute('data-k')))};
 d.querySelector('.x').onclick=function(){d.close()};d.querySelectorAll('[data-s]').forEach(function(b){b.onclick=function(){show(k+Number(b.getAttribute('data-s')))}});
+document.getElementById('lbt').onclick=function(){var p=L[k];d.close();window.RCMTag({kind:'photo',ref:G.id+':'+p.n,label:G.t+', photo '+(k+1),image:p.t})};
 d.addEventListener('keydown',function(e){if(e.key==='ArrowRight')show(k+1);if(e.key==='ArrowLeft')show(k-1)});d.addEventListener('click',function(e){if(e.target===d)d.close()})})();</script>`;
     return page(`${g.title} · Photographs · Heritage Library`, `${g.photo_count || list.length} photographs${g.event_date ? ', ' + fmtDate(g.event_date) : ''}.`, body, `${origin}/library/photos/${g.slug}`, g.cover_path ? aSrc(g.cover_path) : null);
   }
@@ -330,6 +344,7 @@ if(o.i)c.appendChild(el('blockquote',o.i));else if(o.n)c.appendChild(el('p',o.n)
 var f=el('span','Catalogue no. '+o.a+' · ','small');if(o.o){var l=document.createElement('a');l.href=o.o;l.target='_blank';l.rel='noopener';l.textContent='original photograph';f.appendChild(l)}c.appendChild(f);d.showModal();return}
 var fb=e.target.closest('.lib-filter [data-k]');if(fb){var k=fb.getAttribute('data-k');document.querySelectorAll('.lib-filter [data-k]').forEach(function(x){x.setAttribute('aria-pressed',String(x===fb))});document.querySelectorAll('.lib-wall .lib-obj').forEach(function(x){x.hidden=!!k&&x.getAttribute('data-kind')!==k});document.querySelectorAll('.lib-decade').forEach(function(g){g.hidden=!g.querySelector('.lib-obj:not([hidden])')})}});
 d.querySelector('.x').onclick=function(){d.close()};d.addEventListener('click',function(e){if(e.target===d)d.close()});
+var oh=location.hash.match(/^#o=(.+)$/);if(oh){var ob=document.querySelector('[data-obj="'+decodeURIComponent(oh[1]).replace(/"/g,'')+'"]');if(ob){ob.scrollIntoView({block:'center'});ob.click()}}
 var y=location.hash.match(/^#y=(\\d{4})$/);if(y){document.querySelectorAll('.lib-objs .lib-obj').forEach(function(x){var v=Number(x.getAttribute('data-year'));x.hidden=!(v===Number(y[1])||v===Number(y[1])+1)});document.querySelectorAll('.lib-decade').forEach(function(g){g.hidden=!g.querySelector('.lib-obj:not([hidden])')})}})();</script>`;
     return page('The trophy room · Heritage Library', 'Plaques, trophies, medals and gifts from a century of the Rotary Club of Manila.', body, origin + '/library/trophies');
   }
@@ -349,6 +364,129 @@ fetch('/assets/library/catalogue.json').then(function(r){return r.json()}).then(
     return page('The collection · Heritage Library', `The Rotary Club of Manila’s library catalogue: ${CATALOGUE.length} items.`, body, origin + '/library/collection');
   }
 
+  // ---------- museum: find a name ----------
+  const MARK = (t) => esc(String(t || '').replace(/\s+/g, ' ')).replace(/«/g, '<mark>').replace(/»/g, '</mark>');
+  const pageUrl = (r) => `/library/balita/${esc(r.vol)}/${r.issue_no}#p${r.rel}`;
+  async function nameFinder(origin, term) {
+    term = String(term || '').replace(/["“”]/g, '').replace(/\s+/g, ' ').trim().slice(0, 60);
+    const presMatch = term.length >= 4 ? PRES.presidents.filter((p) => p.name.toLowerCase().includes(term.toLowerCase())).slice(0, 3) : [];
+    let body = `${libNav('name')}<section class="lib-era-hero"><div class="wrap"><span class="lib-eyebrow">Find a name</span><h1>${term ? esc(term) : 'Find your name in a century of the Balita'}</h1>
+<p>${term ? 'Every page of the Rotary Balita where this name is printed, year by year.' : 'Type a member’s name, a past president, a guest speaker or a family name. You will see every page where it was printed since 1948, year by year, with a link to the page.'}</p>
+<form action="/library/name" method="get" role="search" class="lib-search"><input name="q" type="search" value="${esc(term)}" placeholder="e.g. Carlos P. Romulo, Ramon Magsaysay, your grandfather’s name" aria-label="A name"><button class="btn btn-gold" type="submit">Find</button></form></div></section>`;
+    if (term.length < 3) {
+      const picks = ['Carlos P. Romulo', 'Ramon Magsaysay', 'Leon J. Lambert', 'Paul Harris', 'Diosdado Macapagal', 'Corazon Aquino'];
+      body += `<section class="wrap lib-sec"><h2 class="lib-era-h">Try one</h2><div class="lib-chips">${picks.map((n) => `<a href="/library/name?q=${encodeURIComponent(n)}">${esc(n)}</a>`).join('')}</div>
+<p class="muted" style="margin-top:18px">Tips: use the name as it would be printed (first name and surname, or with the middle initial). Old issues are read by machine, so a few spellings may be missed. Members’ home addresses are never shown.</p></section>`;
+      return page('Find a name · Heritage Library', 'Find a name in a century of the Rotary Club of Manila’s Balita.', body, origin + '/library/name');
+    }
+    let rows = await safe(() => q(`rpc/rcm_lib_name?q=${encodeURIComponent(term)}&lim=600`), []);
+    const seen = new Set(); rows = rows.filter((r) => { const k = r.issue_no + ':' + r.rel; if (seen.has(k)) return false; seen.add(k); return r.year; });
+    const modern = await safe(() => searchBalita(`"${term}"`), []);
+    const parts = term.split(' ');
+    const alts = [parts.filter((w) => !/^[A-Z]\.?$/.test(w)).join(' '), parts.length > 2 ? parts[0] + ' ' + parts[parts.length - 1] : ''].filter((x) => x && x !== term && x.split(' ').length > 1);
+    if (!rows.length && !modern.length) {
+      body += `<section class="wrap lib-sec"><div class="lib-empty">“${esc(term)}” was not found in the Balita.${alts.length ? ` Try ${[...new Set(alts)].map((a) => `<a href="/library/name?q=${encodeURIComponent(a)}">${esc(a)}</a>`).join(' or ')}.` : ' Try another spelling, or just the first name and surname.'}</div></section>`;
+      return page(`${term} · Find a name · Heritage Library`, `Pages of the Rotary Balita that mention ${term}.`, body, origin + '/library/name');
+    }
+    const byYear = new Map(); for (const r of rows) { if (!byYear.has(r.year)) byYear.set(r.year, []); byYear.get(r.year).push(r); }
+    const years = [...byYear.keys()].sort((a, b) => a - b);
+    const issues = new Set(rows.map((r) => r.issue_no)).size;
+    const decs = new Map(); for (const y of years) { const d = Math.floor(y / 10) * 10; decs.set(d, (decs.get(d) || 0) + byYear.get(y).length); }
+    const dMax = Math.max(1, ...decs.values());
+    const allDecs = []; if (years.length) for (let d = Math.floor(years[0] / 10) * 10; d <= Math.floor(years[years.length - 1] / 10) * 10; d += 10) allDecs.push(d);
+    body += `<section class="wrap lib-sec" style="padding-top:28px">
+${presMatch.map((p) => `<a class="lib-name-pres" href="/past-presidents#${presId(p)}"><img src="${p.img}" alt="" width="64" height="64" loading="lazy"><span><small>President of the Club, ${esc(p.years)}</small><strong>${esc(p.name)}</strong></span></a>`).join('')}
+${rows.length ? `<p class="lib-name-sum"><b>${rows.length.toLocaleString('en')}${rows.length >= 600 ? '+' : ''} pages</b> in <b>${issues.toLocaleString('en')} issues</b> of the Balita, ${years[0]}${years.length > 1 ? '–' + years[years.length - 1] : ''}.</p>
+<div class="lib-name-bars" aria-hidden="true">${allDecs.map((d) => `<a href="#y${(years.find((y) => y >= d && y < d + 10)) || ''}" style="--h:${Math.round(((decs.get(d) || 0) / dMax) * 100)}%"><i></i><span>${d}s</span></a>`).join('')}</div>
+<ol class="lib-name-years">${years.map((y) => { const L = byYear.get(y); const li = (r) => `<li><a href="${pageUrl(r)}"><small>Balita No. ${r.issue_no}${r.issue_date ? ' · ' + esc(fmtDate(r.issue_date)) : ''} · page ${r.rel}</small><span>${MARK(r.snippet)}</span></a></li>`;
+      return `<li id="y${y}"><details${years.length <= 6 ? ' open' : ''}><summary><b>${y}</b><span>${L.length} page${L.length > 1 ? 's' : ''}</span></summary><ol class="lib-results">${L.slice(0, 40).map(li).join('')}</ol>${L.length > 40 ? `<p class="muted">And ${L.length - 40} more pages this year. <a href="/library/search?q=${encodeURIComponent('"' + term + '"')}">Search for them</a>.</p>` : ''}</details></li>`; }).join('')}</ol>` : ''}
+${modern.length ? `<h2 class="lib-era-h">In the Balita since 2015</h2><ol class="lib-results">${modern.slice(0, 20).map((r) => `<li><a href="/balita/${r.issue_no}${r.slug ? '/' + esc(r.slug) : ''}"><small>Balita No. ${r.issue_no}${r.issue_date ? ' · ' + esc(fmtDate(r.issue_date)) : ''}</small><strong>${esc(r.title || '')}</strong>${r.snippet ? `<span>${esc(r.snippet)}</span>` : ''}</a></li>`).join('')}</ol>` : ''}
+${alts.length ? `<p class="muted">Also try: ${[...new Set(alts)].map((a) => `<a href="/library/name?q=${encodeURIComponent(a)}">${esc(a)}</a>`).join(' · ')}</p>` : ''}
+<p class="muted" style="font-size:14px">Old issues are read by machine, so a few pages may be missed or misread. Know a photo of this person? Open the page and use “Who’s on this page?”.</p></section>`;
+    return page(`${term} in the Balita · Heritage Library`, `${rows.length} pages of the Rotary Balita mention ${term}.`, body, `${origin}/library/name?q=${encodeURIComponent(term)}`);
+  }
+
+  // ---------- museum: the Club's timeline ----------
+  async function timelinePage(origin) {
+    const tl = await timeline();
+    const byDec = new Map(); for (const e of tl) { const d = Math.floor(e.year / 10) * 10; if (!byDec.has(d)) byDec.set(d, []); byDec.get(d).push(e); }
+    const MON = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const decTitle = (d) => { const x = PRES.decades.find((k) => eraYear(k) === d) || eraOf(d); return x ? x.title : ''; };
+    const entry = (e) => `<li class="lib-tl-e"><div class="lib-tl-y">${e.year}${e.month ? `<small>${MON[e.month]}</small>` : ''}</div><div class="lib-tl-b">${e.image_path ? `<img src="${esc(anySrc(e.image_path, 400))}" alt="" loading="lazy">` : ''}<h3>${esc(e.headline)}</h3>${e.body ? `<p>${esc(e.body)}</p>` : ''}${(e.links || []).length ? `<p class="lib-tl-l">${e.links.map((l) => `<a href="${esc(l.url)}">${esc(l.label || 'Read more')}</a>`).join(' · ')}</p>` : ''}</div></li>`;
+    const body = `${libNav('timeline')}<section class="lib-era-hero"><div class="wrap"><span class="lib-eyebrow">1919 to today</span><h1>The Club’s timeline</h1><p>Moments from more than a hundred years of the Rotary Club of Manila, each one linked to the Balita page or story where it was reported.</p>
+${byDec.size ? `<div class="lib-era-strip">${[...byDec.keys()].map((d) => `<a href="#d${d}">${d}s</a>`).join('')}</div>` : ''}</div></section>
+<section class="wrap lib-sec">${byDec.size ? [...byDec.entries()].map(([d, L]) => `<div class="lib-tl-dec" id="d${d}"><h2 class="lib-era-h"><a href="/library/era/${d}">${d}s</a> <small>${esc(decTitle(d))}</small></h2><ol class="lib-tl">${L.map(entry).join('')}</ol></div>`).join('') : `<div class="lib-empty">The timeline is being checked by the Club’s librarian and will appear here soon. In the meantime, browse <a href="/library/era/1919">the Club decade by decade</a>.</div>`}
+<p class="h-source">Drawn from the Balita archive, the Club’s presidential profiles and the trophy room. Corrections are welcome: <a href="mailto:rotaryclubofmanila@gmail.com?subject=Club%20timeline">rotaryclubofmanila@gmail.com</a>.</p></section>`;
+    return page('The Club’s timeline · Heritage Library', 'More than a hundred years of the Rotary Club of Manila, moment by moment.', body, origin + '/library/timeline');
+  }
+
+  // ---------- museum: the monthly exhibit ----------
+  const exItemUrl = (it) => it.type === 'page' ? `/library/balita/${it.vol}/${it.issue_no}#p${it.rel}` : it.type === 'object' ? `/library/trophies#o=${encodeURIComponent(it.acc || '')}` : it.type === 'photo' ? `/library/photos/${it.slug}` : it.url || '#';
+  const exLabel = (it) => it.type === 'page' ? `Balita No. ${it.issue_no}, page ${it.rel}` : it.type === 'object' ? 'In the trophy room' : it.type === 'photo' ? 'See the album' : 'Read the story';
+  async function exhibitPage(origin, slug) {
+    const list = await exhibits();
+    const ex = slug ? list.find((x) => x.slug === slug) : currentExhibit(list);
+    if (!ex) {
+      const body = `${libNav('exhibit')}<section class="wrap lib-page-head"><span class="kicker">This month’s exhibit</span><h1>The next exhibit is being prepared</h1><p class="dek">Each month the library tells one story from the Club’s past in pages, photographs and objects. <a href="/library">Return to the library</a>.</p></section>`;
+      return page('Exhibit · Heritage Library', 'A monthly exhibit from the Rotary Club of Manila’s archive.', body, origin + '/library/exhibit');
+    }
+    const items = Array.isArray(ex.items) ? ex.items : [];
+    const past = list.filter((x) => x.slug !== ex.slug);
+    const monthName = new Date(ex.month + 'T12:00:00+08:00').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+    const body = `${libNav('exhibit')}<section class="lib-ex-hero">${ex.cover ? `<img src="${esc(anySrc(ex.cover, 1600))}" alt="" class="bg" aria-hidden="true">` : ''}<div class="wrap"><span class="lib-eyebrow">${esc(ex.kicker || 'Exhibit')} · ${esc(monthName)}</span><h1>${esc(ex.title)}</h1>${ex.intro ? `<p>${esc(ex.intro)}</p>` : ''}</div></section>
+<section class="wrap lib-sec"><ol class="lib-ex">${items.map((it, k) => `<li class="lib-ex-i${k % 3 === 0 ? ' big' : ''}"><a href="${esc(exItemUrl(it))}">${it.image ? `<span class="im"><img src="${esc(anySrc(it.image, 1000))}" alt="${esc(it.title || '')}" loading="lazy"></span>` : ''}<span class="tx"><small>${esc(String(it.year || ''))}</small><strong>${esc(it.title || '')}</strong>${it.caption ? `<span>${esc(it.caption)}</span>` : ''}<em>${esc(exLabel(it))} →</em></span></a></li>`).join('')}</ol>
+${past.length ? `<h2 class="lib-era-h">Earlier exhibits</h2><div class="lib-chips">${past.map((x) => `<a href="/library/exhibit/${esc(x.slug)}">${esc(x.title)}</a>`).join('')}</div>` : ''}
+<p class="h-source">Curated from the Club’s Heritage Library. Captions are drawn from the pages and objects shown.</p></section>`;
+    return page(`${ex.title} · Heritage Library exhibit`, ex.intro ? ex.intro.slice(0, 200) : 'A monthly exhibit from the Club’s archive.', body, `${origin}/library/exhibit/${ex.slug}`, ex.cover ? anySrc(ex.cover, 1200) : null);
+  }
+
+  // ---------- museum: ask the archive ----------
+  function askPage(origin, qs) {
+    const ex = ['What did the Club do after Mount Pinatubo erupted?', 'How has the Club helped fight polio?', 'When did Carlos P. Romulo speak to the Club?', 'What is the Alay Lakad?'];
+    const body = `${libNav('ask')}<section class="lib-era-hero"><div class="wrap"><span class="lib-eyebrow">Ask the archive</span><h1>Ask a question about the Club’s history</h1><p>The answer is written from the Balita and the library, with links to the pages it comes from. It can be wrong, so check the pages.</p>
+<form id="ask-f" class="lib-search"><input id="ask-q" name="q" type="search" maxlength="300" value="${esc(String(qs || '').slice(0, 300))}" placeholder="e.g. When did the Club start the Alay Lakad?" aria-label="Your question" required><button class="btn btn-gold" type="submit">Ask</button></form>
+<div class="lib-chips light">${ex.map((x) => `<button type="button" data-ex>${esc(x)}</button>`).join('')}</div></div></section>
+<section class="wrap lib-sec"><div id="ask-out" aria-live="polite"></div></section>
+<script>(function(){var F='https://unavxknqpibxwcoqemaf.supabase.co/functions/v1/rcm-museum',f=document.getElementById('ask-f'),i=document.getElementById('ask-q'),o=document.getElementById('ask-out');
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function render(d){var src=d.sources||[];var t=esc(d.answer||'').replace(/\\[(\\d+)\\]/g,function(m,n){var s=src[Number(n)-1];return s?'<a class="cite" href="'+esc(s.url)+'">['+n+']</a>':m}).split(/\\n\\s*\\n/).map(function(p){return '<p>'+p+'</p>'}).join('');
+o.innerHTML='<div class="lib-ask-a">'+t+'</div>'+(src.length?'<h2 class="lib-era-h">Sources</h2><ol class="lib-results">'+src.map(function(s,k){return '<li><a href="'+esc(s.url)+'"><small>['+(k+1)+'] '+esc(s.where||'')+'</small><strong>'+esc(s.title||'')+'</strong>'+(s.text?'<span>'+esc(s.text)+'</span>':'')+'</a></li>'}).join('')+'</ol>':'')}
+async function ask(qv){o.innerHTML='<p class="muted">Reading the archive…</p>';try{var r=await fetch(F,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'ask',question:qv})});var d=await r.json();if(!r.ok||d.error)throw new Error(d.error||('Error '+r.status));render(d);try{history.replaceState(null,'','/library/ask?q='+encodeURIComponent(qv))}catch(e){}}catch(e){o.innerHTML='<div class="lib-empty">'+esc(e.message)+'</div>'}}
+f.onsubmit=function(e){e.preventDefault();var v=i.value.trim();if(v.length>4)ask(v)};
+document.querySelectorAll('[data-ex]').forEach(function(b){b.onclick=function(){i.value=b.textContent;ask(b.textContent)}});
+if(i.value.trim().length>4)ask(i.value.trim())})();</script>`;
+    return page('Ask the archive · Heritage Library', 'Ask a question about the Rotary Club of Manila’s history and get an answer from the Balita, with sources.', body, origin + '/library/ask');
+  }
+
+  // ---------- museum: this week's history minute (read aloud at the weekly meeting) ----------
+  async function minutePage(origin, wk) {
+    const today = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
+    const all = await safe(() => q('rcm_lib_minutes?select=week,title,script,links&status=eq.published&order=week'), []);
+    const m = (wk && all.find((x) => x.week === wk)) || all.find((x) => x.week >= today) || all[all.length - 1];
+    const next = all.filter((x) => x.week >= today && (!m || x.week !== m.week)).slice(0, 6);
+    const body = `${libNav('')}<section class="wrap lib-page-head lib-minute"><span class="kicker">History minute${m ? ' · ' + esc(new Date(m.week + 'T12:00:00+08:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })) : ''}</span>
+${m ? `<h1>${esc(m.title)}</h1><div class="lib-minute-t">${String(m.script).split(/\n\s*\n/).map((t) => `<p>${esc(t.trim())}</p>`).join('')}</div>
+<p class="lib-tl-l">${(m.links || []).map((l) => `<a href="${esc(l.url)}">${esc(l.label || 'Read it in the Balita')}</a>`).join(' · ')}</p>
+<div class="row lib-minute-act"><button class="btn btn-navy" type="button" onclick="window.print()">Print</button><button class="btn btn-line" type="button" style="color:var(--navy)" onclick="navigator.clipboard&&navigator.clipboard.writeText(document.querySelector('.lib-minute-t').innerText).then(function(){this.textContent='Copied'}.bind(this))">Copy the text</button></div>` : '<h1>No history minute yet</h1>'}
+${next.length ? `<h2 class="lib-era-h">Coming weeks</h2><ul class="lib-results">${next.map((x) => `<li><a href="/library/minute?w=${x.week}"><small>${esc(fmtDate(x.week))}</small><strong>${esc(x.title)}</strong></a></li>`).join('')}</ul>` : ''}
+<p class="muted" style="font-size:14px">A one-minute story from the Club’s past for the host to read at the weekly meeting, drawn from the Balita of the same week in an earlier year.</p></section>`;
+    return page(m ? `History minute: ${m.title}` : 'History minute · Heritage Library', 'A one-minute story from the Rotary Club of Manila’s past, for the weekly meeting.', body, origin + '/library/minute');
+  }
+
+  // ---------- museum: "Who's in this photo?" form (shared by albums and the page reader) ----------
+  const TAG_FORM = `<dialog class="lib-tagdlg" id="tagdlg"><form method="dialog" id="tagf"><h2>Who’s in this picture?</h2><p class="muted">Help the library name the people in this picture. The Club’s librarian checks every suggestion before it appears.</p>
+<img id="tag-img" alt="" hidden><label>Names, left to right<textarea name="names" required maxlength="600" placeholder="e.g. (left) PP Juan dela Cruz, (center) Gov. ..."></textarea></label>
+<label>How do you know? <span class="muted">(optional)</span><input name="note" maxlength="300" placeholder="e.g. He is my grandfather"></label>
+<label>Your name<input name="submitter" required maxlength="100" autocomplete="name"></label>
+<label>Email or mobile, in case the librarian has a question <span class="muted">(not shown)</span><input name="contact" maxlength="120" autocomplete="email"></label>
+<input name="website" tabindex="-1" autocomplete="off" class="hp" aria-hidden="true">
+<div class="row"><button class="btn btn-navy" type="submit" value="send">Send to the librarian</button><button class="btn btn-line" type="button" style="color:var(--navy)" id="tag-x">Cancel</button></div><p id="tag-msg" class="muted" aria-live="polite"></p></form></dialog>
+<script>(function(){var d=document.getElementById('tagdlg'),f=document.getElementById('tagf'),m=document.getElementById('tag-msg'),cur=null;
+window.RCMTag=function(o){cur=o;f.reset();m.textContent='';var im=document.getElementById('tag-img');im.hidden=!o.image;if(o.image)im.src=o.image;d.showModal()};
+document.getElementById('tag-x').onclick=function(){d.close()};
+f.addEventListener('submit',async function(e){e.preventDefault();var fd=new FormData(f);if(fd.get('website'))return;m.textContent='Sending…';
+try{var r=await fetch('https://unavxknqpibxwcoqemaf.supabase.co/functions/v1/rcm-museum',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'tag',kind:cur.kind,ref:cur.ref,label:cur.label,image:cur.image,names:fd.get('names'),note:fd.get('note'),submitter:fd.get('submitter'),contact:fd.get('contact')})});var j=await r.json();if(!r.ok||j.error)throw new Error(j.error||'Please try again');m.textContent='Thank you. The librarian will check it.';setTimeout(function(){d.close()},1800)}catch(err){m.textContent=err.message}})})();</script>`;
+
   async function route(origin, u) {
     const parts = String(u.searchParams.get('p') || '').split('/').filter(Boolean);
     const [a, b, c] = parts;
@@ -359,7 +497,12 @@ fetch('/assets/library/catalogue.json').then(function(r){return r.json()}).then(
     if (a === 'photos') return b ? gallery(origin, b) : photos(origin);
     if (a === 'trophies') return trophies(origin);
     if (a === 'collection') return collection(origin);
+    if (a === 'name') return nameFinder(origin, u.searchParams.get('q'));
+    if (a === 'timeline') return timelinePage(origin);
+    if (a === 'exhibit') return exhibitPage(origin, b);
+    if (a === 'ask') return askPage(origin, u.searchParams.get('q'));
+    if (a === 'minute') return minutePage(origin, u.searchParams.get('w'));
     return null;
   }
-  return { route };
+  return { route, exhibits, currentExhibit, anySrc };
 };

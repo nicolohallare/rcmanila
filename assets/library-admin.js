@@ -23,6 +23,7 @@
     return d;
   }
   const call = (a, p) => post(LIB, a, p);
+  window.RCMLib = { call, review: (a, p) => post(SB + '/functions/v1/rcm-museum-review', a, p) };
   const admin = (a, p) => post(ADM, a, p);
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   async function retry(fn, n = 3) { let e; for (let i = 0; i < n; i++) { try { return await fn(); } catch (x) { e = x; if (x.auth) throw x; await sleep(1500 * (i + 1)); } } throw e; }
@@ -77,7 +78,7 @@
   $('refresh').onclick = open;
   $('signout').onclick = (e) => { e.preventDefault(); try { sessionStorage.removeItem('rcm-library-code'); } catch (x) {} code = ''; $('code').value = ''; show('login'); };
   let current = 'obj';
-  function tab(t) { current = t; document.querySelectorAll('#tabs [data-t]').forEach((b) => b.setAttribute('aria-current', String(b.getAttribute('data-t') === t))); for (const k of ['obj', 'vol', 'dig', 'gal', 'browse']) $('t-' + k).classList.toggle('hidden', k !== t); if (t === 'obj') objList(); if (t === 'vol') volList(); if (t === 'gal') heldList(); }
+  function tab(t) { current = t; document.querySelectorAll('#tabs [data-t]').forEach((b) => b.setAttribute('aria-current', String(b.getAttribute('data-t') === t))); for (const k of ['obj', 'vol', 'dig', 'gal', 'browse', 'tl', 'ex', 'tags', 'min']) { const el = $('t-' + k); if (el) el.classList.toggle('hidden', k !== t); } document.dispatchEvent(new CustomEvent('rcmlib:tab', { detail: t })); if (t === 'obj') objList(); if (t === 'vol') volList(); if (t === 'gal') heldList(); }
   $('tabs').onclick = (e) => { const b = e.target.closest('[data-t]'); if (b) tab(b.getAttribute('data-t')); };
 
   // ---------- trophy room ----------

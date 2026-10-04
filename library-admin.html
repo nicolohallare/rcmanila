@@ -28,6 +28,17 @@ th{background:#f8fafc;font-size:12.5px;color:var(--ink-2);position:sticky;top:0}
 .st.done{background:#e2f4e8;color:#1d7a46}.st.run{background:#dbe9fb;color:#17458f}.st.fail{background:#f3e3e3;color:#8a2b2b}.st.wait{background:#eef1f5;color:var(--muted)}
 .note{background:#fdf0d5;border:1px solid #f0cf8a;border-radius:8px;padding:12px 14px;color:#5c3a00}
 .preview{display:flex;gap:8px;overflow:hidden;height:120px}.preview img{height:120px;border:1px solid var(--line);border-radius:3px}
+.mu-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
+.mu-card{border:1px solid #e1e7ef;border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px;background:#fff}
+.mu-card.past{opacity:.6}
+.mu-card input,.mu-card textarea,.mu-card select{font:inherit;font-size:15px;border:1px solid #cdd7e4;border-radius:8px;padding:8px 10px;width:100%;background:#fff}
+.mu-card textarea{resize:vertical;line-height:1.5}
+.mu-h{font-weight:700}
+.mu-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.mu-row .mu-y{width:96px}.mu-row select{width:auto}
+.mu-row.small,.small{font-size:13px}
+.mu-thumbs{display:flex;gap:6px;overflow-x:auto}.mu-thumbs figure{margin:0;flex:none;width:72px;text-align:center;font-size:11px;color:var(--muted)}.mu-thumbs img,.mu-thumbs span{display:block;width:72px;height:72px;object-fit:cover;border-radius:6px;background:#eef2f7}
+.mu-tag{flex-direction:row;align-items:flex-start}.mu-tag>a img{width:160px;border-radius:8px}.mu-tag>div{flex:1;display:flex;flex-direction:column;gap:8px}
+@media (max-width:640px){.mu-tag{flex-direction:column}.mu-tag>a img{width:100%}}
 .lw-hero{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:center}
 @media (max-width:760px){.lw-hero{grid-template-columns:1fr}}
 </style>
@@ -49,12 +60,12 @@ th{background:#f8fafc;font-size:12.5px;color:var(--ink-2);position:sticky;top:0}
 <button class="smallbtn" id="refresh" type="button">Refresh</button></div>
 <div class="stats" id="stats"></div><p id="storage" class="muted" style="margin:0"></p>
 </div>
-<nav class="tabs" id="tabs" aria-label="Library jobs"><button data-t="obj" aria-current="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4"/></svg>Trophy room</button><button data-t="gal"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-8 8"/></svg>Photo galleries</button><button data-t="browse"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Files</button><span class="tab-sep">Finished</span><button data-t="vol" class="done">Bound Balita volumes</button><button data-t="dig" class="done">Digital Balita 2015–2025</button></nav>
+<nav class="tabs" id="tabs" aria-label="Library jobs"><button data-t="obj" aria-current="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4"/></svg>Trophy room</button><button data-t="gal"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-8 8"/></svg>Photo galleries</button><button data-t="tl"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h10M4 18h13"/></svg>Timeline</button><button data-t="ex"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 15l5-5 4 4 3-3 6 6"/></svg>Exhibits</button><button data-t="tags"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>Photo names</button><button data-t="min"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>History minutes</button><button data-t="browse"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Files</button><span class="tab-sep">Finished</span><button data-t="vol" class="done">Bound Balita volumes</button><button data-t="dig" class="done">Digital Balita 2015–2025</button></nav>
 
 <div id="t-obj" class="panel stack">
 <h2 style="margin:0">Trophy room: plaques, trophies and medals</h2>
 <p class="muted" style="margin:0">Step 1 (<b>Start</b>) makes a web copy of each photographed plaque or trophy. Step 2 (<b>Polish photos and read labels</b>) cuts each object out of its background, sets it on the gallery backdrop, and reads the text printed on it for a clean title, the giver and the year. It takes about 15 seconds an item; the original photos are kept. Then check a few and click <b>Publish all</b>.</p>
-<div class="row"><button class="btn btn-blue" id="obj-start" type="button">Start</button><button class="btn btn-line" id="obj-stop" type="button" style="color:var(--navy)" disabled>Stop</button><button class="btn btn-blue" id="obj-polish" type="button">Polish photos and read labels</button><button class="btn btn-line" id="obj-pub" type="button" style="color:var(--navy)">Publish all to the trophy room</button><span id="obj-msg" class="muted"></span></div>
+<div class="row"><button class="btn btn-blue" id="obj-start" type="button">Start</button><button class="btn btn-line" id="obj-stop" type="button" style="color:var(--navy)" disabled>Stop</button><button class="btn btn-blue" id="obj-polish" type="button">Polish photos and read labels</button><button class="btn btn-line" id="obj-pub" type="button" style="color:var(--navy)">Publish all to the trophy room</button><button class="btn btn-line" id="obj-qr" type="button" style="color:var(--navy)">Print QR labels</button><span id="obj-msg" class="muted"></span></div>
 <div class="bar"><i id="obj-bar"></i></div><div class="preview" id="obj-prev"></div>
 <div class="scroll"><table><thead><tr><th>Item</th><th>Description</th><th>Status</th></tr></thead><tbody id="obj-rows"></tbody></table></div>
 </div>
@@ -90,6 +101,32 @@ th{background:#f8fafc;font-size:12.5px;color:var(--ink-2);position:sticky;top:0}
 <div class="scroll" style="max-height:40vh"><table><tbody id="held"></tbody></table></div>
 </div>
 
+
+<div id="t-tl" class="panel stack hidden">
+<h2 style="margin:0">Club timeline</h2>
+<p class="muted" style="margin:0">Draft entries were written from the Balita archive and the presidents’ profiles. Read each one, fix the words if needed, and publish it. Only published entries appear on the website (<a href="/library/timeline" target="_blank" rel="noopener">the timeline</a> and each decade page).</p>
+<div class="row"><select id="tl-show"><option value="draft">Waiting for review</option><option value="published">On the website</option><option value="hidden">Hidden</option><option value="all">All</option></select><select id="tl-dec"><option value="">All decades</option></select><button class="btn btn-line" id="tl-pub" type="button" style="color:var(--navy)">Publish all drafts shown</button><span id="tl-count" class="muted"></span></div>
+<p id="tl-msg" class="muted"></p><ol class="mu-list" id="tl-list"></ol>
+</div>
+
+<div id="t-ex" class="panel stack hidden">
+<h2 style="margin:0">Monthly exhibits</h2>
+<p class="muted" style="margin:0">One story from the archive each month, shown on the library and home pages. The current month’s published exhibit is the one featured.</p>
+<p id="ex-msg" class="muted"></p><ol class="mu-list" id="ex-list"></ol>
+</div>
+
+<div id="t-tags" class="panel stack hidden">
+<h2 style="margin:0">Who’s in this photo?</h2>
+<p class="muted" style="margin:0">Names suggested by visitors for people in album photos and Balita pages. Approve only when you are confident; you can correct the names first. Approved names appear under the photo or page.</p>
+<div class="row"><select id="tags-show"><option value="new">New</option><option value="approved">Approved</option><option value="rejected">Rejected</option></select></div>
+<p id="tags-msg" class="muted"></p><ol class="mu-list" id="tags-list"></ol>
+</div>
+
+<div id="t-min" class="panel stack hidden">
+<h2 style="margin:0">History minutes</h2>
+<p class="muted" style="margin:0">A one-minute story from the Club’s past for each weekly meeting, from the Balita of the same week in an earlier year. The Secretariat sees this week’s on their Meetings page, and it is at <a href="/library/minute" target="_blank" rel="noopener">rcmanila.org/library/minute</a>.</p>
+<p id="min-msg" class="muted"></p><ol class="mu-list" id="min-list"></ol>
+</div>
 <div id="t-browse" class="panel stack hidden">
 <h2 style="margin:0">Files in the archive storage</h2>
 <p class="muted" style="margin:0">Look up what is in the private archive, by folder.</p>
@@ -100,6 +137,7 @@ th{background:#f8fafc;font-size:12.5px;color:var(--ink-2);position:sticky;top:0}
 </section>
 </main>
 <script src="/assets/extract.js?v=0929f"></script>
-<script src="/assets/library-admin.js?v=0929f"></script>
+<script src="/assets/library-admin.js?v=1004m"></script>
+<script src="/assets/library-museum.js?v=1004m"></script>
 </body>
 </html>
