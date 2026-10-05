@@ -33,6 +33,9 @@
       const vd = $('vol-done'), vt = $('vol-todo');
       if (vd && vt) { vd.classList.add('hidden'); vt.classList.remove('hidden'); vt.innerHTML = `<b>${v.length} volume${v.length > 1 ? 's' : ''} stopped part-way and ${v.length > 1 ? 'are' : 'is'} not on the website:</b> ${v.map((x) => `${esc(x.acc)} (${esc(x.years)}, ${D.fmt(x.done)} of ${D.fmt(x.pages)} pages)`).join('; ')}. Tick ${v.length > 1 ? 'them' : 'it'} below and click <b>Process ticked volumes</b> to run again. Each takes about 20 minutes.`; }
     }
+    // Bound-volume covers photographed on a white table: one click straightens and trims them.
+    const covN = window.RCMCovers ? await window.RCMCovers.count() : 0;
+    if (covN) items.push({ level: 'todo', icon: 'book', count: covN, title: covN === 1 ? 'volume cover to tidy' : 'volume covers to tidy', text: 'The cover photos show white table around the book and some are slightly tilted. One click straightens and trims them; the originals are kept. Keep the page open for a few minutes.', go: 'vol', label: 'Tidy' });
     // Video room: videos waiting, missing still frames, and this Rotary year's videos still to come from the Secretariat.
     let vids = [];
     try { vids = (await L().video('list', {})).items; } catch (e) { vids = []; }
