@@ -49,7 +49,7 @@
   const accOf = (key) => { const m = key.match(/RCM-?0*(\d{1,6})/i); return m ? 'RCM-' + m[1].padStart(6, '0') : null; };
   const preview = (el, blob) => { const i = new Image(); i.src = URL.createObjectURL(blob); el.prepend(i); while (el.children.length > 12) { URL.revokeObjectURL(el.lastChild.src); el.lastChild.remove(); } };
 
-  let CAT = null, RAW = null, STATE = new Map();
+  let CAT = null, RAW = null, STATE = new Map(), VDB = new Map(), DONE = new Map();
   async function catalogue() { if (!CAT) { const d = await (await fetch('/assets/library/catalogue.json')).json(); CAT = new Map(d.map((x) => [x.a, x])); } return CAT; }
   async function rawIndex() {
     if (RAW) return RAW;
@@ -217,12 +217,20 @@
         list.forEach((v, k) => { v.range = range; v.pick = k === 0; v.spare = k > 0; VOL.push(v); });
       }
       VOL.sort((a, b) => (a.c.y || 0) - (b.c.y || 0) || a.acc.localeCompare(b.acc));
+      // What is already in the library decides the ticks: published volumes are never re-run by accident,
+      // and a volume that stopped part-way continues where it stopped.
+      VDB = new Map(); try { (await call('vol-list')).volumes.forEach((x) => VDB.set(x.acc, x)); } catch (e) {}
+      DONE = new Map(); try { const d = await window.RCMDash.load('library', code); (d.todo.volumes_draft || []).forEach((x) => DONE.set(x.acc, x.done)); } catch (e) {}
+      for (const v of VOL) { const db = VDB.get(v.acc); const st = (STATE.get(v.acc) || {}).state || ''; v.online = !!(db && db.status === 'published'); v.skip = /^skip/.test(st); v.pick = !v.online && !v.spare && !v.skip; }
+      // A range already online (another copy is published) needs no spare: tick only ranges with nothing online.
+      const onlineRanges = new Set(VOL.filter((v) => v.online).map((v) => v.range));
+      for (const v of VOL) if (v.pick && onlineRanges.has(v.range)) v.pick = false;
       drawVol();
-      $('vol-msg').textContent = `${groups.size} volumes (${VOL.length} copies). ${VOL.filter((v) => (STATE.get(v.acc) || {}).state === 'done').length} done.`;
+      $('vol-msg').textContent = `${groups.size} volumes (${VOL.length} copies). ${VOL.filter((v) => v.online).length} copies are in the library. ${VOL.filter((v) => v.pick).length} ticked to process.`;
     } catch (err) { if (err.auth) return show('login'); $('vol-msg').textContent = err.message; }
   }
   function drawVol() {
-    $('vol-rows').innerHTML = VOL.map((v, k) => { const s = (STATE.get(v.acc) || {}).state; return `<tr${v.spare ? ' style="opacity:.6"' : ''}><td><input type="checkbox" data-v="${k}" ${v.pick && s !== 'done' ? 'checked' : ''}></td><td><b>${esc(v.acc)}</b>${v.spare ? ' <span class="muted">(spare copy)</span>' : ''}<br><span class="muted">${esc(v.c.d.slice(0, 90))}</span></td><td>${esc(v.c.i || '')}</td><td>${(v.size / 1048576).toFixed(0)} MB${v.ocr ? ' · text' : ''}</td><td id="vs-${v.acc}">${stTag(s)}</td></tr>`; }).join('');
+    $('vol-rows').innerHTML = VOL.map((v, k) => { const s = (STATE.get(v.acc) || {}).state; return `<tr${v.spare ? ' style="opacity:.6"' : ''}><td><input type="checkbox" data-v="${k}" ${v.pick ? 'checked' : ''}></td><td><b>${esc(v.acc)}</b>${v.spare ? ' <span class="muted">(spare copy)</span>' : ''}<br><span class="muted">${esc(v.c.d.slice(0, 90))}</span></td><td>${esc(v.c.i || '')}</td><td>${(v.size / 1048576).toFixed(0)} MB${v.ocr ? ' · text' : ''}</td><td id="vs-${v.acc}">${stTag(s)}</td></tr>`; }).join('');
   }
   $('vol-rows').onchange = (e) => { const c = e.target.closest('[data-v]'); if (c) VOL[+c.getAttribute('data-v')].pick = c.checked; };
   $('vol-stop').onclick = () => { volStop = true; $('vol-msg').textContent = 'Stopping…'; };
@@ -233,7 +241,11 @@
       const v = todo[k]; const cell = $('vs-' + v.acc);
       try { if (cell) cell.innerHTML = stTag('Working…'); const r = await processVolume(v, (t, f) => { $('vol-msg').textContent = `${v.acc} (${k + 1} of ${todo.length}): ${t}`; if (f != null) $('vol-bar').style.width = Math.round(f * 100) + '%'; });
         await setState(v.acc, 'volume', volStop ? 'stopped' : 'done', r); if (cell) cell.innerHTML = stTag(volStop ? 'stopped' : 'done'); logv(`${v.acc}: ${r.pages} pages, ${r.issues} issues, ${r.withheld} withheld, ${r.blanked} with addresses blanked, ${r.ocr} read by machine.`); }
-      catch (err) { if (err.auth) return show('login'); await setState(v.acc, 'volume', 'failed: ' + err.message.slice(0, 80)); if (cell) cell.innerHTML = stTag('failed'); logv(`${v.acc}: FAILED ${err.message}`); }
+      catch (err) {
+        if (err.auth) return show('login');
+        await setState(v.acc, 'volume', 'failed: ' + err.message.slice(0, 80)); if (cell) cell.innerHTML = stTag('failed'); logv(`${v.acc}: FAILED ${err.message}`);
+        if (/allocation|memory/i.test(err.message)) { logv('The browser ran out of memory. Close other tabs, reload this page and click Process again: it continues where it stopped.'); $('vol-msg').textContent = 'Stopped: the browser ran out of memory. Reload the page and click Process again; it continues where it stopped.'; break; }
+      }
     }
     $('vol-start').disabled = false; $('vol-stop').disabled = true; if (!volStop) $('vol-msg').textContent = 'Finished.';
   };
@@ -285,19 +297,40 @@
     const [lo, hi] = String(v.c.i || '').split('-').map(Number);
     const yf = v.c.y || null, yt = v.c.y2 || (yf ? yf + 1 : null);
     const years = yf ? (yt && yt !== yf ? `${yf}–${String(yt).slice(2)}` : String(yf)) : '';
-    prog('downloading the scan…', 0);
+    prog('opening the scan…', 0);
     const [url] = await getUrls([v.key]);
-    const resp = await fetch(url); if (!resp.ok) throw new Error('Could not download (' + resp.status + ')');
-    const total = Number(resp.headers.get('content-length')) || v.size; const reader = resp.body.getReader(); const chunks = []; let got = 0;
-    for (;;) { const { done, value } = await reader.read(); if (done) break; chunks.push(value); got += value.length; prog(`downloading ${Math.round(got / 1048576)} of ${Math.round(total / 1048576)} MB…`, got / total * 0.1); }
-    const data = new Uint8Array(got); { let o = 0; for (const c of chunks) { data.set(c, o); o += c.length; } }
     const pdfjs = await window.BalitaExtract.loadPdfJs();
-    const doc = await pdfjs.getDocument({ data, isEvalSupported: false }).promise;
+    // Read the scan piece by piece as pages are needed, instead of downloading it whole first (large volumes are 1–2 GB).
+    let doc;
+    try {
+      const head = await fetch(url, { headers: { Range: 'bytes=0-0' } });
+      const len = Number((head.headers.get('content-range') || '').split('/')[1]) || v.size;
+      if (head.status !== 206 || !len) throw new Error('no ranges');
+      const rt = new pdfjs.PDFDataRangeTransport(len, null);
+      rt.requestDataRange = (begin, end) => { retry(async () => { const r = await fetch(url, { headers: { Range: `bytes=${begin}-${end - 1}` } }); if (r.status !== 206) throw new Error('The storage did not send part of the file (' + r.status + ').'); rt.onDataRange(begin, new Uint8Array(await r.arrayBuffer())); }).catch((e) => logv(`${acc}: ${e.message}`)); };
+      doc = await pdfjs.getDocument({ range: rt, length: len, rangeChunkSize: 2097152, disableAutoFetch: true, disableStream: true, isEvalSupported: false }).promise;
+    } catch (e) {
+      if (!/no ranges/.test(e.message)) throw e;
+      const resp = await fetch(url); if (!resp.ok) throw new Error('Could not download (' + resp.status + ')');
+      const data = new Uint8Array(await resp.arrayBuffer());
+      doc = await pdfjs.getDocument({ data, isEvalSupported: false }).promise;
+    }
     const N = doc.numPages;
-    const { volume } = await call('vol-save', { fields: { acc, title: `The Rotary Balita, ${years}`, years, year_from: yf, year_to: yt, issue_from: lo || null, issue_to: hi || null, source_key: v.key, page_count: N, status: 'draft' } });
-    let batch = [], starts = [], withheld = 0, blanked = 0, ocrN = 0, cover = null;
+    const known = VDB.get(acc);
+    const fields = { acc, title: `The Rotary Balita, ${years}`, years, year_from: yf, year_to: yt, issue_from: lo || null, issue_to: hi || null, source_key: v.key, page_count: N };
+    const { volume } = known ? await call('vol-save', { id: known.id, fields: known.status === 'published' ? fields : { ...fields, status: 'draft' } }) : await call('vol-save', { fields: { ...fields, status: 'draft' } });
+    VDB.set(acc, volume);
+    // Continue a volume that stopped part-way: pages already saved are only read for issue numbers.
+    const resumeFrom = known && known.status !== 'published' ? Math.max(1, (DONE.get(acc) || 0) - 14) : 1;
+    if (resumeFrom > 1) logv(`${acc}: continuing from page ${resumeFrom} of ${N}.`);
+    let batch = [], starts = [], withheld = 0, blanked = 0, ocrN = 0, cover = resumeFrom > 1 ? `vol/${slug}/p/0001.jpg` : null;
     for (let n = 1; n <= N; n++) {
       if (volStop) break;
+      if (n < resumeFrom) {
+        if (n % 10 === 1) prog(`finding issues on saved page ${n} of ${resumeFrom - 1}`, 0.1 * n / resumeFrom);
+        try { const pg = await doc.getPage(n); const t = (await pg.getTextContent()).items.map((i) => i.str).join(' '); const iss = findIssue(t, lo, hi); if (iss && !starts.some((x) => x.no === iss.no)) starts.push({ no: iss.no, date: iss.date, n }); pg.cleanup(); } catch (e) {}
+        continue;
+      }
       prog(`page ${n} of ${N}`, 0.1 + 0.88 * n / N);
       const page = await doc.getPage(n);
       const vp0 = page.getViewport({ scale: 1 });

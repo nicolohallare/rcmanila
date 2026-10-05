@@ -22,9 +22,13 @@
     else if (next.status !== 'published') items.push({ level: daysToNext <= 10 ? 'urgent' : 'todo', icon: 'frame', title: `${monthName(t.next_month)} exhibit is ready to read: “${next.title}”`, text: `Read it and publish it before ${D.day(t.next_month)} (in ${daysToNext} days). It only shows from the first of the month.`, go: 'ex', label: 'Read' });
     if (t.minutes_left <= 4) items.push({ level: t.minutes_left ? 'todo' : 'urgent', icon: 'clock', title: t.minutes_left ? `History minutes run out after ${D.day(t.minutes_last)}` : 'No history minutes are ready for coming meetings', text: 'The Secretariat shows one at each meeting. Ask Claude to write the next set.', go: 'min', label: 'Open' });
     if (t.galleries_held) items.push({ level: 'todo', icon: 'photo', count: t.galleries_held, title: t.galleries_held === 1 ? 'photo album is held for a consent check' : 'photo albums are held for a consent check', text: 'Outreach albums: medical missions, homes, schools. Publish when no child or patient can be identified, or keep an album private so it leaves this list.', go: 'held', label: 'Check' });
-    if ((t.volumes_draft || []).length) {
-      const v = t.volumes_draft;
-      items.push({ level: 'todo', icon: 'book', count: v.length, title: v.length === 1 ? 'bound volume stopped part-way' : 'bound volumes stopped part-way', html: true, text: v.map((x) => `${esc(x.acc)} (${esc(x.years)}): ${D.fmt(x.done)} of ${D.fmt(x.pages)} pages`).join('<br>') + '<br>Run them again from Bound Balita (tick them, then Process) on a computer that can stay on, or leave them out if they are spare copies.', go: 'vol', label: 'Open' });
+    // Volumes marked as a duplicate scan (job state "skip: …") are not waiting for anything.
+    let skip = new Set();
+    try { skip = new Set((await L().call('src-list')).items.filter((x) => /^skip/.test(x.state || '')).map((x) => x.acc)); } catch (e) {}
+    const vols = (t.volumes_draft || []).filter((x) => !skip.has(x.acc));
+    if (vols.length) {
+      const v = vols;
+      items.push({ level: 'todo', icon: 'book', count: v.length, title: v.length === 1 ? 'bound volume stopped part-way' : 'bound volumes stopped part-way', html: true, text: v.map((x) => `${esc(x.acc)} (${esc(x.years)}): ${D.fmt(x.done)} of ${D.fmt(x.pages)} pages`).join('<br>') + '<br>Open Bound Balita and click Process: they are ticked, and each continues where it stopped. Use a computer with plenty of memory that can stay on, with other tabs closed.', go: 'vol', label: 'Open' });
       const tv = $('tab-vol'); if (tv) tv.classList.remove('done');
       const vd = $('vol-done'), vt = $('vol-todo');
       if (vd && vt) { vd.classList.add('hidden'); vt.classList.remove('hidden'); vt.innerHTML = `<b>${v.length} volume${v.length > 1 ? 's' : ''} stopped part-way and ${v.length > 1 ? 'are' : 'is'} not on the website:</b> ${v.map((x) => `${esc(x.acc)} (${esc(x.years)}, ${D.fmt(x.done)} of ${D.fmt(x.pages)} pages)`).join('; ')}. Tick ${v.length > 1 ? 'them' : 'it'} below and click <b>Process ticked volumes</b> to run again. Each takes about 20 minutes.`; }
