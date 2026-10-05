@@ -743,6 +743,23 @@ function historyWeek(items) {
   };
   return `<div class="h-week"><h3>This week in Club history</h3><div class="h-week-row">${picks.slice(0, 3).map(card).join('')}</div></div>`;
 }
+// The Club's own facts for the Heritage Library's "Ask the archive" (read by the rcm-museum function once a day).
+function askFacts() {
+  const rows = [], add = (kind, title, url, year, body) => rows.push({ kind, title, url, year: year || null, body: String(body || '').replace(/\s+/g, ' ').trim() });
+  const cur = PRES.presidents[PRES.presidents.length - 1];
+  add('club', 'The founding of the Rotary Club of Manila (1919)', '/past-presidents', 1919, 'In January 1919, Leon J. Lambert and a small group of business leaders met at the Manila Hotel to form a Rotary club; Lambert called the first meeting and became the first president. On 1 June 1919, Rotary International granted Charter No. 478, making the Rotary Club of Manila the first Rotary club in the Philippines and in Asia. The Club launched its newsletter, The Rotary Balita, in April 1919.');
+  add('club', 'The Club today', '/meeting', null, `The Rotary Club of Manila belongs to Rotary District 3810 (Metro Manila) and Rotary Zone 10A. It meets every Thursday at 12:15 PM for fellowship and service; guests are welcome. Its president for ${cur.years} is ${cur.name}. ${PRES.presidents.length} presidential terms have been served since 1919. Rotary International's message for 2026-27 is "Create Lasting Impact".`);
+  for (const d of PRES.decades) add('history', `The Club, ${d.label}: ${d.title}`, `/past-presidents#d-${d.key}`, Number(d.label.slice(0, 4)), d.blurb);
+  for (const i of PRES.interludes || []) add('history', `${i.title} (${i.years})`, '/past-presidents', Number(i.years.slice(0, 4)), i.text);
+  for (const x of PRES.presidents) add('president', `${x.name}, president ${x.years}`, `/past-presidents#${presId(x)}`, Number((x.years.match(/\d{4}/) || [])[0]) || null, `${x.name} was president of the Rotary Club of Manila in ${x.years}. ${x.summary || ''}`);
+  for (const p of PROJECTS) add('project', p.title, `/projects/${p.slug}`, null, [p.kicker, p.dek, ...(p.need || []), ...(p.did || []).map((d) => (Array.isArray(d) ? d.join(' ') : d)), ...(p.result || []).map((r) => (Array.isArray(r) ? r.join(' ') : r)), p.next].filter(Boolean).join(' '));
+  for (const y of YEARS) add('history', `The Club in ${y.year}`, '/', Number(y.year), y.text);
+  for (const f of FLAGSHIP) add('project', f.title, f.link || '/projects', null, `${f.tag || ''}. ${f.text}`);
+  for (const f of SIGNATURE) add('award', f.title, '/projects', null, f.text);
+  add('project', FEATURE.title, '/projects/project-river', null, `${FEATURE.text} ${FEATURE.quote || ''}`);
+  return rows;
+}
+
 async function home(origin) {
   const issues = await liveIssues(1).catch(() => []);
   const issue = issues[0];
@@ -1448,6 +1465,7 @@ module.exports = async (req, res) => {
     res.setHeader('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=3600');
     return res.end(await meetingsIcs(origin));
   }
+  if (r === 'ask-facts') { res.setHeader('Content-Type', 'application/json; charset=utf-8'); res.setHeader('Cache-Control', 'public, s-maxage=3600'); return res.end(JSON.stringify(askFacts())); }
   if (r === 'robots') {
     res.setHeader('Content-Type', 'text/plain; charset=utf-8'); res.setHeader('Cache-Control', 'public, s-maxage=86400');
     return res.end(`User-agent: *\nDisallow: /admin\nDisallow: /secretariat\nDisallow: /library-admin\nDisallow: /api/\nSitemap: ${origin}/sitemap.xml\n`);
@@ -1466,7 +1484,7 @@ module.exports = async (req, res) => {
 - The Rotary Balita is the Club's weekly publication.
 
 ## Main pages
-- [About the Club](${origin}/#club): who we are and what we do
+- [About the Club](${origin}/#history): who we are and what we do
 - [Service projects](${origin}/projects): the Club's current projects in health, education, relief and the environment
 - [Weekly meeting](${origin}/meeting): this week's meeting, guest speaker, venue and sign-up
 - [Events](${origin}/events): fellowships, fundraisers and other Club events
