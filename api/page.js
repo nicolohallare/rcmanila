@@ -844,7 +844,11 @@ ${(() => { const cv = cover || COVER_FALLBACK; const mon = new Date(cv.month + '
 
 <section class="h-heritage" id="history"><div class="wrap">
 <div class="h-head"><div><span class="kicker">107 years · Asia’s first Rotary club</span><h2>Where Rotary in Asia began</h2><p>In 1919, Leon Lambert and a small group of business leaders met at the Manila Hotel and formed the first Rotary club in the Philippines and in Asia, Charter No. 478. More than a century later, the Club still meets every Thursday for fellowship and service, led in 2026–27 by President Reginald T. Yu.</p></div></div>
-<a class="h-exhibit" href="${exNow ? `/library/exhibit/${esc(exNow.slug)}` : '/library'}">${exNow && exNow.cover ? `<span class="im"><img src="${esc(LIB.anySrc(exNow.cover, 900))}" alt="" loading="lazy"></span>` : ''}<span class="t"><span class="kicker">The Heritage Library${exNow ? ' · This month’s exhibit' : ''}</span><strong>${exNow ? esc(exNow.title) : 'The Club in its own words and pictures'}</strong><span>Every Balita since 1948, nearly 12,000 photos, the trophy room, past presidents and Club films. Look up your name, or your father’s.</span><em>${exNow ? 'Visit the exhibit →' : 'Open the library →'}</em></span></a>
+<div class="h-lib"><a class="h-lib-im" href="/library"><img src="${H('heritage-library')}" alt="The Rotary Balita of 8 July 1948 with Dr. Emilio Javier on the cover, beside pages from the same issue and a 1936 photograph of Club members" width="1200" height="800" loading="lazy"></a>
+<div class="h-lib-t"><span class="kicker">The Heritage Library</span><h3>107 years in the Club’s own words and pictures</h3>
+<p>Every Balita since 1948, nearly 12,000 photos, the trophy room, past presidents and Club films. Look up your name, or your father’s.</p>
+<a class="btn btn-gold" href="/library">Open the library</a>
+${exNow ? `<a class="h-lib-ex" href="/library/exhibit/${esc(exNow.slug)}"><small>This month’s exhibit</small>${esc(exNow.title)} →</a>` : ''}</div></div>
 <div class="h-pres"><div class="h-pres-head"><h3>${PRES.presidents.length} presidential terms since 1919</h3><a class="link-arrow" href="/past-presidents">See every president and his term</a></div>
 <div class="h-pres-row">${PRES.presidents.slice(-8).reverse().map((x) => `<a href="/past-presidents#${presId(x)}"><img src="${x.img}" alt="" width="400" height="600" loading="lazy"><b>${esc(x.name)}</b><span>${esc(x.years)}</span></a>`).join('')}</div></div>
 </div></section>

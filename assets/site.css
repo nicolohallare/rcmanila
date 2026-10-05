@@ -1196,3 +1196,13 @@ a:focus-visible,button:focus-visible,summary:focus-visible,[tabindex]:focus-visi
 .home-head{align-items:flex-end;margin-bottom:-24px}.home-head .h-theme{margin:10px 0 0}
 .h-heritage .h-exhibit{margin:8px 0 48px}
 .h-join .h-more{margin-top:18px;color:#cfe0f5;font-size:16px}.h-join .h-more a{color:#fff;text-decoration:underline;text-underline-offset:3px}
+.h-lib{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:40px;align-items:center;margin:8px 0 56px}
+.h-lib-im{display:block;border-radius:10px;overflow:hidden;box-shadow:0 24px 50px -24px rgba(0,0,0,.6)}
+.h-lib-im img{display:block;width:100%;height:auto;aspect-ratio:3/2}
+.h-lib-t .kicker{color:var(--gold)}
+.h-lib-t h3{font-family:Georgia,serif;color:#fff;font-size:clamp(26px,2.6vw,36px);line-height:1.15;margin:10px 0 14px}
+.h-lib-t p{color:#dfe8f7;font-size:17px;line-height:1.55;margin:0 0 22px}
+.h-lib-ex{display:block;margin-top:22px;padding-top:18px;border-top:1px solid rgba(255,255,255,.2);color:#fff;font-weight:700;text-decoration:none}
+.h-lib-ex small{display:block;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin-bottom:4px;font-weight:700}
+.h-lib-ex:hover{text-decoration:underline}
+@media (max-width:820px){.h-lib{grid-template-columns:1fr;gap:24px}}
