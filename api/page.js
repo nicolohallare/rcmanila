@@ -757,7 +757,6 @@ async function home(origin) {
   const stories = firstStory ? [firstStory, ...arts.filter((a) => a !== firstStory)].slice(0, 6) : [];
   const mt = await nextMeeting().catch(() => null);
   const cover = await currentCover().catch(() => null);
-  const hist = await q('rpc/rcm_history_week').catch(() => []);
   const exNow = LIB.currentExhibit(await LIB.exhibits().catch(() => []));
   const mtCount = mt ? await signupCount(mt.id) : 0;
   const nextThu = (() => { const d = new Date(Date.now() + 8 * 3600 * 1000); const add = (4 - d.getUTCDay() + 7) % 7; d.setUTCDate(d.getUTCDate() + add); return d.toISOString().slice(0, 10); })();
@@ -814,35 +813,6 @@ ${(() => { const cv = cover || COVER_FALLBACK; const mon = new Date(cv.month + '
 </section>
 
 
-<section class="poa" id="action"><div class="wrap">
-<div class="poa-lead">
-<a class="poa-img" href="/projects/${POA.slug}"><img src="${POA.hero.src}" alt="${esc(POA.hero.alt)}" width="${POA.hero.w || 1792}" height="${POA.hero.h || 1252}"></a>
-<div class="poa-body"><span class="kicker">People of Action · ${esc(POA.kicker.split(' · ')[0])}</span>
-<h2>${esc(POA.title)}</h2>
-<dl class="poa-steps"><div><dt>The need</dt><dd>${esc(POA.need[0])}</dd></div>
-<div><dt>What members did</dt><dd>${esc(POA_DID)}</dd></div>
-<div><dt>The result</dt><dd>${esc(POA.result.map(([n, t]) => n + ' ' + t).slice(0, 1).join(''))}.</dd></div></dl>
-<div class="h-cta"><a class="btn btn-navy" href="/projects/${POA.slug}">Read the story</a><a class="btn btn-line" style="color:var(--navy)" href="/projects">All service projects</a></div></div>
-</div>
-<div class="pj-cards">${PROJECTS.filter((x) => x !== POA).slice(0, 3).map((x) => projectCard(x)).join('')}</div>
-</div></section>
-<section class="poa-wall"><div class="wrap">
-<div class="section-head"><div><span class="kicker">Rotary · People of Action</span><h2>Together, we act</h2></div><a class="link-arrow" href="/projects">All service projects</a></div>
-<div class="poa-wall-grid">${POA_WALL.map((b) => `<a href="${b.link}"><img src="${b.img}" alt="${esc(b.alt)}" loading="lazy"><span>${esc(b.label)}</span></a>`).join('')}</div>
-</div></section>
-${routesStrip()}
-
-<section class="h-sec" id="club"><div class="wrap h-club">
-<div class="h-club-text">
-<span class="kicker">Our Club</span>
-<h2 class="h-title">Where Rotary in Asia began</h2>
-<p>In January 1919, Leon Lambert and a small group of business leaders met at the Manila Hotel to form a Rotary club. On 1 June 1919, Rotary International granted Charter No. 478, making the Rotary Club of Manila the first in the Philippines and in Asia.</p>
-<p>More than a century later, the Club still meets every Thursday for fellowship and service. It is led in Rotary Year 2026–2027 by President Reginald T. Yu.</p>
-<div class="h-facts"><div><b>1919</b><span>Founded in Manila</span></div><div><b>No. 478</b><span>Rotary charter</span></div><div><b>3810</b><span>Rotary district</span></div></div>
-</div>
-<figure class="h-photo"><img src="${H('club-1936')}" alt="Club President Charlie Romulo, smiling, cutting a birthday cake with members in 1936" loading="lazy"><figcaption>Fellowship in 1936: President Charlie Romulo celebrates his 37th birthday at the Club’s first membership meeting of the year.</figcaption></figure>
-</div></section>
-
 <section class="h-impact" id="impact"><div class="wrap">
 <span class="kicker">Rotary Year 2025–2026</span>
 <h2>A year of service, in numbers</h2>
@@ -855,40 +825,38 @@ ${routesStrip()}
 <p class="h-source">From the RY 2025–2026 report of Immediate Past President Raoul C. Creencia.</p>
 </div></section>
 
-<section class="h-sec" id="projects"><div class="wrap">
-<div class="h-head"><div><span class="kicker">Flagship projects</span><h2 class="h-theme"><img src="/assets/cli-h-blue.png" alt="Create Lasting Impact" width="1470" height="88"></h2><p>Rotary’s message for 2026–27 encourages all of us, as people of action, to work together to make a meaningful difference in our communities and around the world. These are the long-term projects the Club funds and runs with trusted partners.</p></div><a class="btn btn-gold" href="/donate">Support a project</a></div>
-<article class="h-feature"><img src="${H(FEATURE.img)}" alt="Rotarians steady a ladder as a member mounts the Four-Way Test marker at Hospicio de San Jose, at the Project R.I.V.E.R. turnover in December 2025" loading="lazy">
-<div class="h-feature-body"><span class="kicker">Water &amp; health</span><h3>${esc(FEATURE.title)}</h3><p>${esc(FEATURE.text)}</p><blockquote class="h-quote">${esc(FEATURE.quote)}</blockquote><ul class="tags">${FEATURE.tags.map((t) => `<li>${esc(t)}</li>`).join('')}</ul><a class="link-arrow" href="/projects/project-river">Read the story</a></div></article>
-<div class="h-cards c2">${FLAGSHIP.map((p) => `<article class="h-card"><div class="im"><img src="${H(p.img)}" alt="" loading="lazy"></div><span class="kicker">${esc(p.tag)}</span><h3>${esc(p.title)}</h3><p>${esc(p.text)}</p>${p.link ? `<a class="link-arrow" href="${p.link}">Read the story</a>` : ''}</article>`).join('')}</div>
-
-<div class="h-sub"><span class="kicker">Signature awards</span><h2>Honoring excellence in the Philippines</h2></div>
-<div class="h-cards c3">${SIGNATURE.map((p) => `<article class="h-card"><div class="im"><img src="${H(p.img)}" alt="" loading="lazy"></div><h3>${esc(p.title)}</h3><p>${esc(p.text)}</p></article>`).join('')}</div>
-
+<section class="poa" id="action"><div class="wrap">
+<div class="section-head home-head"><div><span class="kicker">Our service · Rotary 2026–27</span><h2 class="h-theme"><img src="/assets/cli-h-blue.png" alt="Create Lasting Impact" width="1470" height="88"></h2></div><a class="link-arrow" href="/projects">All service projects</a></div>
+<div class="poa-lead">
+<a class="poa-img" href="/projects/${POA.slug}"><img src="${POA.hero.src}" alt="${esc(POA.hero.alt)}" width="${POA.hero.w || 1792}" height="${POA.hero.h || 1252}"></a>
+<div class="poa-body"><span class="kicker">People of Action · ${esc(POA.kicker.split(' · ')[0])}</span>
+<h2>${esc(POA.title)}</h2>
+<dl class="poa-steps"><div><dt>The need</dt><dd>${esc(POA.need[0])}</dd></div>
+<div><dt>What members did</dt><dd>${esc(POA_DID)}</dd></div>
+<div><dt>The result</dt><dd>${esc(POA.result.map(([n, t]) => n + ' ' + t).slice(0, 1).join(''))}.</dd></div></dl>
+<div class="h-cta"><a class="btn btn-navy" href="/projects/${POA.slug}">Read the story</a><a class="btn btn-line" style="color:var(--navy)" href="/projects">All service projects</a></div></div>
+</div>
+<div class="pj-cards">${PROJECTS.filter((x) => x !== POA).slice(0, 3).map((x) => projectCard(x)).join('')}</div>
 </div></section>
 
+
+
+
 <section class="h-heritage" id="history"><div class="wrap">
-<div class="h-head"><div><span class="kicker">107 years</span><h2>A century of service</h2><p>Through war, reconstruction and renewal, the Club has kept meeting and kept serving.</p></div></div>
-${historyWeek(hist)}
-${exNow ? `<a class="h-exhibit" href="/library/exhibit/${esc(exNow.slug)}">${exNow.cover ? `<span class="im"><img src="${esc(LIB.anySrc(exNow.cover, 900))}" alt="" loading="lazy"></span>` : ''}<span class="t"><span class="kicker">From the Heritage Library · This month’s exhibit</span><strong>${esc(exNow.title)}</strong><span>${esc((exNow.intro || '').slice(0, 170))}${(exNow.intro || '').length > 170 ? '…' : ''}</span><em>Visit the exhibit →</em></span></a>` : ''}
-<div class="h-years">${YEARS.map((y) => `<figure class="h-year" style="margin:0"><img src="${H(y.img)}" alt="" loading="lazy"><b>${y.year}</b><p>${esc(y.text)}</p></figure>`).join('')}</div>
+<div class="h-head"><div><span class="kicker">107 years · Asia’s first Rotary club</span><h2>Where Rotary in Asia began</h2><p>In 1919, Leon Lambert and a small group of business leaders met at the Manila Hotel and formed the first Rotary club in the Philippines and in Asia, Charter No. 478. More than a century later, the Club still meets every Thursday for fellowship and service, led in 2026–27 by President Reginald T. Yu.</p></div></div>
+<a class="h-exhibit" href="${exNow ? `/library/exhibit/${esc(exNow.slug)}` : '/library'}">${exNow && exNow.cover ? `<span class="im"><img src="${esc(LIB.anySrc(exNow.cover, 900))}" alt="" loading="lazy"></span>` : ''}<span class="t"><span class="kicker">The Heritage Library${exNow ? ' · This month’s exhibit' : ''}</span><strong>${exNow ? esc(exNow.title) : 'The Club in its own words and pictures'}</strong><span>Every Balita since 1948, nearly 12,000 photos, the trophy room, past presidents and Club films. Look up your name, or your father’s.</span><em>${exNow ? 'Visit the exhibit →' : 'Open the library →'}</em></span></a>
 <div class="h-pres"><div class="h-pres-head"><h3>${PRES.presidents.length} presidential terms since 1919</h3><a class="link-arrow" href="/past-presidents">See every president and his term</a></div>
 <div class="h-pres-row">${PRES.presidents.slice(-8).reverse().map((x) => `<a href="/past-presidents#${presId(x)}"><img src="${x.img}" alt="" width="400" height="600" loading="lazy"><b>${esc(x.name)}</b><span>${esc(x.years)}</span></a>`).join('')}</div></div>
 </div></section>
 
-${issue ? `<section class="h-sec alt" id="balita"><div class="wrap h-balita">
-<a class="h-balita-cover" href="/balita/${issue.issue_no}">${issue.cover_path ? `<img src="${coverSrc(issue, 480)}" alt="Cover of Balita issue ${issue.issue_no}" loading="lazy">` : ''}</a>
-<div class="h-balita-main"><span class="kicker">Published every Thursday</span><h2>Balita</h2>
-<p class="h-balita-meta">Issue No. ${issue.issue_no} · ${esc(fmtDate(issue.issue_date))}</p>
-${guestName ? `<p class="h-balita-cover-note">On the cover: ${coverStory ? `<a href="/balita/${issue.issue_no}/${coverStory.slug}">${esc(guestName)}</a>` : esc(guestName)}, guest of honor and speaker</p>` : ''}
-<ul class="h-stories">${stories.map((a) => `<li><a href="/balita/${issue.issue_no}/${a.slug}"><small>${esc(a.kicker || 'Balita')}</small><strong>${esc(a.title)}</strong></a></li>`).join('')}</ul>
-<div class="h-cta"><a class="btn btn-navy" href="/balita/${issue.issue_no}">Read issue ${issue.issue_no}</a><a class="btn btn-line" style="color:var(--navy)" href="/balita">All issues</a></div>
-</div></div></section>` : ''}
+
 
 <section class="h-join" id="join"><img class="bg" src="${H('people-of-action')}" alt="" aria-hidden="true" loading="lazy"><div class="wrap">
 <span class="kicker">Membership</span>
 <h2>Leadership becomes more meaningful in the service of others.</h2>
 <p>Join business, professional and civic leaders working for a stronger Manila. Start by joining us at a Thursday meeting as a guest.</p>
 <div class="h-cta"><a class="btn btn-gold" href="/meeting">Attend as a guest</a><a class="btn btn-ghost" href="/join">How to join</a></div>
+<p class="h-more">Or <a href="/partner">partner with us</a>, <a href="/donate">support a project</a> or <a href="/projects">explore our projects</a>.</p>
 </div></section>
 ${rotaryWorld()}
 <div class="app-tip" id="app-tip" hidden><a href="/app"><img src="/assets/apple-touch-icon.png" alt="" width="36" height="36"><span><b>Put the Club on your phone</b>One tap to the meeting, events and the Balita.</span></a><button type="button" aria-label="Not now">×</button></div>
