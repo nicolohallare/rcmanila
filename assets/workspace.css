@@ -89,7 +89,11 @@ main p,main li,main td,main label,main dd,main dt{font-family:var(--sans)}
 .todo-i.urgent .todo-n{background:#c98a00}
 .todo-i.info .todo-n{background:#6b7787}
 .todo-go{white-space:nowrap;padding:9px 16px;font-size:14px}
-@media (max-width:640px){.todo-i{grid-template-columns:34px minmax(0,1fr)}.todo-ic{width:34px;height:34px}.todo-go{grid-column:2;justify-self:start}}
+.todo-acts{display:flex;flex-direction:column;align-items:stretch;gap:8px}
+.todo-acts [data-done]{display:inline-flex;align-items:center;justify-content:center;gap:6px;color:#17458f;border-color:#b9c9df;background:#fff}
+.todo-acts [data-done] svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.todo-acts [data-done]:hover{background:#e8f5ec;border-color:#7cbf95;color:#1d5a37}
+@media (max-width:640px){.todo-i{grid-template-columns:34px minmax(0,1fr)}.todo-ic{width:34px;height:34px}.todo-acts{grid-column:2;flex-direction:row;flex-wrap:wrap;justify-self:start}}
 .todo-clear{display:flex;gap:14px;align-items:center;background:#e8f5ec;border:1px solid #b9dcc6;border-radius:12px;padding:16px;color:#1d5a37;font-family:var(--sans)}
 .todo-clear svg{width:28px;height:28px}
 .todo-clear div{display:flex;flex-direction:column}

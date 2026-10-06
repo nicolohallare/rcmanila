@@ -37,8 +37,8 @@
     return `<ul class="todo">${L.map((t) => {
       const act = t.go ? `<button type="button" class="btn ${t.level === 'info' ? 'btn-line' : 'btn-blue'} todo-go" data-go="${esc(t.go)}">${esc(t.label || 'Open')}</button>`
         : t.href ? `<a class="btn ${t.level === 'info' ? 'btn-line' : 'btn-blue'} todo-go" href="${esc(t.href)}"${/^https?:|^\/(library|balita|events|meeting)/.test(t.href) ? ' target="_blank" rel="noopener"' : ''}>${esc(t.label || 'Open')}</a>` : '';
-      const doneBtn = t.done ? `<button type="button" class="btn btn-line todo-go" data-done="${esc(t.done)}" style="color:var(--navy)">Posted</button>` : '';
-      return `<li class="todo-i ${esc(t.level || 'todo')}"><span class="todo-ic">${icon(t.icon)}</span><div class="todo-t"><b>${t.count != null ? `<span class="todo-n">${fmt(t.count)}</span> ` : ''}${esc(t.title)}</b>${t.text ? `<span>${t.html ? t.text : esc(t.text)}</span>` : ''}</div>${act}${doneBtn}</li>`;
+      const doneBtn = t.done ? `<button type="button" class="btn btn-line todo-go" data-done="${esc(t.done)}">${icon('check')}<span>Mark as posted</span></button>` : '';
+      return `<li class="todo-i ${esc(t.level || 'todo')}"><span class="todo-ic">${icon(t.icon)}</span><div class="todo-t"><b>${t.count != null ? `<span class="todo-n">${fmt(t.count)}</span> ` : ''}${esc(t.title)}</b>${t.text ? `<span>${t.html ? t.text : esc(t.text)}</span>` : ''}</div>${act || doneBtn ? `<div class="todo-acts">${act}${doneBtn}</div>` : ''}</li>`;
     }).join('')}</ul>`;
   }
   // tiles: [{ n, label, sub }]
@@ -55,7 +55,7 @@
   // Viber Community items: [{kind, ref, title, date, link}] -> to-do items with a share button and "Posted".
   const VIBER = { meeting: 'Post this week\'s meeting', event: 'Announce the event', 'event-reminder': 'Remind members about', balita: 'Post the new Balita', exhibit: 'Post this month\'s exhibit' };
   function viberItems(list, opts) {
-    return (list || []).map((v) => Object.assign({ level: v.kind === 'event-reminder' || v.kind === 'meeting' ? 'todo' : 'info', icon: 'share', title: `Viber Community: ${VIBER[v.kind] || 'Post'}: ${v.title}`, text: (v.date ? day(v.date, { weekday: 'long' }) + '. ' : '') + 'Share it in “RCM General Information & Announcements”, then click Posted.', done: v.kind + '|' + v.ref }, opts(v)));
+    return (list || []).map((v) => Object.assign({ level: v.kind === 'event-reminder' || v.kind === 'meeting' ? 'todo' : 'info', icon: 'share', title: `Viber Community: ${VIBER[v.kind] || 'Post'}: ${v.title}`, text: (v.date ? day(v.date, { weekday: 'long' }) + '. ' : '') + 'Share it in “RCM General Information & Announcements”, then click “Mark as posted”.', done: v.kind + '|' + v.ref }, opts(v)));
   }
   const badge = (el, n) => { if (!el) return; el.hidden = !n; el.textContent = n > 99 ? '99+' : String(n || ''); };
 
