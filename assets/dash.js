@@ -37,7 +37,8 @@
     return `<ul class="todo">${L.map((t) => {
       const act = t.go ? `<button type="button" class="btn ${t.level === 'info' ? 'btn-line' : 'btn-blue'} todo-go" data-go="${esc(t.go)}">${esc(t.label || 'Open')}</button>`
         : t.href ? `<a class="btn ${t.level === 'info' ? 'btn-line' : 'btn-blue'} todo-go" href="${esc(t.href)}"${/^https?:|^\/(library|balita|events|meeting)/.test(t.href) ? ' target="_blank" rel="noopener"' : ''}>${esc(t.label || 'Open')}</a>` : '';
-      return `<li class="todo-i ${esc(t.level || 'todo')}"><span class="todo-ic">${icon(t.icon)}</span><div class="todo-t"><b>${t.count != null ? `<span class="todo-n">${fmt(t.count)}</span> ` : ''}${esc(t.title)}</b>${t.text ? `<span>${t.html ? t.text : esc(t.text)}</span>` : ''}</div>${act}</li>`;
+      const doneBtn = t.done ? `<button type="button" class="btn btn-line todo-go" data-done="${esc(t.done)}" style="color:var(--navy)">Posted</button>` : '';
+      return `<li class="todo-i ${esc(t.level || 'todo')}"><span class="todo-ic">${icon(t.icon)}</span><div class="todo-t"><b>${t.count != null ? `<span class="todo-n">${fmt(t.count)}</span> ` : ''}${esc(t.title)}</b>${t.text ? `<span>${t.html ? t.text : esc(t.text)}</span>` : ''}</div>${act}${doneBtn}</li>`;
     }).join('')}</ul>`;
   }
   // tiles: [{ n, label, sub }]
@@ -46,7 +47,17 @@
     const h = Number(new Date().toLocaleString('en-GB', { hour: 'numeric', hour12: false, timeZone: TZ }));
     return { greet: h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening', date: new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: TZ }) };
   }
+  // Marks a website post as shared in the Viber Community, so it leaves the to-do list.
+  async function posted(page, kind, ref, code) {
+    const r = await fetch(FN, { method: 'POST', headers: { 'content-type': 'application/json', 'x-editor-code': code || '', apikey: PUB }, body: JSON.stringify({ for: page, action: 'viber-posted', kind, ref }) });
+    const d = await r.json().catch(() => ({})); if (!r.ok || d.error) throw new Error(d.error || 'Error ' + r.status);
+  }
+  // Viber Community items: [{kind, ref, title, date, link}] -> to-do items with a share button and "Posted".
+  const VIBER = { meeting: 'Post this week\'s meeting', event: 'Announce the event', 'event-reminder': 'Remind members about', balita: 'Post the new Balita', exhibit: 'Post this month\'s exhibit' };
+  function viberItems(list, opts) {
+    return (list || []).map((v) => Object.assign({ level: v.kind === 'event-reminder' || v.kind === 'meeting' ? 'todo' : 'info', icon: 'share', title: `Viber Community: ${VIBER[v.kind] || 'Post'}: ${v.title}`, text: (v.date ? day(v.date, { weekday: 'long' }) + '. ' : '') + 'Share it in “RCM General Information & Announcements”, then click Posted.', done: v.kind + '|' + v.ref }, opts(v)));
+  }
   const badge = (el, n) => { if (!el) return; el.hidden = !n; el.textContent = n > 99 ? '99+' : String(n || ''); };
 
-  window.RCMDash = { load, esc, fmt, day, daysUntil, ago, icon, todo, kpis, hello, badge };
+  window.RCMDash = { load, esc, fmt, day, daysUntil, ago, icon, todo, kpis, hello, badge, posted, viberItems };
 })();

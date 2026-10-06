@@ -31,6 +31,7 @@
       if (e.capacity && e.seats > e.capacity) items.push({ level: 'urgent', icon: 'star', title: `${e.title}: ${e.seats} seats signed up for ${e.capacity}`, text: `On ${D.day(e.event_date, { weekday: 'long' })}. Raise the limit, close sign-ups, or tell the organizer.`, go: 'v-ev', label: 'Open events' });
       if (e.status !== 'published' && D.daysUntil(e.event_date) <= 30) items.push({ level: 'todo', icon: 'star', title: `${e.title} is still a draft`, text: `On ${D.day(e.event_date)}. Publish it so members can sign up.`, go: 'v-ev', label: 'Open events' });
     }
+    items.push(...D.viberItems(d.viber, (v) => v.kind === 'meeting' ? { go: 'meeting:' + v.id, label: 'Open share panel' } : { go: 'v-ev', label: 'Open events' }));
     $('sh-todo').innerHTML = D.todo(items, 'The next meeting is set, and no messages or gifts are waiting.');
     D.badge($('b-today'), items.filter((i) => i.level === 'urgent').length);
 
@@ -55,7 +56,9 @@
 
   document.addEventListener('rcmsec:home', draw);
   $('sh-refresh').onclick = draw;
-  document.addEventListener('click', (e) => {
+  document.addEventListener('click', async (e) => {
+    const p = e.target.closest('#sh-todo [data-done]');
+    if (p) { const [k, r] = p.getAttribute('data-done').split('|'); p.disabled = true; try { await D.posted('secretariat', k, r, S().code()); draw(); } catch (err) { p.disabled = false; p.textContent = err.message; } return; }
     const b = e.target.closest('#sh-todo [data-go]'); if (!b) return;
     const g = b.getAttribute('data-go');
     if (g === 'new-meeting') return S().newMeeting();

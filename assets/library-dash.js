@@ -46,6 +46,8 @@
     if (vNoStill.length) items.push({ level: 'todo', icon: 'image', count: vNoStill.length, title: vNoStill.length === 1 ? 'published video needs a still frame' : 'published videos need a still frame', text: 'One click makes them from the videos themselves. It takes a few seconds each; keep the page open.', go: 'vid', label: 'Make stills' });
     if (vWait.length) items.push({ level: 'todo', icon: 'frame', count: vWait.length, title: vWait.length === 1 ? 'video waiting for you' : 'videos waiting for you', text: (() => { const h = vWait.filter((v) => v.status === 'held').length; return (h ? `${h} ${h === 1 ? 'is' : 'are'} held for a check (full Zoom meetings and unnamed speeches). ` : '') + 'Watch, check the title and publish, or hide.'; })(), go: 'vid', label: 'Review' });
     if (!vRecent.length) items.push({ level: 'info', icon: 'up', title: 'Add this year’s videos from the Secretariat', text: 'Starting with the induction. Ask for the original files, not Viber copies. Then Videos → Add a new video.', go: 'vid', label: 'Open videos' });
+    // Viber Community: this month's exhibit, with a ready message to copy.
+    items.push(...D.viberItems(d.viber, (v) => ({ go: 'vcopy:' + encodeURIComponent(`This month in the Rotary Club of Manila's Heritage Library: ${v.title}\n${location.origin}${v.link}`), label: 'Copy message' })));
     D.badge($('b-vid'), vWait.length + vNoStill.length);
     $('dh-todo').innerHTML = D.todo(items, 'No suggestions, drafts or checks are waiting. The library runs by itself.');
 
@@ -67,5 +69,12 @@
   }
 
   document.addEventListener('rcmlib:tab', (e) => { if (e.detail === 'home') draw(); });
-  document.addEventListener('click', (e) => { const b = e.target.closest('[data-go]'); if (b && $('t-home').contains(b)) L().tab(b.getAttribute('data-go')); });
+  document.addEventListener('click', async (e) => {
+    const p = e.target.closest('#t-home [data-done]');
+    if (p) { const [k, r] = p.getAttribute('data-done').split('|'); p.disabled = true; try { await D.posted('library', k, r, L().code()); draw(); } catch (err) { p.disabled = false; p.textContent = err.message; } return; }
+    const b = e.target.closest('[data-go]'); if (!b || !$('t-home').contains(b)) return;
+    const g = b.getAttribute('data-go');
+    if (g.startsWith('vcopy:')) { try { await navigator.clipboard.writeText(decodeURIComponent(g.slice(6))); b.textContent = 'Copied: paste in Viber'; } catch (err) { b.textContent = 'Could not copy'; } return; }
+    L().tab(g);
+  });
 })();

@@ -22,6 +22,7 @@
     const toNext = D.daysUntil(d.cover.next);
     if (!d.cover.next_month) items.push({ level: toNext <= 10 ? 'todo' : 'info', icon: 'image', title: `Cover photo for ${monthName(d.cover.next)} not set`, text: `It changes on ${D.day(d.cover.next)} (in ${toNext} days). Without a new one, this month's cover stays up.`, go: 'cover', label: 'Set cover' });
     for (const f of d.facebook.failed || []) items.push({ level: 'urgent', icon: 'alert', title: `A ${f.kind === 'event' ? 'event' : 'Balita'} post did not reach Facebook`, text: `Tried ${f.attempts} times: ${String(f.error || '').slice(0, 140)}`, href: 'https://www.facebook.com/', label: 'Open Facebook' });
+    items.push(...D.viberItems(d.viber, (v) => ({ go: 'issue:' + v.id, label: 'Open share panel' })));
     $('ed-todo').innerHTML = D.todo(items, 'Every issue is live and the next cover is set.');
     const s = d.stats;
     $('ed-kpis').innerHTML = D.kpis([
@@ -34,7 +35,9 @@
   }
 
   document.addEventListener('rcmed:home', draw);
-  document.addEventListener('click', (e) => {
+  document.addEventListener('click', async (e) => {
+    const p = e.target.closest('#ed-todo [data-done]');
+    if (p) { const [k, r] = p.getAttribute('data-done').split('|'); p.disabled = true; try { await D.posted('editor', k, r, E().code()); draw(); } catch (err) { p.disabled = false; p.textContent = err.message; } return; }
     const b = e.target.closest('#ed-todo [data-go]'); if (!b) return;
     const g = b.getAttribute('data-go');
     if (g.startsWith('issue:')) return E().open(g.slice(6));

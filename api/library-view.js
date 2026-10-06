@@ -189,7 +189,7 @@ ${vs.length || gs.length || its.length || ob.length || (p.balita || []).length ?
   async function reading(origin) {
     const vols = await volumes();
     const groups = PRES.decades.map((d) => ({ d, vs: vols.filter((v) => v.year_from >= eraYear(d) && v.year_from < eraYear(d) + 10) })).filter((g) => g.vs.length);
-    const body = `${libNav('balita')}<section class="wrap lib-page-head"><span class="kicker">The reading room</span><h1>The Rotary Balita</h1><p class="dek">Bound volumes of the Club’s newsletter, page by page as printed. Members’ home addresses printed in old issues have been removed, and member directories are shown without them.</p></section>
+    const body = `${libNav('balita')}<section class="wrap lib-page-head"><span class="kicker">The reading room</span><h1>The Rotary Balita</h1><p class="dek">Bound volumes of the Club’s newsletter from 1948 to 2019, page by page as printed. Members’ home addresses printed in old issues have been removed, and member directories are shown without them.</p><p class="dek">Issues from 2015 to today, story by story with their photos, are on the <a href="/balita">Balita page</a>.</p></section>
 <section class="wrap lib-sec" style="padding-top:0">${groups.length ? groups.map((g) => `<h2 class="lib-era-h"><a href="/library/era/${eraYear(g.d)}">${esc(g.d.label)} · ${esc(g.d.title)}</a></h2>${shelf(g.vs)}`).join('') : ''}
 <h2 class="lib-era-h">Recent years</h2>${shelf([], true)}</section>`;
     return page('The reading room · Heritage Library', 'Read the Rotary Balita from 1948, page by page as printed.', body, origin + '/library/balita');
@@ -223,13 +223,14 @@ ${vs.length || gs.length || its.length || ob.length || (p.balita || []).length ?
     ]);
     const byN = new Map(pg.map((p) => [p.n, p]));
     const nm = new Map((named || []).map((x) => [x.n, x.names]));
+    const web = i.issue_no >= 3500 && (v.year_to || 0) >= 2014 ? (await safe(() => q(`rcm_issues?select=issue_no&status=eq.published&issue_no=eq.${Number(i.issue_no)}`), []))[0] : null;
     const pages = []; for (let n = i.start_page; n <= i.end_page; n++) { const p = byN.get(n); pages.push(p ? { n, src: aSrc(p.image_path), w: p.width, h: p.height, t: (p.text || '').slice(0, 6000), f: !!(p.flags && p.flags.length), nm: nm.get(n) || '' } : { n, held: true }); }
     const rel = (n) => n - i.start_page + 1;
     const title = `Balita No. ${i.issue_no}${i.issue_date ? ', ' + fmtDate(i.issue_date) : ''}`;
     const artHtml = arts.map((a) => `<details class="lib-art" id="a-${esc(a.id)}" data-pages="${(a.pages || []).join(',')}"><summary><span class="k">${esc(a.kind || '')}</span><strong>${esc(a.title || '')}</strong>${a.summary ? `<span class="s">${esc(a.summary)}</span>` : ''}<span class="pg">p. ${(a.pages || []).map(rel).join(', ')}</span></summary>
 <div class="lib-art-body">${String(a.body || '').split(/\n\s*\n/).map((t) => `<p>${esc(t.trim())}</p>`).join('')}${(a.people || []).length ? `<div class="lib-people"><span>Named in this article</span>${a.people.slice(0, 60).map((p) => `<a href="/library/search?q=${encodeURIComponent('"' + (p.name || p) + '"')}">${esc(p.name || p)}</a>`).join('')}</div>` : ''}</div></details>`).join('');
     const body = `${libNav('balita')}<section class="wrap lib-reader-head"><a class="lib-back" href="/library/balita/${volSlug(v)}">← Balita ${esc(v.years || '')}</a>
-<h1>No. ${i.issue_no} <small>${esc(i.issue_date ? fmtDate(i.issue_date) : i.label || '')}</small></h1>${i.blurb ? `<p class="dek">${esc(i.blurb)}</p>` : ''}
+<h1>No. ${i.issue_no} <small>${esc(i.issue_date ? fmtDate(i.issue_date) : i.label || '')}</small></h1>${i.blurb ? `<p class="dek">${esc(i.blurb)}</p>` : ''}${web ? `<p class="lib-also"><a class="link-arrow" href="/balita/${web.issue_no}">Read this issue story by story, with photos, on the Balita page</a></p>` : ''}
 <nav class="lib-issue-pager">${prev ? `<a href="/library/balita/${volSlug(v)}/${prev.issue_no}">← No. ${prev.issue_no}</a>` : '<span></span>'}${next ? `<a href="/library/balita/${volSlug(v)}/${next.issue_no}">No. ${next.issue_no} →</a>` : ''}</nav></section>
 <section class="wrap lib-reader">
 <div class="lib-viewer" id="viewer"><div class="lib-vbar"><button type="button" data-go="-1" aria-label="Previous page">←</button><span id="where"></span><button type="button" data-go="1" aria-label="Next page">→</button><button type="button" id="zoom">Zoom</button><button type="button" id="tagp" title="Help name the people in a photo on this page">Who’s on this page?</button></div><div class="lib-vpage" id="vpage"></div><div class="lib-vnote" id="vnote" hidden>Home addresses on this page have been removed.</div><div class="lib-vnames" id="vnames" hidden></div></div>

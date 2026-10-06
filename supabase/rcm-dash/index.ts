@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 // Staff dashboards: what needs doing and a few figures, for the Balita editor, the Secretariat and the librarian.
-// Read-only. Opens with the same passcodes as each staff page (the editor's passcode opens all three).
+// Mostly read-only (it also records which posts were shared on Viber). Opens with the same passcodes as each staff page (the editor's passcode opens all three).
 const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "content-type, x-editor-code, authorization, apikey", "Access-Control-Allow-Methods": "POST, OPTIONS" };
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
 const json = (d: unknown, s = 200) => new Response(JSON.stringify(d), { status: s, headers: { ...CORS, "Content-Type": "application/json" } });
@@ -31,13 +31,20 @@ const n = (r: any) => r?.count ?? 0;
 // deno-lint-ignore no-explicit-any
 const rows = (r: any) => r?.data ?? [];
 
+// Website posts to share in the Club's Viber Community, and which have been marked as posted.
+async function posted(kinds: string[]) {
+  const { data } = await db.from("rcm_viber_posts").select("kind,ref").in("kind", kinds);
+  return new Set((data || []).map((r: { kind: string; ref: string }) => r.kind + "|" + r.ref));
+}
+const addDays = (t: string, d: number) => { const x = new Date(t + "T12:00:00Z"); x.setUTCDate(x.getUTCDate() + d); return x.toISOString().slice(0, 10); };
+
 async function library(today: string) {
   const next = monthStart(today, 1);
   const [tags, evDraft, evFlag, exh, mins, galHeld, volDraft, ask30, askAll, recentQ, tagsDone, vols, pages, objs, gals, photos, evPub] = await Promise.all([
     db.from("rcm_lib_tags").select("id", { count: "exact", head: true }).eq("status", "new"),
     db.from("rcm_lib_events").select("id", { count: "exact", head: true }).eq("status", "draft"),
     db.from("rcm_lib_events").select("id", { count: "exact", head: true }).eq("status", "draft").not("check_note", "is", null),
-    db.from("rcm_lib_exhibits").select("month,title,status").gte("month", monthStart(today)).order("month").limit(4),
+    db.from("rcm_lib_exhibits").select("month,slug,title,status").gte("month", monthStart(today)).order("month").limit(4),
     db.from("rcm_lib_minutes").select("week").eq("status", "published").gte("week", today).order("week", { ascending: false }),
     db.from("rcm_lib_galleries").select("id", { count: "exact", head: true }).eq("status", "draft").gt("photo_count", 0).eq("kept_private", false),
     db.from("rcm_lib_volumes").select("id,acc,years,page_count").eq("status", "draft").order("acc"),
@@ -57,7 +64,11 @@ async function library(today: string) {
   const vd = rows(volDraft) as { id: string; acc: string; years: string; page_count: number }[];
   const vdone = await Promise.all(vd.map((v) => db.from("rcm_lib_pages").select("n", { count: "exact", head: true }).eq("volume_id", v.id)));
   const volumes = vd.map((v, k) => ({ acc: v.acc, years: v.years, pages: v.page_count, done: n(vdone[k]) }));
+  const done = await posted(["exhibit"]);
+  const exNow = (rows(exh) as { month: string; slug: string; title: string; status: string }[]).find((x) => x.month.slice(0, 7) === today.slice(0, 7) && x.status === "published");
+  const viber = exNow && !done.has("exhibit|" + exNow.slug) ? [{ kind: "exhibit", ref: exNow.slug, title: exNow.title, link: "/library/exhibit/" + exNow.slug }] : [];
   return {
+    viber,
     today,
     todo: {
       tags_new: n(tags),
@@ -75,7 +86,7 @@ async function library(today: string) {
 async function editor(today: string) {
   const ry = ryStart(today);
   const [latest, pending, covers, fbFail, fbLast, fbMonth, ryIssues, allIssues, allArticles] = await Promise.all([
-    db.from("rcm_issues").select("issue_no,issue_date").eq("status", "published").order("issue_no", { ascending: false }).limit(1),
+    db.from("rcm_issues").select("id,issue_no,issue_date").eq("status", "published").order("issue_no", { ascending: false }).limit(1),
     db.from("rcm_issues").select("id,issue_no,issue_date,status,publish_at").neq("status", "published").order("issue_no", { ascending: false }).limit(10),
     db.from("rcm_cover").select("month").gte("month", monthStart(today)).order("month"),
     db.from("rcm_fb_posts").select("kind,ref_id,error,attempts,created_at").is("fb_post_id", null).not("error", "is", null).order("created_at", { ascending: false }).limit(5),
@@ -91,8 +102,10 @@ async function editor(today: string) {
   let due: string | null = null;
   if (last?.issue_date) { const d = new Date(last.issue_date + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + 7); due = d.toISOString().slice(0, 10); }
   const months = (rows(covers) as { month: string }[]).map((c) => c.month.slice(0, 7));
+  const done = await posted(["balita"]);
+  const viber = last && last.issue_date >= addDays(today, -10) && !done.has("balita|" + last.issue_no) ? [{ kind: "balita", ref: String(last.issue_no), id: last.id, title: `Balita No. ${last.issue_no}`, date: last.issue_date, link: "/balita/" + last.issue_no }] : [];
   return {
-    today,
+    today, viber,
     latest: last, next_due: due,
     pending: rows(pending),
     cover: { this_month: months.includes(today.slice(0, 7)), next_month: months.includes(monthStart(today, 1).slice(0, 7)), next: monthStart(today, 1) },
@@ -121,8 +134,18 @@ async function secretariat(today: string) {
   // deno-lint-ignore no-explicit-any
   const cnt = (m: any, k: string) => m?.[k]?.[0]?.count ?? 0;
   const don = rows(ryDon) as { amount: number }[];
+  // To share in the Viber Community: this week's meeting, each new event, and a reminder in the last 3 days before it.
+  const done = await posted(["meeting", "event", "event-reminder"]);
+  const viber: Record<string, unknown>[] = [];
+  for (const m of rows(meet) as { id: string; meeting_date: string; label: string; topic: string; status: string }[])
+    if (m.status === "published" && m.meeting_date <= addDays(today, 6) && !done.has("meeting|" + m.meeting_date)) viber.push({ kind: "meeting", ref: m.meeting_date, id: m.id, title: /^no (weekly )?meeting/i.test(m.label || "") ? "No weekly meeting this Thursday" : (m.topic || m.label || "This week's meeting"), date: m.meeting_date, link: "/meetings/" + m.meeting_date });
+  for (const e of rows(events) as { slug: string; title: string; event_date: string; status: string }[]) {
+    if (e.status !== "published") continue;
+    if (!done.has("event|" + e.slug)) viber.push({ kind: "event", ref: e.slug, title: e.title, date: e.event_date, link: "/events/" + e.slug });
+    else if (e.event_date <= addDays(today, 3) && !done.has("event-reminder|" + e.slug)) viber.push({ kind: "event-reminder", ref: e.slug, title: e.title, date: e.event_date, link: "/events/" + e.slug });
+  }
   return {
-    today,
+    today, viber,
     meetings: (rows(meet) as Record<string, unknown>[]).map((m) => ({ ...m, signups: cnt(m, "rcm_signups"), rcm_signups: undefined })),
     last_meeting: rows(lastMeet)[0] ? { ...rows(lastMeet)[0], signups: cnt(rows(lastMeet)[0], "rcm_signups"), rcm_signups: undefined } : null,
     inquiries: { new: n(inqNew), list: rows(inqList) },
@@ -144,6 +167,15 @@ Deno.serve(async (req) => {
   if (!roles.includes(want)) return json({ error: "This passcode does not open that page." }, 403);
   try {
     const today = manilaToday();
+    if (body.action === "viber-posted") {
+      const kind = String(body.kind || ""), ref = String(body.ref || "").slice(0, 120);
+      const need: Record<string, string> = { meeting: "secretariat", event: "secretariat", "event-reminder": "secretariat", balita: "editor", exhibit: "library" };
+      if (!need[kind] || !ref) return json({ error: "Bad request" }, 400);
+      if (!roles.includes(need[kind])) return json({ error: "This passcode does not open that page." }, 403);
+      const { error } = await db.from("rcm_viber_posts").upsert({ kind, ref, posted_at: new Date().toISOString() });
+      if (error) throw error;
+      return json({ ok: true });
+    }
     if (want === "library") return json(await library(today));
     if (want === "editor") return json(await editor(today));
     if (want === "secretariat") return json(await secretariat(today));
