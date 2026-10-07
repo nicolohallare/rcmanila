@@ -101,7 +101,7 @@ const PLAN_TASK = `Return exactly this JSON shape:
 {"issue":{"issue_no":number|null,"date":"YYYY-MM-DD"|null,"meeting":"e.g. 11th Weekly Membership Meeting"|null,"guest":"guest speaker name and title"|null,"summary":"one sentence naming the main stories, factual, no hype"},
  "articles":[{"title":"headline as printed","kicker":"one of: Editorial, Guest speaker, Weekly meeting, Service, Feature, Club administration, In Focus, Foundation, District, Fellowship, In the news, Awards, Club news","byline":"as printed or null","from":first PDF page number,"to":last PDF page number,"printed":"printed page range like pp. 62–81, or null","lead":true only for the single strongest story to feature}],
  "skipped":[{"from":n,"to":n,"reason":"advertisement | meeting program | attendance or dues list | roster | cover | contents | blank"}]}
-Rules: articles are continuous prose stories, editorials, profiles, speaker introductions, reports and announcements with real text. Photo-only pages that belong to an article go inside that article's page range. Do not invent titles: use the printed headline. Keep articles in reading order. Every PDF page belongs to exactly one article or one skipped range.`;
+Rules: articles are continuous prose stories, editorials, profiles, speaker introductions, reports and announcements with real text. Photo-only pages that belong to an article go inside that article's page range. Do not invent titles: use the printed headline. Keep articles in reading order. Every PDF page belongs to exactly one article or one skipped range. Keep the JSON compact: merge neighbouring skipped pages into one range.`;
 
 const CLEAN_SYSTEM = `You turn one article from the weekly Balita (newsletter of the Rotary Club of Manila) into clean web text. The input is raw text pulled from PDF pages, so it contains running headers and footers, page numbers, repeated decorative titles, captions mixed into the body, words broken across lines, and drop caps split from their word (e.g. "T" on its own and "HE Rotary Club..." which is "THE Rotary Club..." → write "The Rotary Club...").
 Keep the author's wording exactly. Fix only extraction damage: rejoin hyphenated or broken words and drop caps, restore paragraph breaks, remove headers, footers, page numbers and repeated titles, and move photo captions out of the body. Never add facts, never summarize the body, never rewrite sentences. Reply with JSON only.`;
@@ -560,7 +560,7 @@ Deno.serve(async (req) => {
       const pages: { n: number; text: string }[] = body.pages || [];
       const text = pages.map((p) => `=== PDF page ${p.n} ===\n${(p.text || "").slice(0, 1800)}`).join("\n\n");
       return streamed(async () => {
-        const reply = await claude([{ type: "text", text: `${PLAN_TASK}\n\nThe issue text:\n\n${text}` }], PLAN_SYSTEM, 6000);
+        const reply = await claude([{ type: "text", text: `${PLAN_TASK}\n\nThe issue text:\n\n${text}` }], PLAN_SYSTEM, 16000);
         return extractJson(reply);
       });
     }

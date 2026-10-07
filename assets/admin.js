@@ -531,6 +531,54 @@
       return m.startsWith('(') ? '(' + x + ')' : x;
     });
   }
+  // The first included photo leads the article; it is never placed inside the text.
+  function isTop(a, k) { return (a.photos || []).findIndex((p) => p.include !== false) === k; }
+  // The article's text with a photo marker wherever a photo shows. Photos placed by hand keep their line; the rest are
+  // shown where the website spreads them (the same rule as the website), so the editor sees and can move every one.
+  function bodyWithPhotos(a) {
+    const photos = a.photos || [];
+    const idx = (path) => photos.findIndex((p) => p.path === path);
+    const rest = photos.map((p, k) => ({ p, k })).filter(({ p, k }) => p.include !== false && !isTop(a, k));
+    const restPaths = new Set(rest.map((x) => x.p.path));
+    const all = (a.body || []).filter((b) => b && (b.t === 'img' ? restPaths.has(b.path) : b.text));
+    const placed = new Set(all.filter((b) => b.t === 'img').map((b) => b.path));
+    const auto = rest.filter((x) => !placed.has(x.p.path));
+    const textCount = all.filter((b) => b.t !== 'img').length;
+    const every = auto.length ? Math.max(2, Math.floor(textCount / (auto.length + 1))) : 0;
+    const out = []; let pi = 0, ti = 0;
+    all.forEach((b) => {
+      if (b.t === 'img') { out.push({ t: 'img', n: idx(b.path) + 1 }); return; }
+      out.push(b); ti++;
+      if (every && ti % every === 0 && pi < auto.length && ti < textCount) out.push({ t: 'img', n: auto[pi++].k + 1 });
+    });
+    // Photos left over go at the end (three or more show as a grid on the website, so leave those unmarked).
+    const left = auto.slice(pi); if (left.length < 3) left.forEach((x) => out.push({ t: 'img', n: x.k + 1 }));
+    return out;
+  }
+  function placeAtCursor(a, k) {
+    const ta = $('e-body'); if (!ta) return;
+    const tag = `[Photo ${k + 1}]`;
+    const mark = new RegExp('^\\s*\\[\\s*photo\\s*' + (k + 1) + '\\s*\\]\\s*$', 'i');
+    let v = ta.value, pos = ta.selectionStart ?? v.length;
+    // Take the photo out of where it was, keeping the cursor in the same spot of the text.
+    const lines = v.split('\n'); let off = 0, cut = 0; const keep = [];
+    lines.forEach((l) => {
+      const len = l.length + 1;
+      if (mark.test(l)) { if (off + len <= pos) cut += len; else if (off < pos) cut += pos - off; }
+      else keep.push(l);
+      off += len;
+    });
+    pos -= cut;
+    v = keep.join('\n').replace(/\n{3,}/g, '\n\n');
+    pos = Math.min(pos, v.length);
+    // Put it after the paragraph the cursor is in.
+    let end = v.indexOf('\n\n', pos); if (end < 0) end = v.length;
+    v = v.slice(0, end).replace(/\s+$/, '') + '\n\n' + tag + '\n\n' + v.slice(end).replace(/^\s+/, '');
+    ta.value = v.replace(/^\s+/, '');
+    const at = ta.value.indexOf(tag); ta.focus(); ta.setSelectionRange(at, at + tag.length);
+    schedulePreview(true);
+    $('e-msg').textContent = `Photo ${k + 1} moved. Click Save changes to keep it.`;
+  }
   function isLive() { return R.issue && R.issue.status === 'published'; }
   function statusOf(a) { if (!a.included) return ['Left out', 'off']; if (a.checked) return ['Checked', 'ok']; if (a.flag) return ['Needs a look', 'flag']; return ['To check', 'wait']; }
   function renderReview() {
@@ -544,15 +592,16 @@
     const pages = (issue.pages || []).slice((a.page_from || 1) - 1, a.page_to || a.page_from || 1);
     $('pp').textContent = a.printed_pages || `PDF pages ${a.page_from}–${a.page_to}`;
     $('printed').innerHTML = pages.map((p) => `<img src="${imgUrl(p, 900)}" alt="Printed page" loading="lazy">`).join('') || '<p class="muted">No page images.</p>';
-    const bodyText = (a.body || []).map((b) => (b.t === 'h' ? '## ' : b.t === 'q' ? '> ' : '') + b.text).join('\n\n');
+    const bodyText = bodyWithPhotos(a).map((b) => b.t === 'img' ? `[Photo ${b.n}]` : (b.t === 'h' ? '## ' : b.t === 'q' ? '> ' : '') + b.text).join('\n\n');
+    const inText = new Set(bodyWithPhotos(a).filter((b) => b.t === 'img').map((b) => b.n - 1));
     $('editor').innerHTML = `
 ${isLive() ? `<div class="okbox" style="padding:12px 14px">This issue is live. Changes you save here show on the website within a minute. <a href="/balita/${R.issue.issue_no}/${esc(a.slug)}" target="_blank" rel="noopener">View this article on the website ↗</a></div>` : ''}
 ${a.flag ? `<div class="note stack" role="note" style="gap:8px"><div><strong>The AI asks you to check:</strong> ${esc(plainFlag(a))}</div><div class="muted" style="color:#5c3a00">To fix it, change the headline, text or photo captions below. Compare with the “As printed” tab beside the preview.</div><div class="row"><button class="btn btn-blue" type="button" id="f-done" style="padding:8px 14px">Done, it's correct now</button></div></div>` : ''}
 <label class="f" for="e-title">Headline<input id="e-title" type="text" value="${esc(a.title)}"></label>
 <label class="f" for="e-dek">Summary shown when shared<textarea id="e-dek" style="min-height:64px">${esc(a.dek || '')}</textarea></label>
 <div class="row"><label class="f" for="e-byline" style="flex:1">Byline<input id="e-byline" type="text" value="${esc(a.byline || '')}"></label><label class="f" for="e-kicker" style="flex:1">Section label<input id="e-kicker" type="text" value="${esc(a.kicker || '')}"></label></div>
-<div class="stack" style="gap:8px"><strong style="font-size:14px;color:var(--ink-2)">Photos — the first one included leads the article</strong>
-<div class="pgrid">${(a.photos || []).map((p, k) => `<div class="pcell ${p.include === false ? 'off' : ''}"><strong style="font-size:13px">Photo ${k + 1}${p.include === false ? ' · left out' : k === 0 || (a.photos || []).slice(0, k).every((x) => x.include === false) ? ' · top of article' : ''}</strong><img src="${imgUrl(p.path, 320)}" alt=""><textarea data-cap="${k}" aria-label="Caption for photo ${k + 1}" placeholder="Caption (optional)">${esc(p.caption || '')}</textarea><div class="row"><button class="smallbtn" type="button" data-tog="${k}">${p.include === false ? 'Include' : 'Leave out'}</button>${k > 0 ? `<button class="smallbtn" type="button" data-lead="${k}">Make first</button>` : ''}<button class="smallbtn" type="button" data-crop="${k}">Crop</button>${p.orig_path ? `<button class="smallbtn" type="button" data-uncrop="${k}">Undo crop</button>` : p.pdf_cut_old ? `<button class="smallbtn" type="button" data-unrecut="${k}" title="Go back to the photo as first cut from the page">Use old cut</button>` : ''}</div></div>`).join('') || '<p class="muted">No photos for this article.</p>'}</div></div>
+<div class="stack" style="gap:8px"><strong style="font-size:14px;color:var(--ink-2)">Photos — the first one included leads the article</strong><span class="muted" style="font-size:14px">To move a photo, click in the text below where it should go, then click <b>Place at cursor</b> on the photo. You can also cut and paste its <b>[Photo 5]</b> line in the text.</span>
+<div class="pgrid">${(a.photos || []).map((p, k) => `<div class="pcell ${p.include === false ? 'off' : ''}"><strong style="font-size:13px">Photo ${k + 1}${p.include === false ? ' · left out' : k === 0 || (a.photos || []).slice(0, k).every((x) => x.include === false) ? ' · top of article' : inText.has(k) ? ' · in the text' : ''}</strong><img src="${imgUrl(p.path, 320)}" alt=""><textarea data-cap="${k}" aria-label="Caption for photo ${k + 1}" placeholder="Caption (optional)">${esc(p.caption || '')}</textarea><div class="row"><button class="smallbtn" type="button" data-tog="${k}">${p.include === false ? 'Include' : 'Leave out'}</button>${k > 0 ? `<button class="smallbtn" type="button" data-lead="${k}">Make first</button>` : ''}${p.include !== false && !isTop(a, k) ? `<button class="smallbtn" type="button" data-place="${k}" title="Click in the text where this photo should go, then click here">Place at cursor</button>` : ''}<button class="smallbtn" type="button" data-crop="${k}">Crop</button>${p.orig_path ? `<button class="smallbtn" type="button" data-uncrop="${k}">Undo crop</button>` : p.pdf_cut_old ? `<button class="smallbtn" type="button" data-unrecut="${k}" title="Go back to the photo as first cut from the page">Use old cut</button>` : ''}</div></div>`).join('') || '<p class="muted">No photos for this article.</p>'}</div></div>
 <label class="f" for="e-body">Text <span class="muted" style="font-weight:400">(blank line between paragraphs; start a line with ## for a subheading)</span><textarea id="e-body" style="min-height:320px">${esc(bodyText)}</textarea></label>
 <div class="row" style="justify-content:space-between">
 <div class="row"><button class="smallbtn" type="button" id="e-incl">${a.included ? 'Leave out of website' : 'Put back on website'}</button><button class="smallbtn" type="button" id="e-lead">${a.lead ? '★ Featured on homepage' : 'Feature on homepage'}</button></div>
@@ -561,7 +610,15 @@ ${a.flag ? `<div class="note stack" role="note" style="gap:8px"><div><strong>The
     schedulePreview(true);
   }
   function readEditor(a) {
-    const blocks = $('e-body').value.split(/\n\s*\n/).map((s) => s.trim()).filter(Boolean).map((s) => s.startsWith('## ') ? { t: 'h', text: s.slice(3).trim() } : s.startsWith('> ') ? { t: 'q', text: s.slice(2).trim() } : { t: 'p', text: s });
+    const MARK = /^\s*\[\s*photo\s*(\d+)\s*\]\s*$/i, seen = new Set();
+    // A [Photo N] line puts that photo there; it may sit on its own line inside a paragraph, so split those out.
+    const chunks = [];
+    $('e-body').value.split(/\n\s*\n/).forEach((c) => { let buf = []; c.split('\n').forEach((l) => { if (MARK.test(l)) { if (buf.length) chunks.push(buf.join('\n')); buf = []; chunks.push(l.trim()); } else buf.push(l); }); if (buf.length) chunks.push(buf.join('\n')); });
+    const blocks = chunks.map((s) => s.trim()).filter(Boolean).map((s) => {
+      const m = s.match(MARK);
+      if (m) { const ph = (a.photos || [])[Number(m[1]) - 1]; if (!ph || seen.has(ph.path)) return null; seen.add(ph.path); return { t: 'img', path: ph.path, text: '' }; }
+      return s.startsWith('## ') ? { t: 'h', text: s.slice(3).trim() } : s.startsWith('> ') ? { t: 'q', text: s.slice(2).trim() } : { t: 'p', text: s };
+    }).filter(Boolean);
     const photos = (a.photos || []).map((p, k) => Object.assign({}, p, { caption: (document.querySelector(`[data-cap="${k}"]`) || {}).value ?? p.caption }));
     return { title: $('e-title').value.trim() || a.title, dek: $('e-dek').value.trim(), byline: $('e-byline').value.trim() || null, kicker: $('e-kicker').value.trim(), body: blocks, photos };
   }
@@ -581,6 +638,8 @@ ${a.flag ? `<div class="note stack" role="note" style="gap:8px"><div><strong>The
     const t = e.target.closest('[data-tog]'), l = e.target.closest('[data-lead]');
     if (t) { const k = +t.getAttribute('data-tog'); const cur = readEditor(a); cur.photos[k].include = cur.photos[k].include === false; Object.assign(a, cur); renderReview(); return; }
     if (l) { const k = +l.getAttribute('data-lead'); const cur = readEditor(a); cur.photos.unshift(cur.photos.splice(k, 1)[0]); Object.assign(a, cur); renderReview(); return; }
+    const pl = e.target.closest('[data-place]');
+    if (pl) { placeAtCursor(a, +pl.getAttribute('data-place')); return; }
     const cr = e.target.closest('[data-crop]'), uc = e.target.closest('[data-uncrop]');
     if (cr) { openCrop(a, +cr.getAttribute('data-crop')); return; }
     const ur = e.target.closest('[data-unrecut]');

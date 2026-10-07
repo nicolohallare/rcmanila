@@ -1064,19 +1064,26 @@ function renderArticle(origin, issue, a, arts) {
   const photos = (a.photos || []).filter((p) => p.include !== false);
   const lead = photos[0];
   const rest = photos.slice(1);
-  const blocks = Array.isArray(a.body) ? a.body : [];
-  const every = rest.length ? Math.max(2, Math.floor(blocks.length / (rest.length + 1))) : 0;
-  let pi = 0, html = '';
-  blocks.forEach((b, i) => {
+  const all = Array.isArray(a.body) ? a.body : [];
+  // The editor can place a photo on a chosen line of the text ({t:'img', path}); photos not placed are spread through the text.
+  const placed = new Set(all.filter((b) => b && b.t === 'img').map((b) => b.path));
+  const auto = rest.filter((p) => !placed.has(p.path));
+  const blocks = all.filter((b) => b && (b.t === 'img' || b.text));
+  const textCount = blocks.filter((b) => b.t !== 'img').length;
+  const every = auto.length ? Math.max(2, Math.floor(textCount / (auto.length + 1))) : 0;
+  let pi = 0, ti = 0, html = '';
+  blocks.forEach((b) => {
+    if (b.t === 'img') { const p = rest.find((x) => x.path === b.path); if (p) html += figure(p, p.caption || ''); return; }
     if (b.t === 'h') html += `<h2>${esc(b.text)}</h2>`;
     else if (b.t === 'q') html += `<blockquote>${esc(b.text)}</blockquote>`;
     else html += `<p>${esc(b.text)}</p>`;
-    if (every && (i + 1) % every === 0 && pi < rest.length && i < blocks.length - 1) {
-      const p = rest[pi++];
+    ti++;
+    if (every && ti % every === 0 && pi < auto.length && ti < textCount) {
+      const p = auto[pi++];
       html += figure(p, p.caption || '');
     }
   });
-  const leftover = rest.slice(pi);
+  const leftover = auto.slice(pi);
   // Three or more remaining photos (photo pages from print) show as a gallery grid; tap one to see it full size.
   if (leftover.length >= 3) html += `<div class="art-gallery">${leftover.map((p) => `<a href="${raw(p.path)}" target="_blank" rel="noopener"${p.caption ? ` title="${esc(p.caption)}"` : ''}><img src="${img(p.path, 600)}" alt="${esc(p.caption || '')}" loading="lazy"></a>`).join('')}</div>`;
   else if (leftover.length) html += leftover.map((p) => figure(p, p.caption || '')).join('');
