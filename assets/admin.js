@@ -673,6 +673,25 @@ ${a.flag ? `<div class="note stack" role="note" style="gap:8px"><div><strong>The
       R.articles[R.sel] = article; renderReview(); $('e-msg').textContent = isLive() ? 'Saved. The website will show it within a minute.' : 'Saved.';
     } catch (err) { $('e-msg').textContent = err.message; }
   }
+  // The full-screen layout editor lives in its own file; load it if the page does not have it yet.
+  function loadLayout() {
+    if (window.RCMLayout) return Promise.resolve();
+    return new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = '/assets/layout-editor.js?v=' + Date.now(); sc.onload = () => window.RCMLayout ? ok() : no(new Error('not loaded')); sc.onerror = () => no(new Error('missing')); document.head.appendChild(sc); });
+  }
+  async function openLayout(a) {
+    const msg = $('e-msg');
+    try {
+      await loadLayout();
+      const cur = readEditor(a);
+      const laid = bodyWithPhotos({ photos: cur.photos, body: cur.body }, true).map((b) => b.t === 'img' ? { t: 'img', path: cur.photos[b.n - 1].path } : b);
+      window.RCMLayout.open({ title: cur.title, photos: cur.photos, body: laid, imgUrl, onDone: (photos, body) => { Object.assign(a, cur, { photos, body }); renderReview(); save(); } });
+    } catch (err) {
+      msg.textContent = err.message === 'missing' || err.message === 'not loaded'
+        ? 'The layout editor file is not on the website yet. Upload assets/layout-editor.js from the zip, then reload this page.'
+        : 'The layout editor could not open: ' + err.message;
+      msg.scrollIntoView({ block: 'center' });
+    }
+  }
   $('rlist').addEventListener('click', (e) => { const b = e.target.closest('[data-i]'); if (!b) return; R.sel = Number(b.getAttribute('data-i')); renderReview(); });
   $('editor').addEventListener('click', (e) => {
     const a = R.articles[R.sel]; if (!a) return;
@@ -686,12 +705,7 @@ ${a.flag ? `<div class="note stack" role="note" style="gap:8px"><div><strong>The
     if (e.target.closest('[data-cancel]')) { arrPick = -1; drawArrange(); return; }
     if (pk) { const n = +pk.getAttribute('data-pick'); arrPick = arrPick === n ? -1 : n; drawArrange(); return; }
     if (e.target.id === 'arr-match') { arrMatch(a); return; }
-    if (e.target.closest('#lx-open')) {
-      const cur = readEditor(a);
-      const laid = bodyWithPhotos({ photos: cur.photos, body: cur.body }, true).map((b) => b.t === 'img' ? { t: 'img', path: cur.photos[b.n - 1].path } : b);
-      window.RCMLayout.open({ title: cur.title, photos: cur.photos, body: laid, imgUrl, onDone: (photos, body) => { Object.assign(a, cur, { photos, body }); renderReview(); save(); } });
-      return;
-    }
+    if (e.target.closest('#lx-open')) { openLayout(a); return; }
     const cr = e.target.closest('[data-crop]'), uc = e.target.closest('[data-uncrop]');
     if (cr) { openCrop(a, +cr.getAttribute('data-crop')); return; }
     const ur = e.target.closest('[data-unrecut]');
