@@ -535,7 +535,7 @@
   function isTop(a, k) { return (a.photos || []).findIndex((p) => p.include !== false) === k; }
   // The article's text with a photo marker wherever a photo shows. Photos placed by hand keep their line; the rest are
   // shown where the website spreads them (the same rule as the website), so the editor sees and can move every one.
-  function bodyWithPhotos(a) {
+  function bodyWithPhotos(a, everyPhoto) {
     const photos = a.photos || [];
     const idx = (path) => photos.findIndex((p) => p.path === path);
     const rest = photos.map((p, k) => ({ p, k })).filter(({ p, k }) => p.include !== false && !isTop(a, k));
@@ -552,32 +552,71 @@
       if (every && ti % every === 0 && pi < auto.length && ti < textCount) out.push({ t: 'img', n: auto[pi++].k + 1 });
     });
     // Photos left over go at the end (three or more show as a grid on the website, so leave those unmarked).
-    const left = auto.slice(pi); if (left.length < 3) left.forEach((x) => out.push({ t: 'img', n: x.k + 1 }));
+    const left = auto.slice(pi); if (everyPhoto || left.length < 3) left.forEach((x) => out.push({ t: 'img', n: x.k + 1 }));
     return out;
   }
-  function placeAtCursor(a, k) {
-    const ta = $('e-body'); if (!ta) return;
-    const tag = `[Photo ${k + 1}]`;
-    const mark = new RegExp('^\\s*\\[\\s*photo\\s*' + (k + 1) + '\\s*\\]\\s*$', 'i');
-    let v = ta.value, pos = ta.selectionStart ?? v.length;
-    // Take the photo out of where it was, keeping the cursor in the same spot of the text.
-    const lines = v.split('\n'); let off = 0, cut = 0; const keep = [];
-    lines.forEach((l) => {
-      const len = l.length + 1;
-      if (mark.test(l)) { if (off + len <= pos) cut += len; else if (off < pos) cut += pos - off; }
-      else keep.push(l);
-      off += len;
+  // ---------- "Where the photos go": the article as a list of paragraphs and photos, rearranged by click, drag or arrows ----------
+  let arrPick = -1;
+  function arrSeq(a) {
+    const cur = readEditor(a);
+    return bodyWithPhotos({ photos: cur.photos, body: cur.body }, true);
+  }
+  function arrWrite(a, seq) {
+    $('e-body').value = seq.map((b) => b.t === 'img' ? `[Photo ${b.n}]` : (b.t === 'h' ? '## ' : b.t === 'q' ? '> ' : '') + b.text).join('\n\n');
+    drawArrange(); schedulePreview(true);
+    $('e-msg').textContent = 'Photos moved. Click Save changes to keep it.';
+  }
+  function arrMove(a, n, gap) {
+    // gap = position in the sequence (0 = before the first paragraph) where the photo should go
+    const seq = arrSeq(a); const from = seq.findIndex((b) => b.t === 'img' && b.n === n); if (from < 0) return;
+    const [item] = seq.splice(from, 1); if (gap > from) gap--;
+    seq.splice(Math.max(0, Math.min(seq.length, gap)), 0, item);
+    arrPick = -1; arrWrite(a, seq);
+  }
+  function arrStep(a, n, dir) {
+    // Move one paragraph up or down (photos next to each other swap places).
+    const seq = arrSeq(a); const at = seq.findIndex((b) => b.t === 'img' && b.n === n); if (at < 0) return;
+    const to = at + dir; if (to < 0 || to >= seq.length) return;
+    [seq[at], seq[to]] = [seq[to], seq[at]]; arrWrite(a, seq);
+  }
+  const STOP = new Set('the and for with from that this his her their our its was were are has have had into onto upon rotarian rotarians star club rotary manila quarter photo award awards presents presented receives received during year best'.split(' '));
+  const words = (t) => new Set(String(t || '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').match(/[a-z]{3,}/g)?.filter((w) => !STOP.has(w)) || []);
+  function arrMatch(a) {
+    const seq = arrSeq(a); const photos = readEditor(a).photos;
+    const texts = seq.filter((b) => b.t !== 'img');
+    let moved = 0;
+    const keep = seq.filter((b) => b.t !== 'img'); const placed = new Map(); const unmatched = [];
+    seq.forEach((b, i) => {
+      if (b.t !== 'img') return;
+      const cap = words(photos[b.n - 1] && photos[b.n - 1].caption);
+      let best = null, score = 0;
+      if (cap.size) texts.forEach((t) => { const w = words(t.text); let sc = 0; cap.forEach((x) => { if (w.has(x)) sc++; }); if (sc > score) { score = sc; best = t; } });
+      if (best && score >= 2) { if (!placed.has(best)) placed.set(best, []); placed.get(best).push(b); moved++; }
+      else { const prev = seq.slice(0, i).reverse().find((x) => x.t !== 'img'); unmatched.push({ b, after: prev || null }); }
     });
-    pos -= cut;
-    v = keep.join('\n').replace(/\n{3,}/g, '\n\n');
-    pos = Math.min(pos, v.length);
-    // Put it after the paragraph the cursor is in.
-    let end = v.indexOf('\n\n', pos); if (end < 0) end = v.length;
-    v = v.slice(0, end).replace(/\s+$/, '') + '\n\n' + tag + '\n\n' + v.slice(end).replace(/^\s+/, '');
-    ta.value = v.replace(/^\s+/, '');
-    const at = ta.value.indexOf(tag); ta.focus(); ta.setSelectionRange(at, at + tag.length);
-    schedulePreview(true);
-    $('e-msg').textContent = `Photo ${k + 1} moved. Click Save changes to keep it.`;
+    if (!moved) { $('e-msg').textContent = 'No captions matched the text. Type a caption with the person’s name, or move the photos by hand.'; return; }
+    const out = [];
+    unmatched.filter((u) => !u.after).forEach((u) => out.push(u.b));
+    keep.forEach((t) => { out.push(t); (placed.get(t) || []).forEach((b) => out.push(b)); unmatched.filter((u) => u.after === t).forEach((u) => out.push(u.b)); });
+    arrWrite(a, out);
+    $('e-msg').textContent = `Placed ${moved} photo${moved === 1 ? '' : 's'} under the paragraph that names the same people. Check the preview, then Save changes.`;
+  }
+  function drawArrange() {
+    const box = $('arr'); const a = R.articles[R.sel]; if (!box || !a) return;
+    const seq = arrSeq(a); const photos = readEditor(a).photos;
+    const top = photos.findIndex((p) => p.include !== false);
+    const gap = (g) => arrPick >= 0 ? `<button type="button" class="arr-gap on" data-gap="${g}">Put Photo ${arrPick} here</button>` : `<div class="arr-gap" data-gap="${g}"></div>`;
+    let h = top >= 0 ? `<div class="arr-top"><img src="${imgUrl(photos[top].path, 200)}" alt=""><span><b>Photo ${top + 1}</b>Top of the article<small>Use “Make first” above to change it</small></span></div>` : '';
+    seq.forEach((b, i) => {
+      h += gap(i);
+      if (b.t === 'img') {
+        const p = photos[b.n - 1] || {};
+        h += `<div class="arr-ph${arrPick === b.n ? ' picked' : ''}" draggable="true" data-pick="${b.n}"><img src="${imgUrl(p.path, 200)}" alt=""><span><b>Photo ${b.n}</b>${p.caption ? esc(p.caption) : '<i>No caption</i>'}</span><span class="arr-ud"><button type="button" class="smallbtn" data-up="${b.n}" aria-label="Move photo ${b.n} up">↑</button><button type="button" class="smallbtn" data-dn="${b.n}" aria-label="Move photo ${b.n} down">↓</button></span></div>`;
+      } else h += `<div class="arr-p${b.t === 'h' ? ' h' : ''}">${esc(b.text.length > 220 ? b.text.slice(0, 220) + '…' : b.text)}</div>`;
+    });
+    h += gap(seq.length);
+    box.innerHTML = h || '<p class="muted">No text yet.</p>';
+    $('arr-help').innerHTML = arrPick >= 0 ? `Now click <b>Put Photo ${arrPick} here</b> under the paragraph it belongs with. <button type="button" class="smallbtn" data-cancel="1">Cancel</button>` : 'Click a photo, then click <b>Put it here</b> where it belongs. You can also drag a photo, or use the ↑ ↓ arrows.';
   }
   function isLive() { return R.issue && R.issue.status === 'published'; }
   function statusOf(a) { if (!a.included) return ['Left out', 'off']; if (a.checked) return ['Checked', 'ok']; if (a.flag) return ['Needs a look', 'flag']; return ['To check', 'wait']; }
@@ -600,13 +639,17 @@ ${a.flag ? `<div class="note stack" role="note" style="gap:8px"><div><strong>The
 <label class="f" for="e-title">Headline<input id="e-title" type="text" value="${esc(a.title)}"></label>
 <label class="f" for="e-dek">Summary shown when shared<textarea id="e-dek" style="min-height:64px">${esc(a.dek || '')}</textarea></label>
 <div class="row"><label class="f" for="e-byline" style="flex:1">Byline<input id="e-byline" type="text" value="${esc(a.byline || '')}"></label><label class="f" for="e-kicker" style="flex:1">Section label<input id="e-kicker" type="text" value="${esc(a.kicker || '')}"></label></div>
-<div class="stack" style="gap:8px"><strong style="font-size:14px;color:var(--ink-2)">Photos — the first one included leads the article</strong><span class="muted" style="font-size:14px">To move a photo, click in the text below where it should go, then click <b>Place at cursor</b> on the photo. You can also cut and paste its <b>[Photo 5]</b> line in the text.</span>
-<div class="pgrid">${(a.photos || []).map((p, k) => `<div class="pcell ${p.include === false ? 'off' : ''}"><strong style="font-size:13px">Photo ${k + 1}${p.include === false ? ' · left out' : k === 0 || (a.photos || []).slice(0, k).every((x) => x.include === false) ? ' · top of article' : inText.has(k) ? ' · in the text' : ''}</strong><img src="${imgUrl(p.path, 320)}" alt=""><textarea data-cap="${k}" aria-label="Caption for photo ${k + 1}" placeholder="Caption (optional)">${esc(p.caption || '')}</textarea><div class="row"><button class="smallbtn" type="button" data-tog="${k}">${p.include === false ? 'Include' : 'Leave out'}</button>${k > 0 ? `<button class="smallbtn" type="button" data-lead="${k}">Make first</button>` : ''}${p.include !== false && !isTop(a, k) ? `<button class="smallbtn" type="button" data-place="${k}" title="Click in the text where this photo should go, then click here">Place at cursor</button>` : ''}<button class="smallbtn" type="button" data-crop="${k}">Crop</button>${p.orig_path ? `<button class="smallbtn" type="button" data-uncrop="${k}">Undo crop</button>` : p.pdf_cut_old ? `<button class="smallbtn" type="button" data-unrecut="${k}" title="Go back to the photo as first cut from the page">Use old cut</button>` : ''}</div></div>`).join('') || '<p class="muted">No photos for this article.</p>'}</div></div>
-<label class="f" for="e-body">Text <span class="muted" style="font-weight:400">(blank line between paragraphs; start a line with ## for a subheading)</span><textarea id="e-body" style="min-height:320px">${esc(bodyText)}</textarea></label>
+<div class="stack" style="gap:8px"><strong style="font-size:14px;color:var(--ink-2)">Photos — the first one included leads the article</strong>
+<div class="pgrid">${(a.photos || []).map((p, k) => `<div class="pcell ${p.include === false ? 'off' : ''}"><strong style="font-size:13px">Photo ${k + 1}${p.include === false ? ' · left out' : k === 0 || (a.photos || []).slice(0, k).every((x) => x.include === false) ? ' · top of article' : inText.has(k) ? ' · in the text' : ''}</strong><img src="${imgUrl(p.path, 320)}" alt=""><textarea data-cap="${k}" aria-label="Caption for photo ${k + 1}" placeholder="Caption (optional)">${esc(p.caption || '')}</textarea><div class="row"><button class="smallbtn" type="button" data-tog="${k}">${p.include === false ? 'Include' : 'Leave out'}</button>${k > 0 ? `<button class="smallbtn" type="button" data-lead="${k}">Make first</button>` : ''}<button class="smallbtn" type="button" data-crop="${k}">Crop</button>${p.orig_path ? `<button class="smallbtn" type="button" data-uncrop="${k}">Undo crop</button>` : p.pdf_cut_old ? `<button class="smallbtn" type="button" data-unrecut="${k}" title="Go back to the photo as first cut from the page">Use old cut</button>` : ''}</div></div>`).join('') || '<p class="muted">No photos for this article.</p>'}</div></div>
+<div class="arr-wrap stack" style="gap:8px"><div class="row" style="justify-content:space-between;align-items:center"><strong style="font-size:16px;color:var(--ink-2)">Where the photos go</strong><button class="smallbtn" type="button" id="arr-match" title="Puts each photo under the paragraph that mentions the same names as its caption">Match photos to captions</button></div>
+<p class="muted" style="margin:0;font-size:14px" id="arr-help">Click a photo, then click <b>Put it here</b> where it belongs. You can also drag a photo, or use the ↑ ↓ arrows.</p>
+<div id="arr" class="arr" aria-label="Article layout"></div></div>
+<label class="f" for="e-body">Text <span class="muted" style="font-weight:400">(blank line between paragraphs; start a line with ## for a subheading; a [Photo 5] line is where that photo shows)</span><textarea id="e-body" style="min-height:320px">${esc(bodyText)}</textarea></label>
 <div class="row" style="justify-content:space-between">
 <div class="row"><button class="smallbtn" type="button" id="e-incl">${a.included ? 'Leave out of website' : 'Put back on website'}</button><button class="smallbtn" type="button" id="e-lead">${a.lead ? '★ Featured on homepage' : 'Feature on homepage'}</button></div>
 <div class="row"><button class="btn btn-line" style="color:var(--blue)" type="button" id="e-save">Save changes</button><button class="btn btn-blue" type="button" id="e-ok">Looks right ✓</button></div>
 </div><p id="e-msg" class="muted" aria-live="polite"></p>`;
+    arrPick = -1; drawArrange();
     schedulePreview(true);
   }
   function readEditor(a) {
@@ -638,8 +681,13 @@ ${a.flag ? `<div class="note stack" role="note" style="gap:8px"><div><strong>The
     const t = e.target.closest('[data-tog]'), l = e.target.closest('[data-lead]');
     if (t) { const k = +t.getAttribute('data-tog'); const cur = readEditor(a); cur.photos[k].include = cur.photos[k].include === false; Object.assign(a, cur); renderReview(); return; }
     if (l) { const k = +l.getAttribute('data-lead'); const cur = readEditor(a); cur.photos.unshift(cur.photos.splice(k, 1)[0]); Object.assign(a, cur); renderReview(); return; }
-    const pl = e.target.closest('[data-place]');
-    if (pl) { placeAtCursor(a, +pl.getAttribute('data-place')); return; }
+    const up = e.target.closest('[data-up]'), dn = e.target.closest('[data-dn]'), gp = e.target.closest('button[data-gap]'), pk = e.target.closest('[data-pick]');
+    if (up) { arrStep(a, +up.getAttribute('data-up'), -1); return; }
+    if (dn) { arrStep(a, +dn.getAttribute('data-dn'), 1); return; }
+    if (gp) { arrMove(a, arrPick, +gp.getAttribute('data-gap')); return; }
+    if (e.target.closest('[data-cancel]')) { arrPick = -1; drawArrange(); return; }
+    if (pk) { const n = +pk.getAttribute('data-pick'); arrPick = arrPick === n ? -1 : n; drawArrange(); return; }
+    if (e.target.id === 'arr-match') { arrMatch(a); return; }
     const cr = e.target.closest('[data-crop]'), uc = e.target.closest('[data-uncrop]');
     if (cr) { openCrop(a, +cr.getAttribute('data-crop')); return; }
     const ur = e.target.closest('[data-unrecut]');
@@ -745,7 +793,12 @@ ${a.flag ? `<div class="note stack" role="note" style="gap:8px"><div><strong>The
     if (!print) fitPreview();
   });
   window.addEventListener('resize', fitPreview);
-  $('editor').addEventListener('input', () => schedulePreview());
+  $('editor').addEventListener('input', (e) => { schedulePreview(); if (e.target.id === 'e-body' || e.target.hasAttribute('data-cap')) { clearTimeout(arrT); arrT = setTimeout(drawArrange, 500); } });
+  let arrT = 0, dragN = -1;
+  $('editor').addEventListener('dragstart', (e) => { const p = e.target.closest && e.target.closest('[data-pick]'); if (!p) return; dragN = +p.getAttribute('data-pick'); e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', String(dragN)); } catch (x) {} $('arr').classList.add('dragging'); });
+  $('editor').addEventListener('dragend', () => { dragN = -1; const b = $('arr'); if (b) { b.classList.remove('dragging'); b.querySelectorAll('.over').forEach((x) => x.classList.remove('over')); } });
+  $('editor').addEventListener('dragover', (e) => { if (dragN < 0) return; const t = e.target.closest && (e.target.closest('[data-gap]') || e.target.closest('.arr-p,.arr-ph')); if (!t) return; e.preventDefault(); $('arr').querySelectorAll('.over').forEach((x) => x.classList.remove('over')); const g = t.matches('[data-gap]') ? t : t.nextElementSibling; if (g) g.classList.add('over'); });
+  $('editor').addEventListener('drop', (e) => { if (dragN < 0) return; const t = e.target.closest && (e.target.closest('[data-gap]') || e.target.closest('.arr-p,.arr-ph')); if (!t) return; e.preventDefault(); const g = t.matches('[data-gap]') ? t : t.nextElementSibling; const a = R.articles[R.sel]; if (g && a) arrMove(a, dragN, +g.getAttribute('data-gap')); dragN = -1; });
   async function publish(at) {
     try {
       const { issue } = await call('publish', { issue_id: R.issue.id, publish_at: at });
