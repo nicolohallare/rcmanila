@@ -641,9 +641,7 @@ ${a.flag ? `<div class="note stack" role="note" style="gap:8px"><div><strong>The
 <div class="row"><label class="f" for="e-byline" style="flex:1">Byline<input id="e-byline" type="text" value="${esc(a.byline || '')}"></label><label class="f" for="e-kicker" style="flex:1">Section label<input id="e-kicker" type="text" value="${esc(a.kicker || '')}"></label></div>
 <div class="stack" style="gap:8px"><strong style="font-size:14px;color:var(--ink-2)">Photos — the first one included leads the article</strong>
 <div class="pgrid">${(a.photos || []).map((p, k) => `<div class="pcell ${p.include === false ? 'off' : ''}"><strong style="font-size:13px">Photo ${k + 1}${p.include === false ? ' · left out' : k === 0 || (a.photos || []).slice(0, k).every((x) => x.include === false) ? ' · top of article' : inText.has(k) ? ' · in the text' : ''}</strong><img src="${imgUrl(p.path, 320)}" alt=""><textarea data-cap="${k}" aria-label="Caption for photo ${k + 1}" placeholder="Caption (optional)">${esc(p.caption || '')}</textarea><div class="row"><button class="smallbtn" type="button" data-tog="${k}">${p.include === false ? 'Include' : 'Leave out'}</button>${k > 0 ? `<button class="smallbtn" type="button" data-lead="${k}">Make first</button>` : ''}<button class="smallbtn" type="button" data-crop="${k}">Crop</button>${p.orig_path ? `<button class="smallbtn" type="button" data-uncrop="${k}">Undo crop</button>` : p.pdf_cut_old ? `<button class="smallbtn" type="button" data-unrecut="${k}" title="Go back to the photo as first cut from the page">Use old cut</button>` : ''}</div></div>`).join('') || '<p class="muted">No photos for this article.</p>'}</div></div>
-<div class="arr-wrap stack" style="gap:8px"><div class="row" style="justify-content:space-between;align-items:center"><strong style="font-size:16px;color:var(--ink-2)">Where the photos go</strong><button class="smallbtn" type="button" id="arr-match" title="Puts each photo under the paragraph that mentions the same names as its caption">Match photos to captions</button></div>
-<p class="muted" style="margin:0;font-size:14px" id="arr-help">Click a photo, then click <b>Put it here</b> where it belongs. You can also drag a photo, or use the ↑ ↓ arrows.</p>
-<div id="arr" class="arr" aria-label="Article layout"></div></div>
+<div class="lx-cta"><button class="btn btn-gold" type="button" id="lx-open">Arrange photos and text ⤢</button><span class="muted">Opens the article full screen. Drag photos to where they belong; their captions move with them.</span></div>
 <label class="f" for="e-body">Text <span class="muted" style="font-weight:400">(blank line between paragraphs; start a line with ## for a subheading; a [Photo 5] line is where that photo shows)</span><textarea id="e-body" style="min-height:320px">${esc(bodyText)}</textarea></label>
 <div class="row" style="justify-content:space-between">
 <div class="row"><button class="smallbtn" type="button" id="e-incl">${a.included ? 'Leave out of website' : 'Put back on website'}</button><button class="smallbtn" type="button" id="e-lead">${a.lead ? '★ Featured on homepage' : 'Feature on homepage'}</button></div>
@@ -688,6 +686,12 @@ ${a.flag ? `<div class="note stack" role="note" style="gap:8px"><div><strong>The
     if (e.target.closest('[data-cancel]')) { arrPick = -1; drawArrange(); return; }
     if (pk) { const n = +pk.getAttribute('data-pick'); arrPick = arrPick === n ? -1 : n; drawArrange(); return; }
     if (e.target.id === 'arr-match') { arrMatch(a); return; }
+    if (e.target.closest('#lx-open')) {
+      const cur = readEditor(a);
+      const laid = bodyWithPhotos({ photos: cur.photos, body: cur.body }, true).map((b) => b.t === 'img' ? { t: 'img', path: cur.photos[b.n - 1].path } : b);
+      window.RCMLayout.open({ title: cur.title, photos: cur.photos, body: laid, imgUrl, onDone: (photos, body) => { Object.assign(a, cur, { photos, body }); renderReview(); save(); } });
+      return;
+    }
     const cr = e.target.closest('[data-crop]'), uc = e.target.closest('[data-uncrop]');
     if (cr) { openCrop(a, +cr.getAttribute('data-crop')); return; }
     const ur = e.target.closest('[data-unrecut]');
