@@ -1146,6 +1146,10 @@ module.exports = {
    "summary": "Jesus “Susing” M. Pineda Jr., a banker and civic leader, served as Manila Rotary’s ninety-ninth and Centennial President. He led its hundredth-anniversary celebrations while advancing educational assistance for disadvantaged college students and community learning through “Sari-Saring Aralan.” His term also supported children’s heart care, shelter and livelihood initiatives, and Manila Bay rehabilitation, while commemorating the club’s legacy through stamps, a centennial book, and gala festivities.",
    "balita": [
     [
+     "/library/centennial",
+     "The Centennial, 2018–2019"
+    ],
+    [
      "/balita/4049/messages-for-tower-awards-2025",
      "Messages for TOWER Awards 2025"
     ]

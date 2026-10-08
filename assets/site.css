@@ -1209,3 +1209,32 @@ a:focus-visible,button:focus-visible,summary:focus-visible,[tabindex]:focus-visi
 .lib-also{margin:6px 0 0}
 
 .foot-ids{font-size:13px;letter-spacing:.04em;color:#b9cbea}
+
+/* The Centennial page */
+.cent-hero{padding-bottom:40px}
+.cent-toc{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-top:26px;max-width:1000px}
+.cent-toc a{display:flex;flex-direction:column;gap:2px;color:#fff;text-decoration:none;border:1px solid rgba(255,255,255,.28);border-radius:10px;padding:10px 12px;font-weight:700;font-size:15px;line-height:1.25;background:rgba(15,47,102,.35)}
+.cent-toc a:hover{background:rgba(247,168,27,.22);border-color:var(--gold)}
+.cent-toc small{color:var(--gold);font-size:12px;letter-spacing:.06em;text-transform:uppercase}
+.cent-ch{padding-block:56px;border-bottom:1px solid #ece4d3;scroll-margin-top:80px}
+.cent-ch:nth-of-type(even){background:#faf7f0}
+.cent-in{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:40px;align-items:center}
+.cent-ch.flip .cent-im{order:2}
+.cent-im{margin:0;background:#f2ede2;border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;max-height:460px}
+.cent-im img{width:100%;max-height:460px;object-fit:contain;display:block}
+.cent-im.portrait{max-width:340px;justify-self:center}
+.cent-tx h2{font-family:Georgia,serif;color:var(--navy);font-size:clamp(26px,3vw,36px);margin:8px 0 12px;line-height:1.15}
+.cent-tx p{font-size:17px;line-height:1.65;color:#3a3226}
+.cent-links{list-style:none;margin:16px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+.cent-links a{font-weight:700;color:var(--navy)}
+.cent-gals{margin-top:30px}
+.cent-end{text-align:center;max-width:760px}
+.cent-end h2{font-family:Georgia,serif;color:var(--navy)}
+.cent-end p{font-size:17px}
+.lib-centennial-card{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:0;background:#0f2f66;color:#fff;border-radius:14px;overflow:hidden;text-decoration:none!important}
+.lib-centennial-card img{width:100%;height:100%;object-fit:cover;min-height:220px;display:block}
+.lib-centennial-card .tx{padding:26px 28px;display:flex;flex-direction:column;gap:8px;justify-content:center}
+.lib-centennial-card strong{font-family:Georgia,serif;font-size:28px;color:#fff;line-height:1.15}
+.lib-centennial-card span{color:#dfe8f7}
+.lib-centennial-card em{font-style:normal;font-weight:800;color:var(--gold)}
+@media (max-width:760px){.cent-in{grid-template-columns:1fr;gap:20px}.cent-ch.flip .cent-im{order:0}.lib-centennial-card{grid-template-columns:1fr}}

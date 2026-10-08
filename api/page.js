@@ -437,7 +437,7 @@ function presidentsPage(origin) {
   const current = list[list.length - 1];
   const card = (x, i) => `<button type="button" class="pres-card" id="${presId(x)}" data-p="${i}" aria-haspopup="dialog"><img src="${x.img}" alt="" width="400" height="600" loading="lazy"><b>${esc(x.name)}</b><span>${esc(x.years)}${x === current ? ' · Current' : ''}</span></button>`;
   const detail = (x, i) => {
-    const src = [x.profile ? 'Presidential profiles, Rotary Club of Manila (2026)' : x.book || !x.summary ? '“The Work That Endures”, the Club’s 107th anniversary history (2026)' : '', ...x.balita.map(([u, t]) => `<a href="${esc(u)}">Balita: ${esc(t)}</a>`)].filter(Boolean);
+    const src = [x.profile ? 'Presidential profiles, Rotary Club of Manila (2026)' : x.book || !x.summary ? '“The Work That Endures”, the Club’s 107th anniversary history (2026)' : '', ...x.balita.map(([u, t]) => `<a href="${esc(u)}">${/^\/balita\//.test(u) ? 'Balita: ' : 'Heritage Library: '}${esc(t)}</a>`)].filter(Boolean);
     return `<template id="pt-${i}"><img src="${x.img}" alt="Portrait of ${esc(x.name)}" width="320" height="320"><div><span class="kicker">${x === current ? 'President, ' : ''}${esc(x.years)}</span><h2>${esc(x.name)}</h2>
 ${x.summary ? `<p>${esc(x.summary)}</p>` : `<p class="muted-p">The Club’s centennial history lists ${esc(x.name)} as president for ${esc(x.years)} but does not describe his term in detail.</p>`}
 <p class="pres-src">Source: ${src.join(' · ')}</p><p><a class="link-arrow" href="/library/name?q=${encodeURIComponent(x.name)}">See him in the archive</a></p></div></template>`;

@@ -107,6 +107,7 @@ ${ex ? `<a class="lib-mcard ex" href="/library/exhibit/${esc(ex.slug)}">${ex.cov
 <div class="lib-mcard"><span class="lib-eyebrow dark">Find a name</span><strong>Is your family in the Balita?</strong><span>Search a name and see every page it was printed on since 1948, year by year.</span><form action="/library/name" method="get" class="lib-mform"><input name="q" type="search" placeholder="A name" aria-label="A name"><button class="btn btn-navy" type="submit">Find</button></form></div>
 <div class="lib-mcard"><span class="lib-eyebrow dark">Ask the archive</span><strong>Ask a question about the Club’s history</strong><span>Answered from the Club’s records and the Balita, with links to the pages.</span><form action="/library/ask" method="get" class="lib-mform"><input name="q" type="search" placeholder="e.g. How has the Club helped fight polio?" aria-label="Your question"><button class="btn btn-navy" type="submit">Ask</button></form>${tlc.length ? '<a class="link-arrow" href="/library/timeline" style="margin-top:6px">Or walk through the timeline</a>' : ''}</div>
 </div></section>
+<section class="lib-sec" style="padding-bottom:0"><div class="wrap"><a class="lib-centennial-card" href="/library/centennial"><img src="${esc(anySrc('issues/3796/photos/p023-9-mutkqa8g.jpg', 900))}" alt="" loading="lazy"><span class="tx"><span class="lib-eyebrow">The Centennial · 2018–2019</span><strong>One hundred years of service</strong><span>The proclamation, the visit of RI President Barry Rassin, the centennial projects and the three-day celebration in June 2019.</span><em>Explore the Centennial →</em></span></a></div></section>
 ${wk ? `<section class="lib-week"><div class="wrap lib-week-in">
 <a class="lib-week-cover" href="/library/balita/${volSlug(wk.vol)}/${wk.issue_no}"><img src="${esc(aSrc(wk.cover))}" alt="Cover of Balita No. ${wk.issue_no}" loading="lazy"></a>
 <div><span class="lib-eyebrow dark">This week in club history · ${yearsAgo(Number(wk.issue_date.slice(0, 4)))} years ago</span>
@@ -524,6 +525,58 @@ ${more.length ? `<section class="wrap lib-sec" style="padding-top:8px"><h2 class
     return page(`${v.title} · Video room`, v.description || `${v.title}, from the Rotary Club of Manila’s video room.`, body, origin + '/library/videos/' + v.slug, v.poster ? aSrc(v.poster) : null);
   }
 
+  // ---------- The Centennial, 2018–2019: the story told by the Balita and the Club's photo albums ----------
+  const CENT = [
+    { when: '2015–2017', title: 'The road to 100', img: 'issues/3724/photos/p016-2-muql9e24.jpg',
+      text: 'Planning began four years ahead. In 2015 the Club formed its 2019 Centennial Committee under PDG Vince Carlos, and from then on the Balita carried “Centennial News” almost every week. In April 2017 the Club signed PDG Chit Lijauco to prepare its centennial coffee table book.',
+      links: [['/balita/3596/rc-manila-2019-centennial-committee', 'The 2019 Centennial Committee meets (2015)'], ['/balita/3692/district-rotary-foundation-seminar-centennial-coffee-table-book', 'The coffee table book contract (2017)'], ['/balita/3724/centennial-news-the-road-to-100', 'Centennial News: The Road to 100']],
+      albums: ['2018-02-22-february-22-2018-centennial-committee-meeting-the-rotary-club-of-manila'] },
+    { when: 'January 2018', title: 'A proclamation', img: 'issues/3729/photos/p018-1-muql6jb7.jpg',
+      text: 'On January 24, 2018, President Rodrigo Roa Duterte signed Proclamation No. 413, declaring July 1, 2018 to June 30, 2019 the “Year for the Celebration of the Centennial Anniversary of the Rotary Club of Manila and the Rotary Movement in the Philippines and in Asia.”',
+      links: [['/balita/3729/duterte-signs-proclamation-declaring-centennial', 'Read the story in the Balita']] },
+    { when: 'May 2018', title: 'The Centennial President', img: '/assets/portraits/2018-pineda.jpg',
+      text: 'Jesus “Susing” M. Pineda Jr., banker and civic leader, was inducted on May 30, 2018 as the Club’s ninety-ninth president, its Centennial President. He set two signature initiatives for the year: Sari-Saring Aralan, learning hubs for out-of-school youth modelled on the neighbourhood sari-sari store, and the Rotary Club of Manila Educational Assistance Program, which aimed to support 100 graduating students at the Pamantasan ng Maynila and the Polytechnic University of the Philippines.',
+      links: [['/balita/3747/inaugural-speech-of-centennial-president-susing-pineda', 'His inaugural speech'], ['/balita/3751/centennial-initiatives-for-ry-2018-2019', 'Centennial Initiatives for 2018–2019'], ['/past-presidents', 'All the Club’s presidents']],
+      albums: ['2018-05-30-may-30-2018-induction-of-pe-susing'] },
+    { when: 'July 2018', title: 'An evening with the President of Rotary International', img: 'issues/3754/photos/p038-1-muqks9dd.jpg',
+      text: 'On July 19, 2018 the Club welcomed Rotary International President Barry Rassin and Lady Esther to “An Evening with Rotary International President Barry Rassin and Lady Esther” at the Grand Ballroom of Okada Manila. PUP’s Banda Kawayan performed, and the Club’s World Famous Music Chorale led the national anthem.',
+      links: [['/balita/3754/highlights-an-evening-with-ri-president-barry-rassin-and-lady-esther', 'Highlights of the evening'], ['/balita/3754/welcome-message-of-president-susing-pineda-rassin-evening', 'President Susing’s welcome message']],
+      albums: ['2018-07-19-an-evening-with-r-i-president-barry-rassin-and-lady-esther-the-rotary-club-of-ma'] },
+    { when: '2018–2019', title: 'Service for the centennial year', img: 'issues/3764/photos/p006-1-muqkkphj.jpg',
+      text: 'The Club marked its hundredth year with service. On September 28, 2018 it held a joint tree planting with Parañaque City. With the Manila Yacht Club it took up Save Manila Bay, in support of the government’s clean-up of the bay. A “100 Years of Art” celebration opened in September 2018, and the Club ran a nationwide Centennial Awards contest for the most outstanding Rotary service projects in the country’s ten districts, judged by a panel chaired by United States Ambassador Sung Kim.',
+      links: [['/balita/3764/highlights-joint-tree-planting-project', 'The tree planting with Parañaque City'], ['/balita/3795/centennial-awards-nationwide-contest-for-the-most-outstanding-service-projects', 'The Centennial Awards and Save Manila Bay'], ['/balita/3787/centennial-awards', 'The Centennial Awards judges']],
+      albums: ['2018-08-17-meeting-on-tree-planting-centennial-project-at-okada-road-the-rotary-club-of-man', '2018-09-15-opening-ceremony-of-rcm-s-100-years-of-art-celebration-the-rotary-club-of-manila', '2019-01-27-manila-bay-project-launching-the-rotary-club-of-manila'] },
+    { when: '2018–2019', title: 'Stamps, a song and an anthem', img: 'issues/3795/photos/p031-2-muqjwgyb.jpg',
+      text: 'With the Philippine Postal Corporation the Club issued limited edition centennial commemorative stamps. A Centennial Chorale Competition produced a new song, “This Is Our Pledge (Himig Rotarian),” with lyrics by Catherine Bancod and music by Fr. Ernest Raymund Simeon. Members also recorded a centennial edition of the Club’s rendition of the Philippine national anthem.',
+      links: [['/balita/3794/centennial-commemorative-stamps', 'The commemorative stamps'], ['/balita/3795/rotary-club-of-manila-centennial-chorale-competition', 'The Chorale Competition and the winning song'], ['/balita/3794/second-audiovisual-shoot-for-the-centennial-edition-of-the-national-anthem', 'Recording the national anthem']],
+      albums: ['2018-06-18-rotary-club-of-manila-100-years-with-commemorative-stamp-the-rotary-club-of-mani'] },
+    { when: 'June 20–22, 2019', title: 'Three days in June', img: 'issues/3796/photos/p023-9-mutkqa8g.jpg',
+      text: 'The year ended in a three-day celebration. On June 20 the Club met its sister clubs and visiting Rotarians at the airport and welcomed them to a Salubong Fiesta at the World Trade Center in Pasay City. June 21 was “A Legacy of Rotary Service,” chaired by Dir. Amading Valdez, with the five grand finalists of the Chorale Competition on the program. On June 22 the Centennial Gala, chaired by VPE Hermie Esguerra, filled the Grand Ballroom of Okada Manila.',
+      links: [['/balita/3796/highlights-of-the-centennial-celebration-day-one-salubong-fiesta', 'Day One: Salubong Fiesta'], ['/balita/3796/day-two-a-legacy-of-rotary-service', 'Day Two: A Legacy of Rotary Service'], ['/balita/3796/day-three-centennial-gala-celebration', 'Day Three: the Centennial Gala'], ['/balita/3796/reactions-to-the-centennial-celebration', 'Members’ reactions'], ['/balita/3795/rotary-club-of-manila-is-100', 'Rotary Club of Manila Is 100']],
+      albums: ['2019-05-16-rcm-townhall-meeting-on-the-centennial-celebration-the-rotary-club-of-manila', '2019-06-20-welcome-party-salubong-fiesta-centennial-celebration-the-rotary-club-of-manila', '2019-06-29-rcm-welcome-salubong-2019-photos-of-ian-santos-the-rotary-club-of-manila'] },
+  ];
+  async function centennialPage(origin) {
+    const slugs = [...new Set(CENT.flatMap((c) => c.albums || []))];
+    const gals = await safe(() => q(`rcm_lib_galleries?select=slug,title,event_date,cover_path,photo_count&status=eq.published&slug=in.(${slugs.join(',')})`), []);
+    const bySlug = new Map(gals.map((g) => [g.slug, { ...g, title: String(g.title || '').replace(/\s*\|\s*The Rotary Club of Manila\s*$/i, '') }]));
+    const pic = (p, w) => (p && p[0] === '/' ? p : anySrc(p, w));
+    const albums = gals.reduce((n, g) => n + (g.photo_count || 0), 0);
+    const ch = (c, k) => {
+      const al = (c.albums || []).map((s) => bySlug.get(s)).filter(Boolean);
+      return `<section class="cent-ch${k % 2 ? ' flip' : ''}" id="c${k + 1}"><div class="wrap cent-in">
+<figure class="cent-im${/portraits/.test(c.img) ? ' portrait' : ''}"><img src="${esc(pic(c.img, 1200))}" alt="" loading="${k ? 'lazy' : 'eager'}"></figure>
+<div class="cent-tx"><span class="lib-eyebrow dark">${esc(c.when)}</span><h2>${esc(c.title)}</h2><p>${esc(c.text)}</p>
+<ul class="cent-links">${c.links.map(([u, t]) => `<li><a href="${esc(u)}">${esc(t)} →</a></li>`).join('')}</ul></div></div>
+${al.length ? `<div class="wrap"><div class="lib-gals cent-gals">${al.map(galCard).join('')}</div></div>` : ''}</section>`;
+    };
+    const body = `${libNav('')}<section class="lib-ex-hero cent-hero"><img src="${esc(anySrc('issues/3796/photos/p023-9-mutkqa8g.jpg', 1600))}" alt="" class="bg" aria-hidden="true"><div class="wrap"><span class="lib-eyebrow">The Centennial · 2018–2019</span><h1>One hundred years of service</h1>
+<p>The Rotary Club of Manila, Asia’s first Rotary club, was established on June 1, 1919. A national proclamation made July 2018 to June 2019 its centennial year, led by Centennial President Jesus “Susing” M. Pineda Jr. This is that year as the Balita and the Club’s photographers recorded it${albums ? `, with ${albums.toLocaleString('en')} photographs in the albums below` : ''}.</p>
+<nav class="cent-toc" aria-label="Chapters">${CENT.map((c, k) => `<a href="#c${k + 1}"><small>${esc(c.when)}</small>${esc(c.title)}</a>`).join('')}</nav></div></section>
+${CENT.map(ch).join('')}
+<section class="wrap lib-sec cent-end"><h2>Help complete this page</h2><p>Many more photographs from the Centennial year are still in members’ albums and phones. If you have pictures from any of these events, or from others in 2018–2019, please send them to the Secretariat so they can be added to the Heritage Library.</p><p><a class="btn btn-navy" href="/library/search?q=centennial">Search the library for “centennial”</a> <a class="btn btn-line" style="color:var(--navy)" href="/library/photos">All photo albums</a></p></section>`;
+    return page('The Centennial, 2018–2019 · Heritage Library', 'How the Rotary Club of Manila, Asia’s first Rotary club, celebrated its hundredth year in 2018–2019: the proclamation, the visit of RI President Barry Rassin, the centennial projects, and the three-day celebration in June 2019.', body, `${origin}/library/centennial`, anySrc('issues/3796/photos/p023-9-mutkqa8g.jpg', 1200));
+  }
+
   async function route(origin, u) {
     const parts = String(u.searchParams.get('p') || '').split('/').filter(Boolean);
     const [a, b, c] = parts;
@@ -538,6 +591,7 @@ ${more.length ? `<section class="wrap lib-sec" style="padding-top:8px"><h2 class
     if (a === 'name') return nameFinder(origin, u.searchParams.get('q'));
     if (a === 'timeline') return timelinePage(origin);
     if (a === 'exhibit') return exhibitPage(origin, b);
+    if (a === 'centennial') return centennialPage(origin);
     if (a === 'ask') return askPage(origin, u.searchParams.get('q'));
     if (a === 'minute') return minutePage(origin, u.searchParams.get('w'));
     return null;
