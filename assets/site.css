@@ -1207,3 +1207,5 @@ a:focus-visible,button:focus-visible,summary:focus-visible,[tabindex]:focus-visi
 .h-lib-ex:hover{text-decoration:underline}
 @media (max-width:820px){.h-lib{grid-template-columns:1fr;gap:24px}}
 .lib-also{margin:6px 0 0}
+
+.foot-ids{font-size:13px;letter-spacing:.04em;color:#b9cbea}
