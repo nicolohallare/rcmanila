@@ -809,6 +809,10 @@ ${lead ? `<a class="wk-lead" href="/balita/${issue.issue_no}/${lead.slug}">${esc
     : `<a class="hx-item" href="/meeting"><span class="hx-date"><b>THU</b>12:15</span><span class="hx-txt"><small>Weekly meeting</small><strong>Every Thursday. Guests are welcome.</strong></span><span class="hx-go">Details →</span></a>`;
   const offEv = isOff(mt) ? await sameDayEvent(mt.meeting_date) : null;
   const wkMeetingFinal = isOff(mt) ? `<a class="hx-item" href="${offEv ? `/events/${esc(offEv.slug)}` : `/meetings/${mt.meeting_date}`}"><span class="hx-date"><b>${new Date(mt.meeting_date + 'T12:00:00+08:00').toLocaleDateString('en-GB', { timeZone: 'Asia/Manila', day: 'numeric' })}</b>${new Date(mt.meeting_date + 'T12:00:00+08:00').toLocaleDateString('en-GB', { timeZone: 'Asia/Manila', month: 'short' }).toUpperCase()}</span><span class="hx-txt"><small>No weekly meeting this Thursday</small><strong>${offEv ? `Join us at the ${esc(offEv.title)}` : esc(mt.topic || 'Meetings resume next week')}</strong>${offEv && offEv.venue ? `<em>${esc(offEv.time_text ? offEv.time_text + ' · ' : '')}${esc(offEv.venue)}</em>` : ''}</span><span class="hx-go">${offEv ? 'Sign up →' : 'Details →'}</span></a>` : wkMeeting;
+  // On a week with no meeting, also show the next real meeting so members can already sign up for it.
+  const mtNext = isOff(mt) ? ((await q(`rcm_meetings?select=*&status=eq.published&meeting_date=gt.${mt.meeting_date}&order=meeting_date.asc&limit=3`).catch(() => [])).find((x) => !isOff(x)) || null) : null;
+  const mtNextCount = mtNext ? await signupCount(mtNext.id) : 0;
+  const wkNext = mtNext ? `<a class="hx-item" href="/meetings/${mtNext.meeting_date}"><span class="hx-date"><b>${new Date(mtNext.meeting_date + 'T12:00:00+08:00').toLocaleDateString('en-GB', { timeZone: 'Asia/Manila', day: 'numeric' })}</b>${new Date(mtNext.meeting_date + 'T12:00:00+08:00').toLocaleDateString('en-GB', { timeZone: 'Asia/Manila', month: 'short' }).toUpperCase()}</span><span class="hx-txt"><small>Next meeting${mtNextCount ? ` · ${mtNextCount} signed up` : ''}</small><strong>${esc(mtNext.topic || mtNext.label || 'Weekly membership meeting')}</strong>${mtNext.speaker ? `<em>${esc(mtNext.speaker)}</em>` : ''}</span><span class="hx-go">Sign up →</span></a>` : '';
   const soonEv = (await upcomingEvents(6)).filter((e) => e.event_date >= manilaToday() && Date.parse(e.event_date) - Date.now() < 21 * 864e5 && !(offEv && e.slug === offEv.slug))[0];
   const wkEvent = soonEv ? `<a class="hx-item" href="/events/${esc(soonEv.slug)}"><span class="hx-date"><b>${new Date(soonEv.event_date + 'T12:00:00+08:00').toLocaleDateString('en-GB', { timeZone: 'Asia/Manila', day: 'numeric' })}</b>${new Date(soonEv.event_date + 'T12:00:00+08:00').toLocaleDateString('en-GB', { timeZone: 'Asia/Manila', month: 'short' }).toUpperCase()}</span><span class="hx-txt"><small>${esc(soonEv.kicker ? soonEv.kicker.split(' · ')[0] : 'Club event')}</small><strong>${esc(soonEv.title)}</strong>${soonEv.venue ? `<em>${esc(soonEv.venue)}</em>` : ''}</span><span class="hx-go">Sign up →</span></a>` : '';
   // The headline is the story the editor picked with "Feature on homepage" (the printed cover is not always the guest speaker).
@@ -834,7 +838,7 @@ ${(() => { const cv = cover || COVER_FALLBACK; const mon = new Date(cv.month + '
 <span class="poa-mark-lock" aria-hidden="true"><img src="/assets/club-logo-white.png" alt="" width="803" height="286"><i></i><b>People <small>of</small> Action</b></span>
 </div></div>
 <div class="poa-cover-cap"><div class="wrap poa-cover-cap-in"><span class="poa-cover-tag">People of Action · ${esc(mon)}</span>${cv.caption ? `<span class="poa-cover-txt">${esc(cv.caption)}</span>` : ''}${cv.link ? `<a class="poa-cover-go" href="${esc(cv.link)}">Read the story <span aria-hidden="true">→</span></a>` : ''}</div></div>`; })()}
-<div class="hx-week"><div class="wrap hx-week-in${wkEvent ? ' three' : ''}"><span class="hx-week-l">This week</span>${wkMeetingFinal}${wkEvent}${wkBalita}</div></div>
+<div class="hx-week"><div class="wrap hx-week-in${wkNext || wkEvent ? ' three' : ''}"><span class="hx-week-l">This week</span>${wkMeetingFinal}${wkNext || wkEvent}${wkBalita}</div></div>
 </section>
 
 
@@ -1246,6 +1250,7 @@ async function meetingPage(origin, dateParam) {
   }
   if (isOff(m)) {
     const ev = await sameDayEvent(m.meeting_date), when0 = fmtDay(m.meeting_date);
+    const nx = (await q(`rcm_meetings?select=meeting_date,topic,speaker,label&status=eq.published&meeting_date=gt.${m.meeting_date}&order=meeting_date.asc&limit=3`).catch(() => [])).find((x) => !isOff(x));
     const body = `<section class="issue-head meet-head"><div class="wrap">
 ${dateChip(m.meeting_date)}
 <div style="display:flex;flex-direction:column;gap:12px">
@@ -1253,7 +1258,7 @@ ${dateChip(m.meeting_date)}
 <span class="eyebrow" style="color:var(--gold)">No weekly meeting · ${esc(when0)}</span>
 <h1>${esc(m.topic || 'There is no weekly meeting this Thursday')}</h1>
 ${m.notes ? `<div style="color:#dfe8f7">${paras(m.notes)}</div>` : ''}
-${ev ? `<div class="hero-cta"><a class="btn btn-gold" href="/events/${esc(ev.slug)}">${esc(ev.title)}: details and sign-up</a></div>` : ''}
+${ev || nx ? `<div class="hero-cta">${ev ? `<a class="btn btn-gold" href="/events/${esc(ev.slug)}">${esc(ev.title)}: details and sign-up</a>` : ''}${nx ? `<a class="btn ${ev ? 'btn-line' : 'btn-gold'}" style="${ev ? 'color:#fff;border-color:#fff' : ''}" href="/meetings/${nx.meeting_date}">Next meeting, ${esc(fmtDay(nx.meeting_date))}: sign up</a>` : ''}</div>` : ''}
 </div></div></section>`;
     return layout({ title: `No weekly meeting on ${when0} · Rotary Club of Manila`, description: m.topic || 'There is no weekly meeting this Thursday.', url: `${origin}/meetings/${m.meeting_date}`, body, nav: 'meeting' });
   }

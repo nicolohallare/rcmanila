@@ -13,8 +13,11 @@
     try { d = await D.load('secretariat', S().code()); }
     catch (e) { if (e.auth) return S().show('v-login'); $('sh-todo').innerHTML = `<p class="err">${esc(e.message)}</p>`; return; }
     const items = [];
-    const m = (d.meetings || [])[0];
-    const thu = nextThursday(d.today);
+    // A "No weekly meeting" week is not a meeting to finish: look past it to the next real one.
+    const isOffM = (x) => /^no (weekly )?meeting/i.test(String(x.label || '').trim());
+    const m = (d.meetings || []).find((x) => !isOffM(x));
+    let thu = nextThursday(d.today);
+    if ((d.meetings || []).some((x) => x.meeting_date === thu && isOffM(x))) { const t = new Date(thu + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() + 7); thu = t.toISOString().slice(0, 10); }
     if (!m || m.meeting_date > thu) {
       items.push({ level: D.daysUntil(thu) <= 3 ? 'urgent' : 'todo', icon: 'cal', title: `Add the meeting for ${D.day(thu, { weekday: 'long' })}`, text: 'Members can sign up on the website once it is published. Last week’s venue and times are filled in for you.', go: 'new-meeting', label: 'Add meeting' });
     }
