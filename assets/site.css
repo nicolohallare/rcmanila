@@ -1256,3 +1256,14 @@ a:focus-visible,button:focus-visible,summary:focus-visible,[tabindex]:focus-visi
 @media (max-width:760px){.cent-verses{grid-template-columns:1fr}}
 .cent-strip-h{font-family:Georgia,serif;color:var(--navy);font-size:20px;margin:30px 0 0}
 .cent-hymn-im{display:block;width:100%;max-width:760px;margin:0 auto 30px;border-radius:10px}
+.cent-audio{margin:0 auto 30px;max-width:520px;display:flex;flex-direction:column;gap:10px;align-items:center}
+.cent-audio figcaption{font-weight:800;color:var(--gold);font-size:15px}
+.cent-audio audio{width:100%}
+
+/* Meeting sign-ups: show the count and invite members to share */
+.meet-going{font-size:18px;color:#fff;margin:0}.meet-going b{color:var(--gold);font-size:26px;font-family:Georgia,serif;margin-right:4px}
+.rsvp-count strong{font-size:28px;font-family:Georgia,serif;color:var(--navy);margin-right:4px}
+.rsvp-share{display:flex;flex-direction:column;gap:8px;background:#f4f1fb;border:1px solid #ddd3f3;border-radius:10px;padding:14px;margin:12px 0}
+.rsvp-share strong{color:#3b2a6b;font-size:16px}.rsvp-share span{font-size:14px;color:#4a4560}
+.btn-viber{background:#7360f2;color:#fff!important;border:2px solid #7360f2;text-align:center}.btn-viber:hover{background:#5d4ad8;border-color:#5d4ad8}
+.rsvp-share small{font-size:13px;color:#3b2a6b}

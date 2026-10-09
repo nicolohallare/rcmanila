@@ -34,6 +34,10 @@
       if (e.capacity && e.seats > e.capacity) items.push({ level: 'urgent', icon: 'star', title: `${e.title}: ${e.seats} seats signed up for ${e.capacity}`, text: `On ${D.day(e.event_date, { weekday: 'long' })}. Raise the limit, close sign-ups, or tell the organizer.`, go: 'v-ev', label: 'Open events' });
       if (e.status !== 'published' && D.daysUntil(e.event_date) <= 30) items.push({ level: 'todo', icon: 'star', title: `${e.title} is still a draft`, text: `On ${D.day(e.event_date)}. Publish it so members can sign up.`, go: 'v-ev', label: 'Open events' });
     }
+    // From two days before the meeting: a ready-made sign-up list to paste in the Viber community, so members see who is coming.
+    if (m && m.status === 'published' && m.signups && D.daysUntil(m.meeting_date) <= 2 && D.daysUntil(m.meeting_date) >= 0) {
+      items.push({ level: 'todo', icon: 'share', title: `Viber Community: post the sign-up list for ${D.day(m.meeting_date, { weekday: 'long' })} (${m.signups} so far)`, text: 'Members who see who is coming are more likely to sign up. Copy the list, paste it in “RCM General Information & Announcements”. Once a day until the meeting is enough.', go: 'vlist:' + m.id, label: 'Copy the list' });
+    }
     items.push(...D.viberItems(d.viber, (v) => v.kind === 'meeting' ? { go: 'meeting:' + v.id, label: 'Open share panel' } : { go: 'v-ev', label: 'Open events' }));
     $('sh-todo').innerHTML = D.todo(items, 'The next meeting is set, and no messages or gifts are waiting.');
     D.badge($('b-today'), items.filter((i) => i.level === 'urgent').length);
@@ -66,6 +70,21 @@
     const g = b.getAttribute('data-go');
     if (g === 'new-meeting') return S().newMeeting();
     if (g.startsWith('meeting:')) return S().openMeeting(g.slice(8));
+    if (g.startsWith('vlist:')) {
+      const old = b.textContent; b.disabled = true; b.textContent = 'Copying…';
+      try {
+        const { meeting: mt, signups } = await S().call('m-get', { id: g.slice(6) });
+        const day = D.day(mt.meeting_date, { weekday: 'long' });
+        const mem = signups.filter((x) => x.kind !== 'guest'), gst = signups.filter((x) => x.kind === 'guest');
+        const lines = [`*${mt.label || 'Weekly meeting'}, ${day}*`, [mt.topic, mt.speaker].filter(Boolean).join(' · '), mt.venue ? `${mt.time_text ? mt.time_text + ', ' : ''}${mt.venue}` : '', '', `Signed up so far (${signups.length}):`,
+          ...mem.map((x, i) => `${i + 1}. ${x.name}`), ...(gst.length ? ['', 'Guests:', ...gst.map((x, i) => `${i + 1}. ${x.name}${x.guest_of ? ' (guest of ' + x.guest_of + ')' : ''}`)] : []),
+          '', 'Not on the list yet? Sign up here:', `https://rcmanila.org/meetings/${mt.meeting_date}`].filter((l, i, a) => l !== '' || (a[i - 1] !== '' && i > 0));
+        const text = lines.join('\n');
+        try { await navigator.clipboard.writeText(text); b.textContent = 'Copied ✓ Paste it in Viber'; } catch (err) { window.prompt('Copy this list:', text); b.textContent = old; }
+      } catch (err) { b.textContent = err.message; }
+      finally { b.disabled = false; setTimeout(() => { b.textContent = old; }, 4000); }
+      return;
+    }
     const tab = document.querySelector(`#sec-tabs [data-tab="${g}"]`); if (tab) tab.click();
   });
 })();

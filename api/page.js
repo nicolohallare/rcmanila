@@ -1279,6 +1279,7 @@ ${dateChip(m.meeting_date)}
 <span class="eyebrow" style="color:var(--gold)">${esc(m.label || 'Weekly membership meeting')}</span>
 <h1>${esc(m.topic || m.label || 'Weekly meeting')}</h1>
 ${m.speaker ? `<p style="font-size:20px;color:#fff"><strong>${esc(m.speaker)}</strong>${m.speaker_title ? `<br><span style="color:var(--sky)">${esc(m.speaker_title)}</span>` : ''}</p>` : ''}
+${!past && count ? `<p class="meet-going"><b>${count}</b> ${count === 1 ? 'member or guest is' : 'members and guests are'} coming so far</p>` : ''}
 ${past ? '<p><strong style="color:var(--gold)">This meeting has already taken place.</strong></p>' : `<div class="hero-cta"><a class="btn btn-gold" href="#rsvp">Sign up to attend</a><a class="btn btn-line" style="color:#fff" href="${calLink(m)}" target="_blank" rel="noopener">Add to calendar</a></div><p class="cal-sub">Get every Thursday meeting in your phone’s calendar, kept up to date: <a href="webcal://${origin.replace(/^https?:\/\//, '')}/meetings.ics">iPhone or Outlook</a> · <a href="https://calendar.google.com/calendar/r?cid=${encodeURIComponent('webcal://' + origin.replace(/^https?:\/\//, '') + '/meetings.ics')}" target="_blank" rel="noopener">Google Calendar (Android)</a></p>`}
 </div></div></section>
 <div class="wrap meet-grid">
@@ -1297,7 +1298,7 @@ ${hist}
 </div>
 <aside class="rsvp" id="rsvp">
 <h2>${open ? 'Will you attend?' : 'Sign-ups closed'}</h2>
-<p class="rsvp-count" id="rsvp-count">${count ? `<strong>${count}</strong> ${count === 1 ? 'person has' : 'people have'} signed up` : 'Be the first to sign up'}</p>
+<p class="rsvp-count" id="rsvp-count">${count ? `<strong>${count}</strong> coming so far` : 'Be the first to sign up'}</p>
 ${open ? `<form id="rsvp-form" novalidate>
 <input type="hidden" name="meeting_id" value="${m.id}">
 <label>Your name, as it should appear on the list<input name="name" required maxlength="80" autocomplete="name" placeholder="e.g. PP Juan Dela Cruz"></label>
@@ -1323,11 +1324,14 @@ var FN=${JSON.stringify(FN)}, PUB=${JSON.stringify(PUB)}, KEYS='rcm-rsvp-${m.id}
 var gf=document.getElementById('guest-fields'), msg=document.getElementById('rsvp-msg'), done=document.getElementById('rsvp-done'), cnt=document.getElementById('rsvp-count');
 function mine(){try{return JSON.parse(localStorage.getItem(KEYS)||'[]')}catch(e){return []}}
 function save(l){try{localStorage.setItem(KEYS,JSON.stringify(l))}catch(e){}}
-function setCount(n){cnt.innerHTML=n?'<strong>'+n+'</strong> '+(n===1?'person has':'people have')+' signed up':'Be the first to sign up';}
+var latest=${count || 0};
+var SHARE_URL=${JSON.stringify(url)}, SHARE_DAY=${JSON.stringify(new Date(m.meeting_date + 'T12:00:00+08:00').toLocaleDateString('en-GB', { weekday: 'long', timeZone: 'Asia/Manila' }))}, SHARE_WHAT=${JSON.stringify(m.topic ? `“${m.topic}”${m.speaker ? ' with ' + m.speaker : ''}` : (m.speaker ? 'with ' + m.speaker : ''))};
+function setCount(n){latest=n||0;cnt.innerHTML=n?'<strong>'+n+'</strong> coming so far':'Be the first to sign up';var h=document.querySelector('.meet-going b');if(h)h.textContent=n;}
+function shareText(){return 'I’m going to '+SHARE_DAY+'’s meeting'+(SHARE_WHAT?' '+SHARE_WHAT:'')+'. '+(latest>1?latest+' of us are coming so far. ':'')+'Join us! Sign up here: '+SHARE_URL;}
 function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function showDone(){var l=mine(); if(!l.length){done.hidden=true;f.hidden=false;return;}
  done.hidden=false; f.hidden=true;
- done.innerHTML='<p class="ok"><strong>You’re on the list.</strong> See you on ${esc(new Date(m.meeting_date + 'T12:00:00+08:00').toLocaleDateString('en-GB', { weekday: 'long', timeZone: 'Asia/Manila' }))}!</p><ul class="mine">'+l.map(function(x,i){return '<li><span>'+esc(x.name)+'</span><button type="button" class="linkbtn" data-rm="'+i+'">Remove</button></li>'}).join('')+'</ul><button type="button" class="btn btn-line" style="color:var(--blue);width:100%" id="add-more">Sign up someone else (e.g. your guest)</button>';
+ done.innerHTML='<p class="ok"><strong>You’re on the list.</strong> See you on ${esc(new Date(m.meeting_date + 'T12:00:00+08:00').toLocaleDateString('en-GB', { weekday: 'long', timeZone: 'Asia/Manila' }))}!</p><ul class="mine">'+l.map(function(x,i){return '<li><span>'+esc(x.name)+'</span><button type="button" class="linkbtn" data-rm="'+i+'">Remove</button></li>'}).join('')+'</ul><div class="rsvp-share"><strong>Tell the Club you’re going</strong><span>Post it in the Viber community so others sign up too.</span><a class="btn btn-viber" id="sh-viber" href="viber://forward?text='+encodeURIComponent(shareText())+'">Share on Viber</a><button type="button" class="btn btn-line" style="color:var(--blue)" id="sh-copy">Copy the message</button><small id="sh-msg" role="status"></small></div><button type="button" class="btn btn-line" style="color:var(--blue);width:100%" id="add-more">Sign up someone else (e.g. your guest)</button>';
 }
 f.addEventListener('change',function(){gf.hidden=f.kind.value!=='guest'});
 f.addEventListener('submit',async function(e){e.preventDefault();
@@ -1344,6 +1348,8 @@ f.addEventListener('submit',async function(e){e.preventDefault();
 });
 done.addEventListener('click',async function(e){
  if(e.target.id==='add-more'){done.hidden=true;f.hidden=false;f.name.focus();return;}
+ if(e.target.id==='sh-copy'){var t=shareText(),sm=document.getElementById('sh-msg');try{await navigator.clipboard.writeText(t);sm.textContent='Copied. Paste it in the Viber community.';}catch(err){window.prompt('Copy this message:',t);}return;}
+ if(e.target.id==='sh-viber'){var sm2=document.getElementById('sh-msg');try{navigator.clipboard.writeText(shareText());}catch(err){} setTimeout(function(){if(document.visibilityState==='visible'&&sm2)sm2.textContent='If Viber did not open, the message is copied: open Viber and paste it in the community.';},1500);return;}
  var rm=e.target.getAttribute('data-rm'); if(rm===null) return;
  var l=mine(), x=l[+rm]; e.target.disabled=true;
  if(x&&x.id){try{await fetch(FN,{method:'POST',headers:{'content-type':'application/json',apikey:PUB},body:JSON.stringify({action:'rsvp-cancel',id:x.id,token:x.token})});}catch(err){}}
