@@ -12,7 +12,7 @@
     window.BalitaExtract._clean = true;
   }
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const imgUrl = (path, w) => `${SB}/storage/v1/render/image/public/rcm/${path.split('/').map(encodeURIComponent).join('/')}?width=${w}&resize=contain&quality=75`;
+  const imgUrl = (path, w) => String(path).startsWith('/') ? path : `${SB}/storage/v1/render/image/public/rcm/${path.split('/').map(encodeURIComponent).join('/')}?width=${w}&resize=contain&quality=75`;
   let code = '';
   try { code = localStorage.getItem('rcm-editor-code') || ''; } catch (e) {}
 
