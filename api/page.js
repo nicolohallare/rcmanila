@@ -190,7 +190,7 @@ const INVOLVED = ['join', 'partner', 'donate'];
 // Second row under the header for the grouped sections (same look as the Library tabs).
 function subNav(nav) {
   const groups = [
-    [WHATSON, 'What’s On', [['meeting', '/meeting', 'Weekly meetings'], ['events', '/events', 'Events'], ['speakers', '/speakers', 'Guest speakers']]],
+    [WHATSON, 'Events', [['meeting', '/meeting', 'Weekly meetings'], ['events', '/events', 'Events'], ['speakers', '/speakers', 'Guest speakers']]],
     [INVOLVED, 'Get Involved', [['join', '/join', 'Join the Club'], ['partner', '/partner', 'Partner with us'], ['donate', '/donate', 'Donate']]],
   ];
   const g = groups.find((x) => x[0].includes(nav));
@@ -236,7 +236,7 @@ ${ld ? `<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, '\
 <header class="site-head"><div class="wrap">
 <a class="logo lockup" href="/" aria-label="Rotary Club of Manila home"><img class="lk-club" src="/assets/club-logo.png" alt="Rotary Club of Manila" width="803" height="286"><span class="lk-rule" aria-hidden="true"></span><img class="lk-msg" src="/assets/msg-2026.png" alt="Create Lasting Impact" width="918" height="509"></a>
 <nav class="nav" aria-label="Main">
-<a href="/#club">Our Club</a><a href="/projects" class="${nav === 'projects' ? 'on' : ''}">Projects</a><a href="/meeting" class="${WHATSON.includes(nav) ? 'on' : ''}">What’s On</a><a href="/balita" class="${nav === 'balita' ? 'on' : ''}">Balita</a><a href="/library" class="${nav === 'library' ? 'on' : ''}">Library</a><a href="/join" class="${INVOLVED.includes(nav) ? 'on' : ''}">Get Involved</a>
+<a href="/#club">Our Club</a><a href="/projects" class="${nav === 'projects' ? 'on' : ''}">Projects</a><a href="/meeting" class="${WHATSON.includes(nav) ? 'on' : ''}">Events</a><a href="/balita" class="${nav === 'balita' ? 'on' : ''}">Balita</a><a href="/library" class="${nav === 'library' ? 'on' : ''}">Library</a><a href="/join" class="${INVOLVED.includes(nav) ? 'on' : ''}">Get Involved</a>
 </nav>
 <details class="menu"><summary>Menu</summary><div class="menu-panel">
 <a href="/#club">Our Club</a><a href="/past-presidents">Past presidents</a><a href="/speakers">Guest speakers</a><a href="/projects">Service projects</a><a href="/youth">Rotaract and Interact</a><a href="/meeting">Meetings</a><a href="/events">Events</a><a href="/balita">Balita</a><a href="/library">Heritage Library</a><a href="/join">Join the Club</a><a href="/partner">Partner or volunteer</a><a href="/donate">Donate</a><a href="#contact">Contact</a>
