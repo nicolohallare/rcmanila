@@ -1335,3 +1335,8 @@ a.lib-door:hover strong{text-decoration:underline}
 }
 @media (min-width:761px){.lib-doors{grid-template-columns:repeat(2,minmax(0,1fr))}.lib-door .cv{flex-basis:110px}}
 .lib-more .lib-doors{margin-top:22px}
+/* Home "This week": the meeting leads with the guest speaker and the poster */
+.hx-pos{flex-shrink:0;width:64px;height:64px;border-radius:6px;overflow:hidden;background:var(--sky);box-shadow:0 4px 10px -4px rgba(0,0,0,.45)}
+.hx-pos img{width:100%;height:100%;object-fit:cover;object-position:center top;display:block}
+.hx-meet .hx-txt strong{font-size:20px}
+@media (max-width:700px){.hx-meet .hx-txt em{display:block;font-size:14px}.hx-pos{width:72px;height:72px}.hx-meet .hx-txt strong{font-size:19px}}
