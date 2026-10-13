@@ -38,6 +38,10 @@
       "destination": "/api/page?r=meeting&date=:date"
     },
     {
+      "source": "/beyond-limits",
+      "destination": "/api/page?r=beyond"
+    },
+    {
       "source": "/donate",
       "destination": "/api/page?r=donate"
     },

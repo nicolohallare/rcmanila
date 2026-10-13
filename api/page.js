@@ -185,12 +185,12 @@ function supportersBand(ads) {
   const card = (x) => `<a class="sup-ad" href="${x.href}" target="_blank" rel="sponsored noopener" aria-label="${esc(x.name)} (opens in a new tab)"><picture><source media="(max-width:560px)" srcset="/assets/supporters/${x.key}-box.jpg"><img src="/assets/supporters/${x.key}-wide.jpg" alt="${esc(x.alt)}" width="1200" height="520" loading="lazy"></picture></a>`;
   return `<section class="sup${on.length === 1 ? ' sup-one' : ''}" aria-label="Supporters of the Rotary Club of Manila"><div class="wrap"><p class="sup-k">With thanks to our ${on.length === 1 ? 'supporter' : 'supporters'}</p><div class="sup-g">${on.map(card).join('')}</div></div></section>`;
 }
-const WHATSON = ['meeting', 'events', 'speakers'];
+const WHATSON = ['meeting', 'events', 'speakers', 'beyond'];
 const INVOLVED = ['join', 'partner', 'donate'];
 // Second row under the header for the grouped sections (same look as the Library tabs).
 function subNav(nav) {
   const groups = [
-    [WHATSON, 'Events', [['meeting', '/meeting', 'Weekly meetings'], ['events', '/events', 'Events'], ['speakers', '/speakers', 'Guest speakers']]],
+    [WHATSON, 'Events', [['meeting', '/meeting', 'Weekly meetings'], ['events', '/events', 'Events'], ['speakers', '/speakers', 'Guest speakers'], ['beyond', '/beyond-limits', 'Beyond Limits art']]],
     [INVOLVED, 'Get Involved', [['join', '/join', 'Join the Club'], ['partner', '/partner', 'Partner with us'], ['donate', '/donate', 'Donate']]],
   ];
   const g = groups.find((x) => x[0].includes(nav));
@@ -1126,6 +1126,73 @@ async function upcomingEvents(limit = 20) {
   const today = manilaToday();
   return q(`rcm_events?select=id,slug,title,kicker,event_date,end_date,time_text,venue,summary,poster_path,capacity,price&status=eq.published&or=(event_date.gte.${today},end_date.gte.${today})&order=event_date&limit=${limit}`).catch(() => []);
 }
+// Beyond Limits: the Angels of Rendu art exhibit. Paintings live in rcm_artworks (sold is set there, so the
+// page updates without a new upload). A request goes to the Secretariat's Inquiries tab, like Join and Partner.
+async function beyondPage(origin) {
+  const art = await q('rcm_artworks?select=code,title,artist,size,medium,price,image,guest,sold&exhibit=eq.beyond-limits-2026&order=code').catch(() => []);
+  const avail = art.filter((a) => !a.sold).length;
+  const peso = (n) => '₱' + Number(n || 0).toLocaleString('en');
+  const card = (a) => `<button type="button" class="bl-card${a.sold ? ' sold' : ''}${a.guest ? ' guest' : ''}" data-code="${a.code}"><span class="im"><img src="${esc(a.image)}" alt="${esc(a.title)} by ${esc(a.artist)}" loading="lazy">${a.sold ? '<i class="bl-sold">Sold</i>' : ''}</span><span class="tx"><small>No. ${String(a.code).padStart(2, '0')}${a.guest ? ' · Guest artist' : ''}</small><strong>${esc(a.title)}</strong><span>${esc(a.artist)} · ${esc(a.size)}</span><b>${a.sold ? 'Sold' : peso(a.price)}</b></span></button>`;
+  const data = JSON.stringify(art.map((a) => ({ c: a.code, t: a.title, a: a.artist, s: a.size, m: a.medium, p: a.price, i: a.image, g: a.guest, x: a.sold }))).replace(/</g, '\\u003c');
+  const body = `<section class="bl-hero"><div class="wrap bl-hero-in">
+<div><span class="kicker" style="color:var(--gold)">Angels of Rendu · Fifth annual exhibit</span>
+<h1>Beyond Limits</h1>
+<p class="bl-lede">Paintings by the Angels of Rendu, the young artists of Hospicio de San Jose, including Angie, who paints with her feet. Buying one is a way to bring “Service Above Self” into your home or office.</p>
+<p class="bl-proceeds"><b>100% of proceeds</b> from painting sales and donations fund the rehabilitation of Hospicio de San Jose’s Physical Therapy and Occupational Therapy Clinic.</p>
+<div class="bl-count"><b id="bl-avail">${avail}</b> of ${art.length} paintings still available</div></div>
+<figure class="bl-hero-art"><img src="/assets/beyond-limits/07.jpg" alt="“Woman in Red” by Angie"><figcaption>“Woman in Red” by Angie, who paints with her feet</figcaption></figure>
+</div></section>
+<section class="wrap bl-sec">
+<div class="bl-bar" role="group" aria-label="Show"><button type="button" class="on" data-f="avail">Available (${avail})</button><button type="button" data-f="all">All ${art.length}</button><button type="button" data-f="guest">Guest artists</button></div>
+<div class="bl-grid" id="bl-grid">${art.map(card).join('')}</div>
+<p class="muted-p" style="margin-top:18px">Sizes are in inches, width by height. Tap a painting to see it larger and ask for it.</p>
+</section>
+<section class="bl-how"><div class="wrap bl-how-in">
+<div><span class="kicker">How to buy a painting</span><h2>Ask for it here, and the Secretariat will reply</h2>
+<ol><li>Tap the painting you like and send your name and how to reach you.</li><li>The Secretariat confirms it is still available and sends payment details: bank transfer or QR Ph to the RC Manila Foundation, or a card at the exhibit.</li><li>Your painting is set aside for you, and the proceeds go to Hospicio de San Jose.</li></ol>
+<p>Questions: call the Club office at <a href="${TEL}">(02) 8527-1885</a> or email <a href="mailto:${MAIL}?subject=Beyond%20Limits">${MAIL}</a>.</p></div>
+<blockquote class="bl-quote"><p>In the last seven years, our artists have risen above barriers: physical, emotional, social and financial. Their works show how boundaries became starting points.</p><footer>Celestino Palma III, Curator</footer></blockquote>
+</div></section>
+<section class="wrap bl-sec"><span class="kicker">A partnership of more than 75 years</span><h2 style="margin-top:6px">The Club and Hospicio de San Jose</h2>
+<p class="muted-p" style="max-width:62ch">Each painting carries forward the Rotary Club of Manila’s partnership with Hospicio de San Jose, a daily reminder of how your generosity supports artistic opportunity and essential care.</p>
+<ul class="bl-links"><li><a href="/balita/4109/beyond-limits">Beyond Limits opens at LRI Design Plaza <span>Balita, October 2026</span></a></li><li><a href="/balita/4025/essence-of-hope-the-rotary-club-of-manilas-artful-vision-for-a-better-future">“Essence,” the third exhibit <span>Balita, September 2024</span></a></li><li><a href="/balita/3980/expanding-horizons-exhibit-for-hospicio-de-san-jose-rendu-ward">“Expanding Horizons” <span>Balita, September 2023</span></a></li><li><a href="/balita/3795/angels-in-rendu">The first Angels of Rendu exhibit <span>Balita, June 2019</span></a></li></ul>
+</section>
+<dialog class="bl-dlg" id="bl-dlg"><button type="button" class="x" aria-label="Close">×</button><div class="bl-dlg-in">
+<figure><img id="bl-di" alt=""></figure>
+<div class="bl-dlg-tx"><small id="bl-dn"></small><h3 id="bl-dt"></h3><p id="bl-dm"></p><p class="bl-dp" id="bl-dp"></p>
+<form id="bl-form" class="don-form" novalidate><p class="muted-p" style="font-size:15px;margin:0">Ask for this painting. The Secretariat will confirm and send payment details.</p>
+<label>Your name<input name="name" autocomplete="name" required></label>
+<label>Email<input name="email" type="email" autocomplete="email"></label>
+<label>Mobile number<input name="phone" type="tel" autocomplete="tel" inputmode="tel"></label>
+<label><span>Message <span class="opt">(optional)</span></span><textarea name="message" rows="2"></textarea></label>
+<input name="website" tabindex="-1" autocomplete="off" class="hp" aria-hidden="true">
+<button class="btn btn-gold" type="submit" id="bl-send">I’d like this painting</button><p id="bl-msg" role="status" aria-live="polite"></p></form>
+<div id="bl-done" class="don-done" hidden></div></div></div></dialog>
+<script>
+(function(){var A=${data},cur=null,g=document.getElementById('bl-grid'),d=document.getElementById('bl-dlg'),f=document.getElementById('bl-form'),msg=document.getElementById('bl-msg');
+function peso(n){return '₱'+Number(n).toLocaleString('en')}
+function filt(k){[].forEach.call(document.querySelectorAll('.bl-bar button'),function(b){b.classList.toggle('on',b.dataset.f===k)});[].forEach.call(g.children,function(c){var a=A.find(function(x){return x.c==c.dataset.code});c.hidden=k==='avail'?a.x:k==='guest'?!a.g:false})}
+document.querySelector('.bl-bar').addEventListener('click',function(e){var b=e.target.closest('button');if(b)filt(b.dataset.f)});
+filt('avail');
+g.addEventListener('click',function(e){var c=e.target.closest('.bl-card');if(!c)return;cur=A.find(function(x){return x.c==c.dataset.code});
+document.getElementById('bl-di').src=cur.i;document.getElementById('bl-di').alt=cur.t+' by '+cur.a;
+document.getElementById('bl-dn').textContent='No. '+String(cur.c).padStart(2,'0')+(cur.g?' · Guest artist':'');document.getElementById('bl-dt').textContent='“'+cur.t+'”';
+document.getElementById('bl-dm').textContent=cur.a+' · '+cur.s+' · '+cur.m;document.getElementById('bl-dp').textContent=cur.x?'Sold':peso(cur.p);
+f.hidden=!!cur.x;document.getElementById('bl-done').hidden=true;msg.textContent='';document.getElementById('bl-send').disabled=false;d.showModal()});
+d.querySelector('.x').onclick=function(){d.close()};d.addEventListener('click',function(e){if(e.target===d)d.close()});
+f.addEventListener('submit',async function(e){e.preventDefault();var fd=new FormData(f),b=document.getElementById('bl-send');
+if(String(fd.get('name')||'').trim().length<2){msg.textContent='Please type your name.';return}
+if(!String(fd.get('email')||'').trim()&&!String(fd.get('phone')||'').trim()){msg.textContent='Please give an email address or a mobile number so the Secretariat can reply.';return}
+b.disabled=true;msg.textContent='Sending…';
+try{var p={action:'send',page:location.pathname,kind:'other',interest:('Beyond Limits No. '+String(cur.c).padStart(2,'0')+': '+cur.t+' ('+peso(cur.p)+')').slice(0,160)};fd.forEach(function(v,k){p[k]=v});
+var r=await fetch('${INQ}',{method:'POST',headers:{'content-type':'application/json',apikey:'${PUB}'},body:JSON.stringify(p)});var j=await r.json().catch(function(){return{error:'The server did not answer. Please try again.'}});
+if(!r.ok||j.error)throw new Error(j.error||'Please try again.');
+f.hidden=true;var dn=document.getElementById('bl-done');dn.hidden=false;dn.innerHTML='<strong>Thank you!</strong><p>The Secretariat has your request for “'+cur.t.replace(/</g,'')+'” and will get in touch to confirm.</p>'}
+catch(err){msg.textContent=err.message;b.disabled=false}});})();
+</script>`;
+  return layout({ title: 'Beyond Limits: paintings by the Angels of Rendu · Rotary Club of Manila', description: `${avail} paintings by the Angels of Rendu of Hospicio de San Jose are still available. 100% of proceeds fund the rehabilitation of Hospicio’s Physical and Occupational Therapy Clinic.`, url: `${origin}/beyond-limits`, image: '/assets/beyond-limits/07.jpg', body, nav: 'beyond' });
+}
+
 async function eventsIndex(origin) {
   const today = manilaToday();
   const [up, past, seats] = await Promise.all([
@@ -1605,6 +1672,7 @@ module.exports = async (req, res) => {
     else if (r === 'presidents') html = presidentsPage(origin);
     else if (r === 'speakers') html = await speakersPage(origin);
     else if (r === 'events') html = await eventsIndex(origin);
+    else if (r === 'beyond') html = await beyondPage(origin);
     else if (r === 'event') html = await eventPage(origin, u.searchParams.get('slug'));
     else if (r === 'lib') html = await LIB.route(origin, u);
     else if (r === 'partner') html = partnerPage(origin, String(u.searchParams.get('i') || '').slice(0, 80));
