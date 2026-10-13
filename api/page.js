@@ -1132,8 +1132,8 @@ async function beyondPage(origin) {
   const art = await q('rcm_artworks?select=code,title,artist,size,medium,price,image,guest,sold&exhibit=eq.beyond-limits-2026&order=code').catch(() => []);
   const avail = art.filter((a) => !a.sold).length;
   const peso = (n) => '₱' + Number(n || 0).toLocaleString('en');
-  const card = (a) => `<button type="button" class="bl-card${a.sold ? ' sold' : ''}${a.guest ? ' guest' : ''}" data-code="${a.code}"><span class="im"><img src="${esc(a.image)}" alt="${esc(a.title)} by ${esc(a.artist)}" loading="lazy">${a.sold ? '<i class="bl-sold">Sold</i>' : ''}</span><span class="tx"><small>No. ${String(a.code).padStart(2, '0')}${a.guest ? ' · Guest artist' : ''}</small><strong>${esc(a.title)}</strong><span>${esc(a.artist)} · ${esc(a.size)}</span><b>${a.sold ? 'Sold' : peso(a.price)}</b></span></button>`;
-  const data = JSON.stringify(art.map((a) => ({ c: a.code, t: a.title, a: a.artist, s: a.size, m: a.medium, p: a.price, i: a.image, g: a.guest, x: a.sold }))).replace(/</g, '\\u003c');
+  const card = (a) => `<button type="button" class="bl-card${a.sold ? ' sold' : ''}${a.guest ? ' guest' : ''}" data-code="${a.code}"><span class="im"><img src="${esc(a.image)}" alt="${esc(a.title)} by ${esc(a.artist)}" loading="lazy">${a.sold ? '<i class="bl-sold">Sold</i>' : ''}</span><span class="tx"><small>No. ${String(a.code).padStart(2, '0')}${a.guest ? ' · Guest artist' : ''}</small><strong>${esc(a.title)}</strong><span>${esc(a.artist)} · ${esc(a.size)}</span><b>${a.sold ? 'Sold' : a.price ? peso(a.price) : 'Price on request'}</b></span></button>`;
+  const data = JSON.stringify(art.map((a) => ({ c: a.code, t: a.title, a: a.artist, s: a.size, m: a.medium || '', p: a.price, i: a.image, g: a.guest, x: a.sold }))).replace(/</g, '\\u003c');
   const body = `<section class="bl-hero"><div class="wrap bl-hero-in">
 <div><span class="kicker" style="color:var(--gold)">Angels of Rendu · Fifth annual exhibit</span>
 <h1>Beyond Limits</h1>
@@ -1177,14 +1177,14 @@ filt('avail');
 g.addEventListener('click',function(e){var c=e.target.closest('.bl-card');if(!c)return;cur=A.find(function(x){return x.c==c.dataset.code});
 document.getElementById('bl-di').src=cur.i;document.getElementById('bl-di').alt=cur.t+' by '+cur.a;
 document.getElementById('bl-dn').textContent='No. '+String(cur.c).padStart(2,'0')+(cur.g?' · Guest artist':'');document.getElementById('bl-dt').textContent='“'+cur.t+'”';
-document.getElementById('bl-dm').textContent=cur.a+' · '+cur.s+' · '+cur.m;document.getElementById('bl-dp').textContent=cur.x?'Sold':peso(cur.p);
+document.getElementById('bl-dm').textContent=[cur.a,cur.s,cur.m].filter(Boolean).join(' · ');document.getElementById('bl-dp').textContent=cur.x?'Sold':cur.p?peso(cur.p):'Price on request';
 f.hidden=!!cur.x;document.getElementById('bl-done').hidden=true;msg.textContent='';document.getElementById('bl-send').disabled=false;d.showModal()});
 d.querySelector('.x').onclick=function(){d.close()};d.addEventListener('click',function(e){if(e.target===d)d.close()});
 f.addEventListener('submit',async function(e){e.preventDefault();var fd=new FormData(f),b=document.getElementById('bl-send');
 if(String(fd.get('name')||'').trim().length<2){msg.textContent='Please type your name.';return}
 if(!String(fd.get('email')||'').trim()&&!String(fd.get('phone')||'').trim()){msg.textContent='Please give an email address or a mobile number so the Secretariat can reply.';return}
 b.disabled=true;msg.textContent='Sending…';
-try{var p={action:'send',page:location.pathname,kind:'other',interest:('Beyond Limits No. '+String(cur.c).padStart(2,'0')+': '+cur.t+' ('+peso(cur.p)+')').slice(0,160)};fd.forEach(function(v,k){p[k]=v});
+try{var p={action:'send',page:location.pathname,kind:'other',interest:('Beyond Limits No. '+String(cur.c).padStart(2,'0')+': '+cur.t+(cur.p?' ('+peso(cur.p)+')':'')).slice(0,160)};fd.forEach(function(v,k){p[k]=v});
 var r=await fetch('${INQ}',{method:'POST',headers:{'content-type':'application/json',apikey:'${PUB}'},body:JSON.stringify(p)});var j=await r.json().catch(function(){return{error:'The server did not answer. Please try again.'}});
 if(!r.ok||j.error)throw new Error(j.error||'Please try again.');
 f.hidden=true;var dn=document.getElementById('bl-done');dn.hidden=false;dn.innerHTML='<strong>Thank you!</strong><p>The Secretariat has your request for “'+cur.t.replace(/</g,'')+'” and will get in touch to confirm.</p>'}
