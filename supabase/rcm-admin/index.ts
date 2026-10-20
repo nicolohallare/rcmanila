@@ -66,6 +66,18 @@ const PARSE_TASK = `Return exactly this JSON shape (use null when the announceme
 {"meeting_date":"YYYY-MM-DD","label":"e.g. 12th Weekly Membership Meeting","topic":"talk title","speaker":"speaker's full name with honorific as written","speaker_title":"speaker's position","speaker_bio":"short paragraph about the speaker taken from the announcement, plus any career milestones as lines starting with • ","time_text":"meeting time, e.g. 12:30 PM–2:00 PM","registration_text":"registration or lunch time if given","venue":"room and hotel","notes":"anything else members need to know that week (elections, special events, dress code, Zoom), in one or two plain sentences"}
 Do not include the list of people attending.`;
 
+// Hidden leftover text from old layout templates (e.g. "3 2 | M I X E D • O C T O B E R 2 0 1 9") that the PDF carries
+// but print never shows. It made the AI think issues were from 2019, so it is removed before any AI step or search.
+const MONTHS = "JANUARY|FEBRUARY|MARCH|APRIL|MAY|JUNE|JULY|AUGUST|SEPTEMBER|OCTOBER|NOVEMBER|DECEMBER";
+const spaced = (w: string) => w.split("").join("\\s*");
+const TEMPLATE_JUNK = new RegExp(
+  "(?:\\d\\s*){1,3}\\|\\s*" + spaced("MIXED") + "\\s*[•·]?\\s*(?:" + MONTHS.split("|").map(spaced).join("|") + ")\\s*(?:\\d\\s*){4}",
+  "gi",
+);
+function scrubPageText(t: string) {
+  return String(t || "").replace(TEMPLATE_JUNK, " ").replace(/[ \t]{2,}/g, " ");
+}
+
 function slugify(s: string) {
   return s.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
     .replace(/[“”"’']/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80) || "article";
@@ -106,7 +118,8 @@ const PLAN_TASK = `Return exactly this JSON shape:
 {"issue":{"issue_no":number|null,"date":"YYYY-MM-DD"|null,"meeting":"e.g. 11th Weekly Membership Meeting"|null,"guest":"guest speaker name and title"|null,"summary":"one sentence naming the main stories, factual, no hype"},
  "articles":[{"title":"headline as printed","kicker":"one of: Editorial, Guest speaker, Weekly meeting, Service, Feature, Club administration, In Focus, Foundation, District, Fellowship, In the news, Awards, Club news","byline":"as printed or null","from":first PDF page number,"to":last PDF page number,"printed":"printed page range like pp. 62–81, or null","lead":true only for the single strongest story to feature}],
  "skipped":[{"from":n,"to":n,"reason":"advertisement | meeting program | attendance or dues list | roster | cover | contents | blank"}]}
-Rules: articles are continuous prose stories, editorials, profiles, speaker introductions, reports and announcements with real text. Photo-only pages that belong to an article go inside that article's page range. Do not invent titles: use the printed headline. Keep articles in reading order. Every PDF page belongs to exactly one article or one skipped range. Keep the JSON compact: merge neighbouring skipped pages into one range.`;
+Rules: articles are continuous prose stories, editorials, profiles, speaker introductions, reports and announcements with real text. Photo-only pages that belong to an article go inside that article's page range. Do not invent titles: use the printed headline. Keep articles in reading order. Every PDF page belongs to exactly one article or one skipped range. Keep the JSON compact: merge neighbouring skipped pages into one range.
+Start a new article at every new printed headline or column label, even when two stories share a section label such as "In the News". Never merge stories with different authors or headlines into one article. A page whose story is printed as a picture (for example a newspaper column reprinted as a clipping, so the page has a heading or label but little or no body text) is still its own article: use the printed heading as its title.`;
 
 const CLEAN_SYSTEM = `You turn one article from the weekly Balita (newsletter of the Rotary Club of Manila) into clean web text. The input is raw text pulled from PDF pages, so it contains running headers and footers, page numbers, repeated decorative titles, captions mixed into the body, words broken across lines, and drop caps split from their word (e.g. "T" on its own and "HE Rotary Club..." which is "THE Rotary Club..." → write "The Rotary Club...").
 Keep the author's wording exactly. Fix only extraction damage: rejoin hyphenated or broken words and drop caps, restore paragraph breaks, remove headers, footers, page numbers and repeated titles, and move photo captions out of the body. Never add facts, never summarize the body, never rewrite sentences. Reply with JSON only.`;
@@ -117,15 +130,15 @@ const CLEAN_TASK = `Return exactly this JSON shape:
  "photos":[{"id":"photo id","caption":"the caption printed for this photo, or empty string"}],
  "lead_photo":"photo id or null",
  "flag":null or "a short note to the editor in plain words (at most two sentences) about something they should fix before publishing"}
-"h" = a printed subheading, "q" = a printed pull quote. Photos: include only real photographs that belong to this article, in reading order; leave out logos, headline art, cover images, advertisements and graphics that are mostly text. Match each printed caption to the photo it describes using what you can see in the images; use an empty caption rather than guessing. lead_photo is the best wide photo for the top of the web page.
-Flag only real problems the editor must act on: text that is cut off or out of order, or a name, date or title that looks wrong. The editor is not technical: write the way a colleague would ("The photo of a man in a tuxedo on printed page 6 has no caption. Is this the author?"). Never mention photo ids, JSON or the PDF. Do not flag empty captions on group or crowd photos, typos you cannot confirm, or anything that is fine as printed. Never flag dates, page numbers or titles found only in running page headers or footers: the layout file carries hidden leftover text from old templates there (such as "32 | MIXED • OCTOBER 2019") that does not show in print. When in doubt, use null.`;
+"h" = a printed subheading, "q" = a printed pull quote. Photos: include only real photographs that belong to this article, in reading order; leave out logos, headline art, cover images, advertisements and graphics that are mostly text. Exception: if the story itself is printed as a picture (a reprinted newspaper clipping), include that picture as the lead photo with an empty caption, and leave the body empty rather than flagging it; if you can read the clipping's own headline and author, use them for title and byline. Match each printed caption to the photo it describes using what you can see in the images; use an empty caption rather than guessing. lead_photo is the best wide photo for the top of the web page.
+Flag only real problems the editor must act on: text that is cut off or out of order, or a name, date or title that looks wrong. The editor is not technical: write the way a colleague would ("The photo of a man in a tuxedo on printed page 6 has no caption. Is this the author?"). Never mention photo ids, JSON or the PDF. Do not flag empty captions on group or crowd photos, typos you cannot confirm, or anything that is fine as printed. Never flag dates, page numbers or titles found only in running page headers or footers: the layout file carries hidden leftover text from old templates there (such as "32 | MIXED • OCTOBER 2019") that does not show in print. Also ignore any year such as 2019 that appears inside letter-spaced template text; judge dates only from the dated running footers ("Balita - October 22, 2026") and the article itself. When in doubt, use null.`;
 
 const CONT_TASK = `This is a continuation of an article whose beginning was already processed. Return exactly this JSON shape:
 {"body":[{"t":"p"|"h"|"q","text":"..."}],
  "photos":[{"id":"photo id","caption":"the caption printed for this photo, or empty string"}],
  "flag":null or "a short note to the editor in plain words (at most two sentences) about something they should fix before publishing"}
 If the first paragraph continues a sentence cut off at the end of the previous part, start with the continuing words as they appear. Same rules for photos as before: only real photographs that belong to this article, in reading order.
-Flag only real problems the editor must act on: text that is cut off or out of order, or a name, date or title that looks wrong. The editor is not technical: write the way a colleague would ("The photo of a man in a tuxedo on printed page 6 has no caption. Is this the author?"). Never mention photo ids, JSON or the PDF. Do not flag empty captions on group or crowd photos, typos you cannot confirm, or anything that is fine as printed. Never flag dates, page numbers or titles found only in running page headers or footers: the layout file carries hidden leftover text from old templates there (such as "32 | MIXED • OCTOBER 2019") that does not show in print. When in doubt, use null.`;
+Flag only real problems the editor must act on: text that is cut off or out of order, or a name, date or title that looks wrong. The editor is not technical: write the way a colleague would ("The photo of a man in a tuxedo on printed page 6 has no caption. Is this the author?"). Never mention photo ids, JSON or the PDF. Do not flag empty captions on group or crowd photos, typos you cannot confirm, or anything that is fine as printed. Never flag dates, page numbers or titles found only in running page headers or footers: the layout file carries hidden leftover text from old templates there (such as "32 | MIXED • OCTOBER 2019") that does not show in print. Also ignore any year such as 2019 that appears inside letter-spaced template text; judge dates only from the dated running footers ("Balita - October 22, 2026") and the article itself. When in doubt, use null.`;
 
 function mapPhotos(list: { id: string; caption: string }[], photos: { id: string; path: string; width: number; height: number }[]) {
   const byId = new Map(photos.map((p) => [p.id, p]));
@@ -580,7 +593,7 @@ Deno.serve(async (req) => {
 
     if (action === "plan") {
       const pages: { n: number; text: string }[] = body.pages || [];
-      const text = pages.map((p) => `=== PDF page ${p.n} ===\n${(p.text || "").slice(0, 1800)}`).join("\n\n");
+      const text = pages.map((p) => `=== PDF page ${p.n} ===\n${scrubPageText(p.text).slice(0, 1800)}`).join("\n\n");
       return streamed(async () => {
         const reply = await claude([{ type: "text", text: `${PLAN_TASK}\n\nThe issue text:\n\n${text}` }], PLAN_SYSTEM, 16000);
         return extractJson(reply);
@@ -601,7 +614,7 @@ Deno.serve(async (req) => {
           : `${CONT_TASK}\n\nArticle: "${article.title}", part ${part + 1} of ${parts}.`;
         const content: unknown[] = [{
           type: "text",
-          text: `${intro}\n\nRaw text:\n\n` + pages.map((p) => `=== PDF page ${p.n} ===\n${(p.text || "").slice(0, 12000)}`).join("\n\n") +
+          text: `${intro}\n\nRaw text:\n\n` + pages.map((p) => `=== PDF page ${p.n} ===\n${scrubPageText(p.text).slice(0, 12000)}`).join("\n\n") +
             (photos.length ? `\n\nThe ${photos.length} images placed on these pages follow, each labelled with its id.` : "\n\nThere are no photos on these pages."),
         }];
         for (const ph of photos.slice(0, 40)) {
@@ -648,6 +661,7 @@ Deno.serve(async (req) => {
       const upd: Record<string, unknown> = { updated_at: new Date().toISOString() };
       if (!cur || cur.status === "processing") upd.status = "draft";
       for (const k of ["issue_date", "meeting", "guest", "summary", "cover_path", "pages", "page_count", "search_text"]) if (k in f) upd[k] = f[k];
+      if (typeof upd.search_text === "string") upd.search_text = scrubPageText(upd.search_text);
       const { data, error } = await db.from("rcm_issues").update(upd).eq("id", body.issue_id).select("id,issue_no,status,cover_path,updated_at").single();
       if (error) throw error;
       return json({ issue: data });
@@ -688,6 +702,7 @@ Deno.serve(async (req) => {
       const f = body.fields || {};
       const upd: Record<string, unknown> = { status: "published", updated_at: new Date().toISOString() };
       for (const k of ["issue_date", "cover_path", "pages", "page_count", "search_text", "pdf_url", "summary"]) if (k in f) upd[k] = f[k];
+      if (typeof upd.search_text === "string") upd.search_text = scrubPageText(upd.search_text);
       upd.publish_at = f.issue_date ? new Date(f.issue_date + "T12:00:00+08:00").toISOString() : new Date().toISOString();
       if (new Date(upd.publish_at as string) > new Date()) upd.publish_at = new Date().toISOString();
       const { data, error } = await db.from("rcm_issues").update(upd).eq("id", body.issue_id).select("id,issue_no,status").single();
