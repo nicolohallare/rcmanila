@@ -15,6 +15,8 @@
   const imgUrl = (path, w) => String(path).startsWith('/') ? path : `${SB}/storage/v1/render/image/public/rcm/${path.split('/').map(encodeURIComponent).join('/')}?width=${w}&resize=contain&quality=75`;
   let code = '';
   try { code = localStorage.getItem('rcm-editor-code') || ''; } catch (e) {}
+  // 'editor' (full access) or 'balita' (staff passcode: uploading and publishing the Balita only).
+  let role = 'editor';
 
   function show(v) { for (const id of ['v-login', 'v-home', 'v-run', 'v-review']) $(id).classList.toggle('hidden', id !== v); $('main').classList.toggle('wide', v === 'v-review'); window.scrollTo(0, 0); }
 
@@ -36,7 +38,7 @@
     e.preventDefault();
     code = $('code').value.trim();
     $('login-err').classList.add('hidden');
-    try { await call('login'); try { localStorage.setItem('rcm-editor-code', code); } catch (x) {} openHome(); }
+    try { const r = await call('login'); role = (r && r.role) || 'editor'; try { localStorage.setItem('rcm-editor-code', code); } catch (x) {} openHome(); }
     catch (err) { $('login-err').textContent = err.auth ? 'That passcode is not right. Check it and try again.' : err.message; $('login-err').classList.remove('hidden'); }
   });
   $('signout').onclick = () => { try { localStorage.removeItem('rcm-editor-code'); } catch (e) {} code = ''; show('v-login'); };
@@ -45,7 +47,9 @@
   const STATUS = { processing: ['Processing', 'run'], draft: ['Ready to check', 'flag'], scheduled: ['Scheduled', 'ok'], published: ['Live', 'ok'] };
   async function openHome() {
     show('v-home');
-    document.dispatchEvent(new Event('rcmed:home'));
+    document.body.classList.toggle('staff', role === 'balita');
+    $('hello-kick').textContent = role === 'balita' ? 'Balita uploading' : 'Balita editor';
+    if (role === 'editor') { document.dispatchEvent(new Event('rcmed:home')); staffStatus(); }
     return openHomeList();
   }
   async function openHomeList() {
@@ -70,6 +74,24 @@
     const when = i.status === 'scheduled' && i.publish_at ? ' · goes live ' + new Date(i.publish_at).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Manila' }) : '';
     return `<li>${i.cover_path ? `<img class="icov${i.issue_date && i.issue_date < '2024-07-01' ? ' pg' : ''}" src="${imgUrl(i.cover_path, 200)}&v=${Date.parse(i.updated_at || 0)}" alt="">` : '<img class="icov" alt="">'}<div style="flex:1"><b>Issue ${i.issue_no}</b><br><span class="muted">${esc(i.issue_date || '')}${esc(when)}${i.guest ? ' · ' + esc(i.guest.length > 70 ? i.guest.slice(0, 68) + '…' : i.guest) : ''}</span></div><span class="tag ${s[1]}">${s[0]}</span><button class="smallbtn" data-open="${i.id}" type="button">${i.status === 'published' ? 'Edit' : 'Check and publish'}</button>${i.status === 'published' || i.status === 'scheduled' ? `<a class="smallbtn" href="/balita/${i.issue_no}" target="_blank" rel="noopener">View</a>` : ''}</li>`;
   }
+  // ---------- Balita staff passcode (editor only). The passcode is typed here and never shown back. ----------
+  function staffShow(d) {
+    $('st-now').textContent = d.set ? `A staff passcode is set${d.at ? ' (since ' + new Date(d.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Manila' }) + ')' : ''}. Staff sign in at rcmanila.org/admin with it.` : 'No staff passcode yet. Only your editor passcode opens this page.';
+    $('st-clear').classList.toggle('hidden', !d.set);
+  }
+  async function staffStatus() { try { staffShow(await call('staff-code-status')); } catch (e) { $('st-now').textContent = e.message; } }
+  $('st-form').addEventListener('submit', async (e) => {
+    e.preventDefault(); const v = $('st-code').value.trim();
+    if (v.length < 8) { $('st-msg').textContent = 'Use at least 8 characters.'; return; }
+    $('st-msg').textContent = 'Saving…';
+    try { staffShow(await call('staff-code-set', { passcode: v })); $('st-code').value = ''; $('st-msg').textContent = 'Saved. Give it to your staff in person or by private message. It works within a minute.'; }
+    catch (err) { $('st-msg').textContent = err.message; }
+  });
+  $('st-clear').onclick = async () => {
+    if (!confirm('Turn off the staff passcode? Staff will be signed out and can no longer open this page.')) return;
+    try { staffShow(await call('staff-code-clear')); $('st-msg').textContent = 'Turned off.'; } catch (err) { $('st-msg').textContent = err.message; }
+  };
+
   window.RCMEditor = { open: (id) => openReview(id), code: () => code, signin: () => show('v-login') };
   ['issues', 'find-list'].forEach((id) => $(id).addEventListener('click', (e) => { const b = e.target.closest('[data-open]'); if (b) openReview(b.getAttribute('data-open')); }));
   // Find any past issue: by number, date, guest, or a word in the issue or an article title.
@@ -843,7 +865,7 @@ ${a.flag ? `<div class="note stack" role="note" style="gap:8px"><div><strong>The
   const SITE = 'https://rcmanila.org';
   const LIB = SB + '/functions/v1/rcm-library';
   document.addEventListener('click', async (e) => {
-    if (!e.target || e.target.id !== 'th-pick' || !R || !R.issue) return;
+    if (!e.target || e.target.id !== 'th-pick' || !R || !R.issue || role !== 'editor') return;
     const b = e.target, m = document.getElementById('th-msg');
     b.disabled = true; m.textContent = 'Starting…';
     const call = async (action) => {
@@ -1024,12 +1046,12 @@ ${a.flag ? `<div class="note stack" role="note" style="gap:8px"><div><strong>The
   }
   async function loadHeyzine() {
     R.hz = null; $('hz').value = ''; $('hz-msg').textContent = '';
-    try { const d = await libCall('issue-heyzine', { issue_id: R.issue.id }); R.hz = d.heyzine_url; $('hz').value = R.hz || ''; } catch (e) { $('hz-msg').textContent = e.message; }
+    try { const d = await call('heyzine', { issue_id: R.issue.id }); R.hz = d.heyzine_url; $('hz').value = R.hz || ''; } catch (e) { $('hz-msg').textContent = e.message; }
     renderShare();
   }
   $('hz-save').onclick = async () => {
     $('hz-msg').textContent = 'Saving…';
-    try { const d = await libCall('issue-heyzine', { issue_id: R.issue.id, url: $('hz').value.trim() }); R.hz = d.heyzine_url; $('hz').value = R.hz || ''; $('hz-msg').textContent = R.hz ? 'Saved. The issue page now shows a “Flip through the magazine” button.' : 'Removed.'; renderShare(); }
+    try { const d = await call('heyzine', { issue_id: R.issue.id, url: $('hz').value.trim() }); R.hz = d.heyzine_url; $('hz').value = R.hz || ''; $('hz-msg').textContent = R.hz ? 'Saved. The issue page now shows a “Flip through the magazine” button.' : 'Removed.'; renderShare(); }
     catch (e) { $('hz-msg').textContent = e.message; }
   };
   async function copyText(t) { try { await navigator.clipboard.writeText(t); return true; } catch (e) { const r = document.createRange(); r.selectNodeContents($('msg')); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); return false; } }
@@ -1051,5 +1073,5 @@ ${a.flag ? `<div class="note stack" role="note" style="gap:8px"><div><strong>The
     try { await call('delete-issue', { issue_id: R.issue.id }); openHome(); } catch (e) { alertBox(e.message); }
   };
 
-  if (code) call('login').then(openHome).catch(() => show('v-login')); else show('v-login');
+  if (code) call('login').then((r) => { role = (r && r.role) || 'editor'; openHome(); }).catch(() => show('v-login')); else show('v-login');
 })();

@@ -591,7 +591,7 @@ function joinPage(origin) {
   const body = `<section class="h-join pg-hero"><img class="bg" src="${H('people-of-action')}" alt="" aria-hidden="true"><div class="wrap">
 <span class="kicker">Membership</span><h1>Join the Rotary Club of Manila</h1>
 <p>Leadership becomes more meaningful in the service of others. Join business, professional and civic leaders who meet every week and serve Manila together.</p>
-<div class="h-cta"><a class="btn btn-gold" href="#inquire">Ask about membership</a><a class="btn btn-ghost" href="/meeting">Attend a meeting as a guest</a></div>
+<div class="h-cta"><a class="btn btn-gold" href="#inquire">Ask about membership</a><a class="btn btn-ghost" href="/invite">Attend a meeting as a guest</a></div>
 </div></section>
 
 <section class="wrap section">
@@ -843,6 +843,12 @@ ${(() => { const cv = cover || COVER_FALLBACK; const mon = new Date(cv.month + '
 <div class="poa-cover-cap"><div class="wrap poa-cover-cap-in"><span class="poa-cover-tag">People of Action · ${esc(mon)}</span>${cv.caption ? `<span class="poa-cover-txt">${esc(cv.caption)}</span>` : ''}${cv.link ? `<a class="poa-cover-go" href="${esc(cv.link)}">Read the story <span aria-hidden="true">→</span></a>` : ''}</div></div>`; })()}
 <div class="hx-week"><div class="wrap hx-week-in${wkNext || wkEvent ? ' three' : ''}"><span class="hx-week-l">This week</span>${wkMeetingFinal}${wkNext || wkEvent}${wkBalita}</div></div>
 </section>
+${INVITE_DRIVE ? `<section class="inv-band" aria-labelledby="inv-band-h"><div class="wrap inv-band-in">
+<div class="inv-band-t"><span class="kicker">Invite one person</span><h2 id="inv-band-h">The next outstanding Manila Rotarian could be someone you already know.</h2>
+<p>Think of one person and invite them to our next meeting as your guest. A personal message is all it takes.</p>
+<div class="h-cta"><a class="btn btn-gold" href="/invite/send">Send an invitation</a><a class="btn btn-ghost" href="/invite">Coming as a guest?</a></div></div>
+<a class="inv-band-im" href="/invite/send" tabindex="-1" aria-hidden="true"><img src="${H('invite-fellowship')}" alt="" width="1368" height="760" loading="lazy"></a>
+</div></section>` : ''}
 
 
 <section class="h-impact" id="impact"><div class="wrap">
@@ -891,7 +897,7 @@ ${exNow ? `<a class="h-lib-ex" href="/library/exhibit/${esc(exNow.slug)}"><small
 <span class="kicker">Membership</span>
 <h2>Leadership becomes more meaningful in the service of others.</h2>
 <p>Join business, professional and civic leaders working for a stronger Manila. Start by joining us at a Thursday meeting as a guest.</p>
-<div class="h-cta"><a class="btn btn-gold" href="/meeting">Attend as a guest</a><a class="btn btn-ghost" href="/join">How to join</a></div>
+<div class="h-cta"><a class="btn btn-gold" href="/invite">Attend as a guest</a><a class="btn btn-ghost" href="/join">How to join</a></div>
 <p class="h-more">Or <a href="/partner">partner with us</a>, <a href="/donate">support a project</a> or <a href="/projects">explore our projects</a>.</p>
 </div></section>
 ${rotaryWorld()}
@@ -1384,7 +1390,8 @@ ${open ? `<form id="rsvp-form" novalidate>
 <p id="rsvp-msg" role="status" aria-live="polite"></p>
 </form>
 <div id="rsvp-done" hidden></div>
-<p class="small">Only the Secretariat sees the list of names. Can't sign up here? Call <a href="${TEL}">(02) 8527-1885</a>.</p>` : `<p>Please contact the Secretariat at <a href="${TEL}">(02) 8527-1885</a> or <a href="mailto:${MAIL}">${MAIL}</a>.</p>`}
+<p class="small">Only the Secretariat sees the list of names. Can't sign up here? Call <a href="${TEL}">(02) 8527-1885</a>.</p>
+<a class="inv-nudge" href="/invite/send"><b>Bring one person this week</b><span>Send a friend or colleague an invitation to be your guest →</span></a>` : `<p>Please contact the Secretariat at <a href="${TEL}">(02) 8527-1885</a> or <a href="mailto:${MAIL}">${MAIL}</a>.</p>`}
 </aside>
 </div>
 <script>
@@ -1429,6 +1436,168 @@ showDone();
 })();
 </script>`;
   return layout({ title: `${title} · Rotary Club of Manila`, description: desc, image: m.poster_path ? img(m.poster_path, 1200) : '', url, body, nav: 'meeting' });
+}
+
+// ---------- "Invite one person": a guest's invitation page (/invite) and the member's send page (/invite/send) ----------
+// The President's drive (October 2026): each member invites one person to a weekly meeting as a guest.
+const INVITE_DRIVE = true; // set to false to take the homepage band down when the drive ends
+async function nextRealMeeting() {
+  const ms = await q(`rcm_meetings?select=*&status=eq.published&meeting_date=gte.${manilaToday()}&order=meeting_date.asc&limit=4`).catch(() => []);
+  return ms.find((x) => !isOff(x)) || null;
+}
+const cleanHost = (s) => { const t = String(s || '').replace(/\s+/g, ' ').trim().slice(0, 60); return /^[\p{L}\p{M} .,'’()-]{2,60}$/u.test(t) ? t : ''; };
+function inviteFacts(m) {
+  const day = new Date(m.meeting_date + 'T12:00:00+08:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Asia/Manila' });
+  return { day, time: m.time_text || '12:15 PM', reg: m.registration_text || '' };
+}
+
+async function invitePage(origin, fromRaw) {
+  const host = cleanHost(fromRaw);
+  const m = await nextRealMeeting();
+  const f = m ? inviteFacts(m) : null;
+  const title = host ? `${host} invites you to the Rotary Club of Manila` : 'You’re invited to the Rotary Club of Manila';
+  const desc = m ? `Join us as a guest on ${f.day}${m.speaker ? `, with guest speaker ${m.speaker}` : ''}${m.topic ? ` on “${m.topic}”` : ''}. Asia’s first Rotary club, est. 1919.`
+    : 'Join us as a guest at our Thursday lunch meeting. Asia’s first Rotary club, est. 1919.';
+  const open = m && m.rsvp_open;
+  const meetCard = m ? `<section class="inv-meet" aria-labelledby="inv-next">
+<h2 id="inv-next">The next meeting</h2>
+<div class="inv-card">${m.poster_path ? `<a class="inv-poster" href="${raw(m.poster_path)}" target="_blank" rel="noopener"><img src="${img(m.poster_path, 600)}" alt="Poster for the meeting on ${esc(f.day)}"></a>` : ''}
+<div class="inv-card-t"><span class="eyebrow">${esc(f.day)}</span>
+${m.speaker ? `<p class="inv-speaker"><small>Guest speaker</small><strong>${esc(m.speaker)}</strong>${m.speaker_title ? `<span>${esc(m.speaker_title)}</span>` : ''}</p>` : ''}
+${m.topic ? `<p class="inv-topic">“${esc(m.topic)}”</p>` : ''}
+<dl class="inv-facts"><div><dt>Time</dt><dd>${esc(f.time)}</dd></div>${f.reg ? `<div><dt>Registration</dt><dd>${esc(f.reg)}</dd></div>` : ''}${m.venue ? `<div><dt>Venue</dt><dd>${esc(m.venue)} · <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(m.venue)}" target="_blank" rel="noopener">Map</a></dd></div>` : ''}</dl>
+${m.speaker_bio ? `<details class="inv-bio"><summary>About the speaker</summary>${paras(m.speaker_bio)}</details>` : ''}
+</div></div></section>`
+    : `<section class="inv-meet"><h2>Our weekly meeting</h2><p>We meet every Thursday at 12:15 PM, with registration and lunch from 11:00 AM. This week’s speaker and venue will be posted here soon. The member who invited you can tell you more, or call the Secretariat at <a href="${TEL}">(02) 8527-1885</a>.</p></section>`;
+  const expect = [
+    ['Lunch and a talk', `${f && f.reg ? (/^\d/.test(f.reg) ? 'Registration and lunch from ' + esc(f.reg) : esc(f.reg)) : 'Registration and lunch from 11:00 AM'}, then the meeting${f ? `, ${esc(f.time)}` : ''}: Club news, fellowship and a guest speaker.`],
+    ['Your host looks after you', `${host ? esc(host) : 'The member who invited you'} will meet you, introduce you to other members and let you know the lunch arrangements.`],
+    ['What to wear', 'Business attire. Most members come in a suit or coat.'],
+    ['Nothing to bring', 'Just yourself. Sign up here so the Secretariat can prepare your name tag.'],
+    ['No commitment', 'Come to listen and meet people. There is no need to decide anything about membership.'],
+    ['Who you will meet', 'Business, professional and civic leaders who have met every week since 1919, in Asia’s first Rotary club.'],
+  ];
+  const body = `<section class="h-join pg-hero inv-hero"><img class="bg" src="${H('invite-fellowship')}" alt="" aria-hidden="true"><div class="wrap">
+<span class="kicker">You’re invited</span>
+<h1>${host ? `${esc(host)} would like you to meet the Rotary Club of Manila` : 'Join us as a guest at the Rotary Club of Manila'}</h1>
+<p>Come to our weekly lunch meeting as ${host ? 'a guest' : 'our guest'}. Hear a good speaker, and meet the business, professional and civic leaders who serve Manila together.</p>
+<div class="h-cta"><a class="btn btn-gold" href="#rsvp">Sign up as a guest</a>${m ? `<a class="btn btn-ghost" href="${calLink(m)}" target="_blank" rel="noopener">Add to calendar</a>` : ''}</div>
+</div></section>
+<div class="wrap meet-grid inv-grid">
+<div class="meet-main">
+${meetCard}
+<section class="inv-expect" aria-labelledby="inv-ex"><h2 id="inv-ex">What to expect</h2>
+<div class="inv-ex-grid">${expect.map(([t, d]) => `<div><b>${t}</b><p>${d}</p></div>`).join('')}</div></section>
+<section class="inv-club"><img src="${H('invite-fellowship')}" alt="Members of the Rotary Club of Manila at a Club fellowship" width="1368" height="760" loading="lazy">
+<div><span class="eyebrow">Since 1919</span><h2>Asia’s first Rotary club</h2><p>Charter No. 478. For more than a century, members have met every week and served Manila together, from flood relief and medical missions to scholarships and the fight against polio.</p>
+<p class="inv-links"><a class="link-arrow" href="/projects">Our service projects</a><a class="link-arrow" href="/library/centennial">The Centennial</a><a class="link-arrow" href="/join">How membership works</a></p></div></section>
+</div>
+<aside class="rsvp" id="rsvp">
+<h2>${open ? 'Sign up as a guest' : 'Coming as a guest?'}</h2>
+${open ? `<p class="rsvp-count">For ${esc(f.day)}</p>
+<form id="inv-form" novalidate>
+<input type="hidden" name="meeting_id" value="${m.id}">
+<label>Your name<input name="name" required maxlength="80" autocomplete="name" placeholder="e.g. Maria Santos"></label>
+<label>Who invited you?<input name="guest_of" required maxlength="80" value="${esc(host)}" placeholder="The member’s name"></label>
+<label>Title or organization <span style="font-weight:400;color:var(--muted)">(optional)</span><input name="affiliation" maxlength="100" autocomplete="organization"></label>
+<label class="hp" aria-hidden="true">Website<input name="website" tabindex="-1" autocomplete="off"></label>
+<button class="btn btn-blue" type="submit" style="width:100%">Sign me up</button>
+<p id="inv-msg" role="status" aria-live="polite"></p>
+</form>
+<div id="inv-done" hidden></div>
+<p class="small">Only the Secretariat sees the list of names. Questions? Call <a href="${TEL}">(02) 8527-1885</a>.</p>`
+    : `<p>${host ? esc(host) : 'The member who invited you'} can add you to the list, or call the Secretariat at <a href="${TEL}">(02) 8527-1885</a> or email <a href="mailto:${MAIL}">${MAIL}</a>.</p>`}
+</aside>
+</div>
+${open ? `<script>
+(function(){
+var f=document.getElementById('inv-form'),msg=document.getElementById('inv-msg'),done=document.getElementById('inv-done');
+var FN=${JSON.stringify(FN)},PUB=${JSON.stringify(PUB)},DAY=${JSON.stringify(f.day)},CAL=${JSON.stringify(calLink(m))};
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+f.addEventListener('submit',async function(e){e.preventDefault();
+ var d={action:'rsvp',kind:'guest',meeting_id:f.meeting_id.value,name:f.name.value,guest_of:f.guest_of.value,affiliation:f.affiliation.value,website:f.website.value};
+ if(d.name.trim().length<2){msg.textContent='Please type your name.';f.name.focus();return;}
+ if(!d.guest_of.trim()){msg.textContent='Please type the name of the member who invited you.';f.guest_of.focus();return;}
+ var b=f.querySelector('button[type=submit]');b.disabled=true;msg.textContent='Saving…';
+ try{var r=await fetch(FN,{method:'POST',headers:{'content-type':'application/json',apikey:PUB},body:JSON.stringify(d)});var j=await r.json();
+  if(!r.ok||j.error)throw new Error(j.error||'Please try again.');
+  var host=d.guest_of.trim();
+  done.innerHTML='<p class="ok"><strong>You’re on the list, '+esc(d.name.trim().split(' ')[0])+'.</strong> See you on '+esc(DAY)+'. '+esc(host)+' and the Club look forward to meeting you.</p><p><a class="btn btn-line" href="'+CAL+'" target="_blank" rel="noopener" style="width:100%">Add to calendar</a></p><p class="small"><button type="button" class="linkbtn" id="inv-more">Coming with someone else? Add another guest</button></p>';
+  f.hidden=true;done.hidden=false;msg.textContent='';
+ }catch(err){msg.textContent=err.message||'Something went wrong. Please try again.';}
+ finally{b.disabled=false;}
+});
+done.addEventListener('click',function(e){if(e.target.id!=='inv-more')return;var g=f.guest_of.value;f.reset();f.guest_of.value=g;done.hidden=true;f.hidden=false;f.name.focus();});
+})();
+</script>` : ''}`;
+  return layout({ title, description: desc, image: m && m.poster_path ? img(m.poster_path, 1200) : H('invite-fellowship'), url: `${origin}/invite${host ? '?from=' + encodeURIComponent(host) : ''}`, body, nav: 'meeting', type: 'website' });
+}
+
+async function inviteSendPage(origin) {
+  const m = await nextRealMeeting();
+  const f = m ? inviteFacts(m) : null;
+  const details = m ? [`${f.day}, ${f.time}${m.venue ? `, at ${m.venue}` : ''}`, m.speaker ? `Our speaker: ${m.speaker}${m.topic ? ` on “${m.topic}”` : ''}` : (m.topic ? `“${m.topic}”` : '')].filter(Boolean).join('\n')
+    : 'We meet every Thursday at 12:15 PM, with lunch from 11:00 AM.';
+  const INTRO = 'I’d love for you to meet my fellow Manila Rotarians. Will you join me at our next meeting as my guest?';
+  const body = `<section class="h-join pg-hero inv-hero"><img class="bg" src="${H('invite-fellowship')}" alt="" aria-hidden="true"><div class="wrap">
+<span class="kicker">Invite one person</span>
+<h1>The next outstanding Manila Rotarian could be someone you already know.</h1>
+<p>Think of one person, a friend you admire or a colleague you respect, and invite them to our next meeting as your guest. They don’t need to decide about membership yet.</p>
+</div></section>
+<div class="wrap meet-grid inv-grid">
+<div class="meet-main">
+<section class="inv-send" aria-labelledby="inv-s"><h2 id="inv-s">Send your invitation</h2>
+<p class="muted">It takes a minute. Your guest gets a page with the meeting details, what to expect and a sign-up form${m ? ` for ${esc(f.day)}` : ''}.</p>
+<form id="snd" onsubmit="return false">
+<label><span class="inv-lbl"><span class="inv-step">1</span><span>Your name, so your guest knows who invited them</span></span><input id="snd-name" maxlength="60" autocomplete="name" placeholder="e.g. Pres Reggie Yu"></label>
+<label><span class="inv-lbl"><span class="inv-step">2</span><span>Your message <span style="font-weight:400;color:var(--muted)">(change it if you like)</span></span></span><textarea id="snd-intro" rows="3" maxlength="400">${esc(INTRO)}</textarea></label>
+<div><span class="inv-lbl"><span class="inv-step">3</span><span>Send it</span></span>
+<div class="inv-btns">
+<a class="btn inv-viber" id="snd-viber" href="#">Viber</a>
+<a class="btn inv-wa" id="snd-wa" href="#" target="_blank" rel="noopener">WhatsApp</a>
+<a class="btn btn-line" id="snd-sms" href="#">Text message</a>
+<a class="btn btn-line" id="snd-mail" href="#">Email</a>
+<button class="btn btn-line" id="snd-copy" type="button">Copy</button>
+<button class="btn btn-line" id="snd-share" type="button" hidden>More…</button>
+</div><p id="snd-msg" class="small" role="status" aria-live="polite"></p></div>
+</form>
+<div class="inv-preview"><span class="eyebrow">Your guest will receive</span><pre id="snd-preview"></pre><a class="link-arrow" id="snd-see" href="/invite" target="_blank" rel="noopener">See the page your guest will open</a></div>
+</section>
+<section class="inv-expect"><h2>Then, on the day</h2>
+<div class="inv-ex-grid inv-day">
+<div><b>Come with them</b><p>Meet your guest at registration so they don’t walk in alone.</p></div>
+<div><b>Introduce them</b><p>Introduce them to other members and to the President.</p></div>
+<div><b>Help them feel welcome</b><p>Let them know the lunch arrangements, and sit with them.</p></div>
+<div><b>Signed up for them?</b><p>You can also add your guest yourself on the <a href="${m ? `/meetings/${m.meeting_date}#rsvp` : '/meeting'}">meeting page</a>: choose “A guest”.</p></div>
+</div></section>
+</div>
+<aside class="rsvp inv-side">
+${m ? `<span class="eyebrow">The next meeting</span>${m.poster_path ? `<img class="inv-side-poster" src="${img(m.poster_path, 600)}" alt="Poster for the meeting on ${esc(f.day)}">` : ''}<h2 style="font-size:22px">${esc(m.topic || m.label || 'Weekly meeting')}</h2>${m.speaker ? `<p style="margin:0"><strong>${esc(m.speaker)}</strong>${m.speaker_title ? `<br><span class="muted">${esc(m.speaker_title)}</span>` : ''}</p>` : ''}<p class="muted" style="margin:0">${esc(f.day)} · ${esc(f.time)}${m.venue ? `<br>${esc(m.venue)}` : ''}</p><a class="link-arrow" href="/meetings/${m.meeting_date}">Meeting details</a>`
+    : `<h2 style="font-size:22px">Every Thursday</h2><p class="muted">The next speaker and venue will be posted soon. Your invitation link always opens the next meeting.</p>`}
+</aside>
+</div>
+<script>
+(function(){
+var ORIGIN=${JSON.stringify(origin)},DETAILS=${JSON.stringify(details)};
+var nm=document.getElementById('snd-name'),it=document.getElementById('snd-intro'),pv=document.getElementById('snd-preview'),sm=document.getElementById('snd-msg');
+try{nm.value=localStorage.getItem('rcm-inv-name')||'';}catch(e){}
+function link(){var n=nm.value.replace(/\\s+/g,' ').trim();return ORIGIN+'/invite'+(n?'?from='+encodeURIComponent(n):'');}
+function text(){return it.value.trim()+'\\n\\n'+DETAILS+'\\n\\nDetails and sign-up: '+link();}
+function upd(){var t=text(),e=encodeURIComponent(t);pv.textContent=t;
+ document.getElementById('snd-viber').href='viber://forward?text='+e;
+ document.getElementById('snd-wa').href='https://wa.me/?text='+e;
+ document.getElementById('snd-sms').href='sms:?&body='+e;
+ document.getElementById('snd-mail').href='mailto:?subject='+encodeURIComponent('Join me at the Rotary Club of Manila')+'&body='+e;
+ document.getElementById('snd-see').href=link();
+ try{localStorage.setItem('rcm-inv-name',nm.value.trim());}catch(e){}}
+nm.addEventListener('input',upd);it.addEventListener('input',upd);upd();
+async function copy(){try{await navigator.clipboard.writeText(text());return true;}catch(e){return false;}}
+document.getElementById('snd-copy').onclick=async function(){sm.textContent=(await copy())?'Copied. Paste it in a chat or email to your guest.':'Select the message above and copy it.';};
+document.getElementById('snd-viber').addEventListener('click',function(){copy();setTimeout(function(){if(document.visibilityState==='visible')sm.textContent='If Viber did not open, the message is copied: open Viber and paste it to your guest.';},1500);});
+var sh=document.getElementById('snd-share');if(navigator.share){sh.hidden=false;sh.onclick=function(){navigator.share({text:text()}).catch(function(){});};}
+})();
+</script>`;
+  return layout({ title: 'Invite one person · Rotary Club of Manila', description: 'Think of one person and invite them to our next meeting as your guest.', image: '/assets/home/invite-one-person.jpg', url: `${origin}/invite/send`, body, nav: 'meeting', type: 'website' });
 }
 
 async function donatePage(origin, pick) {
@@ -1666,6 +1835,8 @@ module.exports = async (req, res) => {
     else if (r === 'projects') html = projectsIndex(origin);
     else if (r === 'project') { html = await projectPage(origin, u.searchParams.get('slug')); if (!html) { res.statusCode = 301; res.setHeader('Location', '/projects'); return res.end(); } }
     else if (r === 'join') html = joinPage(origin);
+    else if (r === 'invite') html = await invitePage(origin, u.searchParams.get('from'));
+    else if (r === 'invite-send') html = await inviteSendPage(origin);
     else if (r === 'youth') html = await youthPage(origin);
     else if (r === 'privacy') html = privacyPage(origin);
     else if (r === 'app') html = appPage(origin);

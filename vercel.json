@@ -38,6 +38,14 @@
       "destination": "/api/page?r=meeting&date=:date"
     },
     {
+      "source": "/invite",
+      "destination": "/api/page?r=invite"
+    },
+    {
+      "source": "/invite/send",
+      "destination": "/api/page?r=invite-send"
+    },
+    {
       "source": "/beyond-limits",
       "destination": "/api/page?r=beyond"
     },

@@ -116,7 +116,7 @@ async function editor(today: string) {
 
 async function secretariat(today: string) {
   const ry = ryStart(today), ryTs = ry + "T00:00:00+08:00";
-  const [meet, lastMeet, inqNew, inqList, donNew, donList, donReceipt, events, minute, ryMeet, rySign, ryInq, ryDon] = await Promise.all([
+  const [meet, lastMeet, inqNew, inqList, donNew, donList, donReceipt, events, minute, ryMeet, rySign, ryInq, ryDon, ryGuest] = await Promise.all([
     db.from("rcm_meetings").select("id,meeting_date,label,topic,speaker,venue,time_text,status,rsvp_open,poster_path,rcm_signups(count)").gte("meeting_date", today).order("meeting_date").limit(3),
     db.from("rcm_meetings").select("meeting_date,label,rcm_signups(count)").lt("meeting_date", today).eq("status", "published").order("meeting_date", { ascending: false }).limit(1),
     db.from("rcm_inquiries").select("id", { count: "exact", head: true }).eq("status", "new"),
@@ -130,6 +130,7 @@ async function secretariat(today: string) {
     db.from("rcm_signups").select("id", { count: "exact", head: true }).gte("created_at", ryTs),
     db.from("rcm_inquiries").select("id", { count: "exact", head: true }).gte("created_at", ryTs),
     db.from("rcm_donations").select("amount,status").gte("created_at", ryTs).in("status", ["verified", "receipt_sent"]),
+    db.from("rcm_signups").select("name,guest_of,affiliation,created_at,rcm_meetings!inner(meeting_date)").eq("kind", "guest").gte("rcm_meetings.meeting_date", ry).order("created_at", { ascending: false }).limit(1000),
   ]);
   // deno-lint-ignore no-explicit-any
   const cnt = (m: any, k: string) => m?.[k]?.[0]?.count ?? 0;
@@ -144,8 +145,22 @@ async function secretariat(today: string) {
     if (!done.has("event|" + e.slug)) viber.push({ kind: "event", ref: e.slug, title: e.title, date: e.event_date, link: "/events/" + e.slug });
     else if (e.event_date <= addDays(today, 3) && !done.has("event-reminder|" + e.slug)) viber.push({ kind: "event-reminder", ref: e.slug, title: e.title, date: e.event_date, link: "/events/" + e.slug });
   }
+  // Guests signed up for weekly meetings this Rotary year (the "invite one person" drive). Private: Secretariat and editor only.
+  const gl = (rows(ryGuest) as { name: string; guest_of: string | null; affiliation: string | null; created_at: string; rcm_meetings: { meeting_date: string } }[])
+    .map((g) => ({ name: g.name, guest_of: g.guest_of, affiliation: g.affiliation, meeting_date: g.rcm_meetings?.meeting_date }));
+  const hostN = new Map<string, { name: string; n: number }>();
+  for (const g of gl) { const h = (g.guest_of || "").replace(/\s+/g, " ").trim(); if (!h) continue; const k = h.toLowerCase(); const v = hostN.get(k) || { name: h, n: 0 }; v.n++; hostN.set(k, v); }
+  const byMeeting = new Map<string, number>();
+  for (const g of gl) if (g.meeting_date) byMeeting.set(g.meeting_date, (byMeeting.get(g.meeting_date) || 0) + 1);
+  const guests = {
+    ry: gl.length,
+    hosts: [...hostN.values()].sort((a, b) => b.n - a.n || a.name.localeCompare(b.name)).slice(0, 10),
+    host_count: hostN.size,
+    by_meeting: [...byMeeting.entries()].sort((a, b) => b[0].localeCompare(a[0])).slice(0, 8).map(([meeting_date, n]) => ({ meeting_date, n })),
+    upcoming: gl.filter((g) => g.meeting_date && g.meeting_date >= today).sort((a, b) => a.meeting_date.localeCompare(b.meeting_date)).slice(0, 40),
+  };
   return {
-    today, viber,
+    today, viber, guests,
     meetings: (rows(meet) as Record<string, unknown>[]).map((m) => ({ ...m, signups: cnt(m, "rcm_signups"), rcm_signups: undefined })),
     last_meeting: rows(lastMeet)[0] ? { ...rows(lastMeet)[0], signups: cnt(rows(lastMeet)[0], "rcm_signups"), rcm_signups: undefined } : null,
     inquiries: { new: n(inqNew), list: rows(inqList) },

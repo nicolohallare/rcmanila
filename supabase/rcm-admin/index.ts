@@ -36,18 +36,23 @@ function streamed(work: () => Promise<unknown>) {
   return new Response(body, { headers: { ...CORS, "Content-Type": "text/plain; charset=utf-8" } });
 }
 
-// Two passcodes: the Balita editor (full access) and the Secretariat (meetings and sign-ups only).
+// Passcodes: the Balita editor (full access), the Secretariat (meetings and sign-ups only) and an optional
+// Balita staff passcode (uploading and publishing the Balita only), which the editor sets on the editor page.
 let codes: Record<string, string> | null = null;
-async function roleFor(code: string | null): Promise<"editor" | "secretariat" | null> {
-  if (!codes) {
-    const { data } = await db.from("rcm_settings").select("key,value").in("key", ["editor_code", "secretariat_code"]);
+let codesAt = 0;
+async function roleFor(code: string | null): Promise<"editor" | "secretariat" | "balita" | null> {
+  if (!codes || Date.now() - codesAt > 60000) {
+    const { data } = await db.from("rcm_settings").select("key,value").in("key", ["editor_code", "secretariat_code", "librarian_code", "balita_code"]);
     codes = Object.fromEntries((data || []).map((r: { key: string; value: string }) => [r.key, r.value]));
+    codesAt = Date.now();
   }
   if (!code) return null;
   if (code === codes.editor_code) return "editor";
   if (code === codes.secretariat_code) return "secretariat";
+  if (codes.balita_code && code === codes.balita_code) return "balita";
   return null;
 }
+const BALITA_ACTIONS = new Set(["login", "issues", "start", "delete-issue", "check-issue", "sign", "plan", "clean-part", "save-draft", "finish", "get", "save-article", "publish", "unpublish", "heyzine"]);
 
 function manilaToday() {
   return new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10);
@@ -192,19 +197,11 @@ async function checkProof(id: string) {
   await db.from("rcm_donations").update({ ai, check_status: status, updated_at: new Date().toISOString() }).eq("id", id);
 }
 
-// Text read from old PDFs can carry null characters and broken surrogate pairs, which Postgres refuses ("unsupported Unicode escape sequence").
-function pgSafe(v: any): any {
-  if (typeof v === "string") return v.replace(/\u0000/g, "").replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "");
-  if (Array.isArray(v)) return v.map(pgSafe);
-  if (v && typeof v === "object") { const o: Record<string, any> = {}; for (const k of Object.keys(v)) o[k] = pgSafe(v[k]); return o; }
-  return v;
-}
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ error: "Use POST" }, 405);
   let body: Record<string, any>;
-  try { body = pgSafe(await req.json()); } catch { return json({ error: "Bad request" }, 400); }
+  try { body = await req.json(); } catch { return json({ error: "Bad request" }, 400); }
   const action = body.action;
 
   // ---------- public: meeting sign-ups (no passcode) ----------
@@ -274,11 +271,34 @@ Deno.serve(async (req) => {
   if (!role) return json({ error: "Wrong passcode." }, 401);
   const isMeetingAction = action === "login" || String(action).startsWith("m-");
   if (role === "secretariat" && !isMeetingAction) return json({ error: "This passcode is for the Secretariat page only." }, 403);
+  if (role === "balita" && !BALITA_ACTIONS.has(String(action))) return json({ error: "This passcode is for uploading the Balita only." }, 403);
 
   try {
     if (action === "login") {
-      if (body.need !== "meetings" && role !== "editor") return json({ error: "This passcode is for the Secretariat page. Use /secretariat instead." }, 401);
+      if (body.need === "meetings" && role === "balita") return json({ error: "This passcode is for the Balita editor. Use /admin instead." }, 401);
+      if (body.need !== "meetings" && role === "secretariat") return json({ error: "This passcode is for the Secretariat page. Use /secretariat instead." }, 401);
       return json({ ok: true, role });
+    }
+
+    // ---------- Balita staff passcode: only the editor sets or removes it; it is never sent back ----------
+    if (action === "staff-code-status" || action === "staff-code-set" || action === "staff-code-clear") {
+      if (role !== "editor") return json({ error: "Only the editor can manage staff passcodes." }, 403);
+      if (action === "staff-code-set") {
+        const pc = typeof body.passcode === "string" ? body.passcode.trim() : "";
+        if (pc.length < 8) return json({ error: "Use at least 8 characters." }, 400);
+        if ([codes?.editor_code, codes?.secretariat_code, codes?.librarian_code].includes(pc)) return json({ error: "Choose a passcode different from the other logins." }, 400);
+        const { error } = await db.from("rcm_settings").upsert([{ key: "balita_code", value: pc }, { key: "balita_code_at", value: new Date().toISOString() }], { onConflict: "key" });
+        if (error) throw error;
+        codes = null;
+      }
+      if (action === "staff-code-clear") {
+        const { error } = await db.from("rcm_settings").upsert([{ key: "balita_code", value: "" }, { key: "balita_code_at", value: new Date().toISOString() }], { onConflict: "key" });
+        if (error) throw error;
+        codes = null;
+      }
+      const { data } = await db.from("rcm_settings").select("key,value").in("key", ["balita_code", "balita_code_at"]);
+      const m = Object.fromEntries((data || []).map((r: { key: string; value: string }) => [r.key, r.value]));
+      return json({ ok: true, set: !!m.balita_code, at: m.balita_code_at || null });
     }
 
     // ---------- Secretariat: meetings and sign-ups ----------
@@ -514,6 +534,7 @@ Deno.serve(async (req) => {
       const issue_no = Number(body.issue_no);
       if (!issue_no) return json({ error: "Enter the issue number." }, 400);
       const { data: existing } = await db.from("rcm_issues").select("id,issue_no,status").eq("issue_no", issue_no).maybeSingle();
+      if (existing && role === "balita" && existing.status === "published" && !body.keep) return json({ error: "Issue " + issue_no + " is already live. Ask the editor before replacing it." }, 403);
       if (existing && body.keep) {
         const { data: arts } = await db.from("rcm_articles").select("id,title,page_from,page_to,checked").eq("issue_id", existing.id);
         return json({ issue: existing, kept: arts || [] });
@@ -527,8 +548,9 @@ Deno.serve(async (req) => {
     }
 
     if (action === "delete-issue") {
-      const { data: iss } = await db.from("rcm_issues").select("id,issue_no").eq("id", body.issue_id).single();
+      const { data: iss } = await db.from("rcm_issues").select("id,issue_no,status").eq("id", body.issue_id).single();
       if (!iss) return json({ error: "Issue not found." }, 404);
+      if (role === "balita" && iss.status === "published") return json({ error: "Unpublish the issue first, or ask the editor to delete it." }, 403);
       const removed = await clearIssueFiles(iss.issue_no);
       const { error } = await db.from("rcm_issues").delete().eq("id", iss.id);
       if (error) throw error;
@@ -699,6 +721,19 @@ Deno.serve(async (req) => {
       const { data, error } = await db.from("rcm_issues").update({ status, publish_at: at, updated_at: new Date().toISOString() }).eq("id", body.issue_id).select("*").single();
       if (error) throw error;
       return json({ issue: data });
+    }
+
+    // The issue's Heyzine flipbook link (editor or Balita staff).
+    if (action === "heyzine") {
+      if ("url" in body) {
+        const u = String(body.url || "").trim();
+        if (u && !/^https:\/\/([a-z0-9-]+\.)*heyzine\.com\/[^\s"'<>]{1,300}$/i.test(u)) return json({ error: "That does not look like a Heyzine link (it should start with https://heyzine.com/)." }, 400);
+        const { error } = await db.from("rcm_issues").update({ heyzine_url: u || null }).eq("id", body.issue_id);
+        if (error) throw error;
+      }
+      const { data, error } = await db.from("rcm_issues").select("heyzine_url").eq("id", body.issue_id).single();
+      if (error) throw error;
+      return json({ heyzine_url: data?.heyzine_url || null });
     }
 
     if (action === "unpublish") {

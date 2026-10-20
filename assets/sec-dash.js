@@ -58,6 +58,18 @@
       { n: s.inquiries, label: 'Website messages' },
       { n: s.gifts, label: 'Gifts verified', sub: s.gifts ? peso(s.gifts_amount) : '' },
     ]);
+    const g = d.guests;
+    if (g) {
+      const up = g.upcoming || [], byDate = {};
+      for (const x of up) (byDate[x.meeting_date] = byDate[x.meeting_date] || []).push(x);
+      $('sh-guests').innerHTML = D.kpis([
+        { n: g.ry, label: 'Guests this Rotary year', sub: 'signed up on the website' },
+        { n: g.host_count, label: 'Members who invited', sub: 'at least one guest' },
+        { n: up.length, label: 'Guests coming', sub: 'to the next meetings' },
+      ]) + (up.length ? Object.keys(byDate).sort().map((dt) => `<h3 style="font-size:15px;margin:14px 0 4px">Coming ${esc(D.day(dt, { weekday: 'long' }))}</h3><ul class="dmini">${byDate[dt].map((x) => `<li><span style="flex:1"><b>${esc(x.name)}</b>${x.affiliation ? ` · ${esc(x.affiliation)}` : ''}</span><span class="muted">${x.guest_of ? 'guest of ' + esc(x.guest_of) : ''}</span></li>`).join('')}</ul>`).join('') + '<p class="muted small" style="margin:6px 0 0">Prepare a name tag for each, and ask the member who invited them to introduce them.</p>' : '<p class="muted small" style="margin:12px 0 0">No guests have signed up for the next meetings yet.</p>')
+        + (g.hosts && g.hosts.length ? `<h3 style="font-size:15px;margin:16px 0 4px">Members who brought the most guests</h3><ul class="dmini">${g.hosts.map((h) => `<li><span style="flex:1">${esc(h.name)}</span><span>${h.n} ${h.n === 1 ? 'guest' : 'guests'}</span></li>`).join('')}</ul>` : '')
+        + (g.by_meeting && g.by_meeting.length ? `<h3 style="font-size:15px;margin:16px 0 4px">Guests by meeting</h3><ul class="dmini">${g.by_meeting.map((b) => `<li><span style="flex:1">${esc(D.day(b.meeting_date, { weekday: 'short' }))}</span><span>${b.n}</span></li>`).join('')}</ul>` : '');
+    }
     $('sh-last').textContent = d.last_meeting ? `Last meeting: ${d.last_meeting.label || 'weekly meeting'}, ${D.day(d.last_meeting.meeting_date, { weekday: 'long' })}, with ${d.last_meeting.signups} signed up on the website.` : '';
   }
 
