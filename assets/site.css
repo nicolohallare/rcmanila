@@ -168,6 +168,14 @@ p{margin:0}
 .h-heritage .kicker{color:var(--gold)}
 .h-heritage h2{color:#fff;font-size:clamp(32px,3.4vw,46px)}
 .h-heritage .h-head p{color:#b9d9eb}
+.h-heritage .h-head{align-items:center}
+.h-banner{margin:0;flex:0 0 auto;width:min(260px,100%);text-align:center}
+.h-banner a{display:block}
+.h-banner img{display:block;width:100%;height:auto;filter:drop-shadow(0 18px 28px rgba(0,0,0,.45));transition:transform .3s}
+.h-banner a:hover img{transform:rotate(-1.5deg)}
+.h-banner figcaption{margin-top:14px;font-size:14px;line-height:1.45;color:#b9d9eb}
+.h-banner figcaption b{display:block;color:var(--gold);font-size:12px;letter-spacing:.14em;text-transform:uppercase;margin-bottom:4px}
+@media (max-width:820px){.h-banner{width:200px;margin-inline:auto}}
 .h-week{margin:-8px 0 48px;padding:24px;border:1px solid rgba(255,255,255,.18);border-radius:6px;background:rgba(0,0,0,.12)}
 .h-week h3{color:var(--gold);font-family:var(--sans);font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;margin:0 0 16px}
 .h-week-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px}
