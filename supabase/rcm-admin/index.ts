@@ -78,6 +78,40 @@ function scrubPageText(t: string) {
   return String(t || "").replace(TEMPLATE_JUNK, " ").replace(/[ \t]{2,}/g, " ");
 }
 
+// Newspaper columns reprinted in "In the News": one member's column is often printed as a clipping (a picture, so its page
+// has only a label like "...Panganiban's Column in Philippine Daily Inquirer"), and the next column follows as text on the
+// next pages. The AI planner keeps merging the two, so the code splits them: a short labelled page at the start of a
+// longer article becomes its own article, and the pages after it become a second article whose title and byline the
+// clean-up step reads from the text.
+const PAPERS = /column|inquirer|philippine star|philstar|manila bulletin|manila times|businessworld|business world|daily tribune|manila standard|business mirror/i;
+function bodyLen(t: string) {
+  return scrubPageText(t).replace(/IN THE NEWS/gi, "").replace(/Rotary Club of Manila\s*\d*/gi, "").replace(/\d*\s*Balita\s*-\s*[A-Za-z]+ \d{1,2}, \d{4}/g, "").replace(/\s+/g, " ").trim().length;
+}
+// deno-lint-ignore no-explicit-any
+function splitClippings(plan: any, pages: { n: number; text: string }[]) {
+  if (!plan || !Array.isArray(plan.articles)) return plan;
+  const byN = new Map(pages.map((p) => [Number(p.n), p.text || ""]));
+  // deno-lint-ignore no-explicit-any
+  const out: any[] = [];
+  for (const a of plan.articles) {
+    const from = Number(a.from), to = Number(a.to);
+    const first = byN.get(from) || "";
+    if (to > from && bodyLen(first) < 500 && PAPERS.test(first)) {
+      let rest = 0;
+      for (let n = from + 1; n <= to; n++) rest += bodyLen(byN.get(n) || "");
+      if (rest > 1200) {
+        const pr = String(a.printed || "").match(/(\d+)\D+(\d+)/);
+        const p1 = pr ? Number(pr[1]) : null;
+        out.push({ ...a, to: from, printed: p1 ? `pp. ${p1}\u2013${p1 + 1}` : null, lead: false });
+        out.push({ ...a, title: "In the News", byline: null, from: from + 1, printed: p1 && pr ? `pp. ${p1 + 2}\u2013${pr[2]}` : null, lead: false });
+        continue;
+      }
+    }
+    out.push(a);
+  }
+  return { ...plan, articles: out };
+}
+
 function slugify(s: string) {
   return s.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
     .replace(/[“”"’']/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80) || "article";
@@ -130,7 +164,7 @@ const CLEAN_TASK = `Return exactly this JSON shape:
  "photos":[{"id":"photo id","caption":"the caption printed for this photo, or empty string"}],
  "lead_photo":"photo id or null",
  "flag":null or "a short note to the editor in plain words (at most two sentences) about something they should fix before publishing"}
-"h" = a printed subheading, "q" = a printed pull quote. Photos: include only real photographs that belong to this article, in reading order; leave out logos, headline art, cover images, advertisements and graphics that are mostly text. Exception: if the story itself is printed as a picture (a reprinted newspaper clipping), include that picture as the lead photo with an empty caption, and leave the body empty rather than flagging it; if you can read the clipping's own headline and author, use them for title and byline. Match each printed caption to the photo it describes using what you can see in the images; use an empty caption rather than guessing. lead_photo is the best wide photo for the top of the web page.
+"h" = a printed subheading, "q" = a printed pull quote. Photos: include only real photographs that belong to this article, in reading order; leave out logos, headline art, cover images, advertisements and graphics that are mostly text. Exception: if the story itself is printed as a picture (a reprinted newspaper clipping), include that picture as the lead photo with an empty caption, and leave the body empty rather than flagging it; if you can read the clipping's own headline and author, use them for title and byline. When the given title is just a section label such as "In the News", take the title and byline from the article itself: its printed headline (it may be a small picture of the headline, which you can read from the images) and the author named in or around the text. Match each printed caption to the photo it describes using what you can see in the images; use an empty caption rather than guessing. lead_photo is the best wide photo for the top of the web page.
 Flag only real problems the editor must act on: text that is cut off or out of order, or a name, date or title that looks wrong. The editor is not technical: write the way a colleague would ("The photo of a man in a tuxedo on printed page 6 has no caption. Is this the author?"). Never mention photo ids, JSON or the PDF. Do not flag empty captions on group or crowd photos, typos you cannot confirm, or anything that is fine as printed. Never flag dates, page numbers or titles found only in running page headers or footers: the layout file carries hidden leftover text from old templates there (such as "32 | MIXED • OCTOBER 2019") that does not show in print. Also ignore any year such as 2019 that appears inside letter-spaced template text; judge dates only from the dated running footers ("Balita - October 22, 2026") and the article itself. When in doubt, use null.`;
 
 const CONT_TASK = `This is a continuation of an article whose beginning was already processed. Return exactly this JSON shape:
@@ -596,7 +630,7 @@ Deno.serve(async (req) => {
       const text = pages.map((p) => `=== PDF page ${p.n} ===\n${scrubPageText(p.text).slice(0, 1800)}`).join("\n\n");
       return streamed(async () => {
         const reply = await claude([{ type: "text", text: `${PLAN_TASK}\n\nThe issue text:\n\n${text}` }], PLAN_SYSTEM, 16000);
-        return extractJson(reply);
+        return splitClippings(extractJson(reply), pages);
       });
     }
 
