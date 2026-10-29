@@ -1137,7 +1137,7 @@ async function upcomingEvents(limit = 20) {
 // page updates without a new upload). A request goes to the Secretariat's Inquiries tab, like Join and Partner.
 const ART_EXHIBIT = 'angels-holiday-2026'; // rcm_artworks.exhibit shown on /beyond-limits (was beyond-limits-2026)
 async function beyondPage(origin) {
-  const art = await q('rcm_artworks?select=code,label,title,artist,size,medium,price,image,guest,sold,is_new&exhibit=eq.${ART_EXHIBIT}&order=sort,code').catch(() => []);
+  const art = await q(`rcm_artworks?select=code,label,title,artist,size,medium,price,image,guest,sold,is_new&exhibit=eq.${ART_EXHIBIT}&order=sort,code`).catch(() => []);
   const avail = art.filter((a) => !a.sold).length, fresh = art.filter((a) => a.is_new && !a.sold).length;
   const no = (a) => a.label || String(a.code).padStart(2, '0');
   const peso = (n) => '₱' + Number(n || 0).toLocaleString('en');
