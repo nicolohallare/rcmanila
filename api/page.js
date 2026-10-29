@@ -1147,7 +1147,8 @@ async function beyondPage(origin) {
 <div><span class="kicker" style="color:var(--gold)">Angels of Rendu · New collection for the holidays</span>
 <h1>Beyond Limits</h1>
 <p class="bl-lede">Paintings by the Angels of Rendu, the young artists of Hospicio de San Jose, including Angie, who paints with her feet. ${fresh} new works join the paintings still available from Beyond Limits, their fifth annual exhibit. A painting is a gift that brings “Service Above Self” into a home or office.</p>
-<p class="bl-proceeds">Your purchase helps the children of <b>Hospicio de San Jose</b>. Buy before the holidays to secure the piece you like while it is still available.</p>
+${manilaToday() <= '2026-11-05' ? '<p class="bl-lede" style="font-size:18px">The collection will be on view at a special Club afternoon with First Lady Liza Araneta-Marcos on 5 November.</p>' : ''}
+<p class="bl-proceeds">Your purchase helps the children of <b>Hospicio de San Jose</b>. ${manilaToday() <= '2026-11-05' ? 'Buy before 5 November to secure the piece you like while it is still available.' : 'Buy before the holidays to secure the piece you like while it is still available.'}</p>
 <div class="bl-count"><b id="bl-avail">${avail}</b> paintings available, ${fresh} of them new</div></div>
 <figure class="bl-hero-art"><img src="/assets/beyond-limits/07.jpg" alt="“Woman in Red” by Angie"><figcaption>“Woman in Red” by Angie, who paints with her feet</figcaption></figure>
 </div></section>
