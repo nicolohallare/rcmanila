@@ -102,6 +102,9 @@ main.wide{max-width:1760px}
 .crop-box i[data-h=sw]{left:-2px;bottom:-2px;cursor:nesw-resize}.crop-box i[data-h=se]{right:-2px;bottom:-2px;cursor:nwse-resize}
 .smallbtn{font:inherit;font-size:13px;font-weight:700;border:1px solid #c7d2df;background:#fff;border-radius:5px;padding:5px 8px;cursor:pointer}
 .note{background:#fdf0d5;border:1px solid #f0cf8a;border-radius:8px;padding:12px 14px;color:#5c3a00}
+.mailbox{border:1px solid #c7d2df;border-left:4px solid #17458f;border-radius:10px;padding:14px 16px;background:#f5f8fc}
+.mailbox b{display:block;font-size:16px;color:#17458f}
+.mailbox p{margin:4px 0 10px;font-size:14px;color:#3b4656}
 .okbox{background:#e8f5ec;border:1px solid #b9dcc6;border-radius:10px;padding:18px}
 .err{color:#a3262a;font-weight:600}
 .muted{color:var(--muted)}
@@ -346,10 +349,11 @@ details.arch-tools>summary{list-style:none;cursor:pointer}details.arch-tools>sum
 <div class="stack" style="gap:10px">
 <label class="f" for="hz">Heyzine flipbook link (optional)<input id="hz" type="url" inputmode="url" placeholder="https://heyzine.com/flip-book/…" autocomplete="off"></label>
 <div class="row"><button class="smallbtn" type="button" id="hz-save">Save link</button><span class="muted" id="hz-msg" role="status"></span></div>
-<div class="row"><a class="smallbtn" id="th-email" href="#" target="_blank" rel="noopener" title="An email copy of this issue to paste into Gmail. Works once the issue is live.">Email version ↗</a><button class="smallbtn" type="button" id="th-recut">Re-cut photos from the PDF</button><input type="file" id="th-recut-file" accept="application/pdf" hidden><button class="smallbtn ed-only" type="button" id="th-pick">Pick the best card photos</button><span class="muted" id="th-msg" role="status">Re-cut: choose this issue's PDF again to replace the photos with clean copies (no page text or captions). Photos you cropped by hand are kept.</span></div>
+<div class="row"><button class="smallbtn" type="button" id="th-recut">Re-cut photos from the PDF</button><input type="file" id="th-recut-file" accept="application/pdf" hidden><button class="smallbtn ed-only" type="button" id="th-pick">Pick the best card photos</button><span class="muted" id="th-msg" role="status">Re-cut: choose this issue's PDF again to replace the photos with clean copies (no page text or captions). Photos you cropped by hand are kept.</span></div>
 <div class="sharemsg" id="msg"></div>
-<div class="row"><button class="btn btn-gold" type="button" id="share-go">Share picture and message…</button><button class="btn btn-line" style="color:var(--blue)" type="button" id="copy-msg">Copy message</button><button class="btn btn-line" style="color:var(--blue)" type="button" id="dl-card">Download picture</button></div>
-<p class="muted" style="margin:0;font-size:14px">On a phone, <b>Share picture and message</b> opens the share menu: pick Viber, then the group. The message is also copied, so if Viber sends only the picture, paste the message as the caption.</p>
+<div class="row"><button class="btn btn-gold" type="button" id="share-go">Share on Viber…</button><button class="btn btn-line" style="color:var(--blue)" type="button" id="copy-msg">Copy message</button><button class="btn btn-line" style="color:var(--blue)" type="button" id="dl-card">Download picture</button></div>
+<p class="muted" style="margin:0;font-size:14px"><b>For Viber only.</b> On a phone, <b>Share on Viber</b> opens the share menu: pick <b>Viber</b>, then the group. The message is also copied, so if Viber sends only the picture, paste the message as the caption.</p>
+<div class="mailbox"><b>Sending by email?</b><p>Don’t use the Viber share for email: it sends only a picture and a short Viber message. Use the email version, the full newsletter laid out for Gmail.</p><a class="btn btn-line" style="color:var(--blue)" id="th-email" href="#" target="_blank" rel="noopener" title="Works once the issue is live.">Open the email version ↗</a></div>
 </div>
 <canvas id="card" width="1080" height="1350" aria-label="Picture to share with the message"></canvas>
 </div>

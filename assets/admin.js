@@ -1063,7 +1063,7 @@ ${a.flag ? `<div class="note stack" role="note" style="gap:8px"><div><strong>The
     try {
       if (file && navigator.canShare && navigator.canShare({ files: [file] })) await navigator.share({ files: [file], text: msg });
       else if (navigator.share) await navigator.share({ text: msg });
-      else { $('share-go').textContent = 'Message copied: download the picture and paste in Viber'; setTimeout(() => { $('share-go').textContent = 'Share picture and message…'; }, 4000); }
+      else { $('share-go').textContent = 'Message copied: download the picture and paste in Viber'; setTimeout(() => { $('share-go').textContent = 'Share on Viber…'; }, 4000); }
     } catch (e) { /* the person closed the share menu */ }
   };
   $('back-home').onclick = openHome;
