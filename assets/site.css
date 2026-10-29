@@ -1354,6 +1354,10 @@ a.lib-door:hover strong{text-decoration:underline}
 .bl-hero h1{color:#fff;font-family:var(--serif);font-size:clamp(40px,6vw,72px);line-height:1;margin:10px 0 18px}
 .bl-lede{font-family:var(--serif);font-size:20px;line-height:1.5;color:#dfe8f7;margin:0 0 16px;max-width:56ch}
 .bl-proceeds{font-size:17px;color:#fff;background:rgba(255,255,255,.08);border-left:3px solid var(--gold);padding:12px 16px;margin:0 0 20px;max-width:56ch}
+.bl-new{background:var(--gold)!important;color:var(--navy)!important}
+.bl-bank{display:flex;flex-direction:column;gap:2px;margin:18px 0 6px;padding:14px 16px;border:1px solid var(--line,#d9dee8);border-left:3px solid var(--gold);border-radius:6px;max-width:42ch}
+.bl-bank small{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2,#555);font-weight:700}
+.bl-bank b{font-size:18px}
 .bl-proceeds b{color:var(--gold)}
 .bl-count{font-size:17px;color:#cfdcf2}.bl-count b{font-family:var(--serif);font-size:40px;color:var(--gold);margin-right:6px;vertical-align:-4px}
 .bl-hero-art{margin:0}.bl-hero-art img{width:100%;max-height:520px;object-fit:contain;display:block;filter:drop-shadow(0 20px 30px rgba(0,0,0,.45))}

@@ -1135,28 +1135,31 @@ async function upcomingEvents(limit = 20) {
 }
 // Beyond Limits: the Angels of Rendu art exhibit. Paintings live in rcm_artworks (sold is set there, so the
 // page updates without a new upload). A request goes to the Secretariat's Inquiries tab, like Join and Partner.
+const ART_EXHIBIT = 'angels-holiday-2026'; // rcm_artworks.exhibit shown on /beyond-limits (was beyond-limits-2026)
 async function beyondPage(origin) {
-  const art = await q('rcm_artworks?select=code,title,artist,size,medium,price,image,guest,sold&exhibit=eq.beyond-limits-2026&order=code').catch(() => []);
-  const avail = art.filter((a) => !a.sold).length;
+  const art = await q('rcm_artworks?select=code,label,title,artist,size,medium,price,image,guest,sold,is_new&exhibit=eq.${ART_EXHIBIT}&order=sort,code').catch(() => []);
+  const avail = art.filter((a) => !a.sold).length, fresh = art.filter((a) => a.is_new && !a.sold).length;
+  const no = (a) => a.label || String(a.code).padStart(2, '0');
   const peso = (n) => '₱' + Number(n || 0).toLocaleString('en');
-  const card = (a) => `<button type="button" class="bl-card${a.sold ? ' sold' : ''}${a.guest ? ' guest' : ''}" data-code="${a.code}"><span class="im"><img src="${esc(a.image)}" alt="${esc(a.title)} by ${esc(a.artist)}" loading="lazy">${a.sold ? '<i class="bl-sold">Sold</i>' : ''}</span><span class="tx"><small>No. ${String(a.code).padStart(2, '0')}${a.guest ? ' · Guest artist' : ''}</small><strong>${esc(a.title)}</strong><span>${esc(a.artist)} · ${esc(a.size)}</span><b>${a.sold ? 'Sold' : a.price ? peso(a.price) : 'Price on request'}</b></span></button>`;
-  const data = JSON.stringify(art.map((a) => ({ c: a.code, t: a.title, a: a.artist, s: a.size, m: a.medium || '', p: a.price, i: a.image, g: a.guest, x: a.sold }))).replace(/</g, '\\u003c');
+  const card = (a) => `<button type="button" class="bl-card${a.sold ? ' sold' : ''}${a.guest ? ' guest' : ''}" data-code="${a.code}"><span class="im"><img src="${esc(a.image)}" alt="${esc(a.title)} by ${esc(a.artist)}" loading="lazy">${a.sold ? '<i class="bl-sold">Sold</i>' : a.is_new ? '<i class="bl-sold bl-new">New</i>' : ''}</span><span class="tx"><small>No. ${esc(no(a))}${a.guest ? ' · Guest artist' : ''}</small><strong>${esc(a.title)}</strong><span>${esc(a.artist)} · ${esc(a.size)}</span><b>${a.sold ? 'Sold' : a.price ? peso(a.price) : 'Price on request'}</b></span></button>`;
+  const data = JSON.stringify(art.map((a) => ({ c: a.code, l: no(a), n: !!a.is_new, t: a.title, a: a.artist, s: a.size, m: a.medium || '', p: a.price, i: a.image, g: a.guest, x: a.sold }))).replace(/</g, '\\u003c');
   const body = `<section class="bl-hero"><div class="wrap bl-hero-in">
-<div><span class="kicker" style="color:var(--gold)">Angels of Rendu · Fifth annual exhibit</span>
+<div><span class="kicker" style="color:var(--gold)">Angels of Rendu · New collection for the holidays</span>
 <h1>Beyond Limits</h1>
-<p class="bl-lede">Paintings by the Angels of Rendu, the young artists of Hospicio de San Jose, including Angie, who paints with her feet. Buying one is a way to bring “Service Above Self” into your home or office.</p>
-<p class="bl-proceeds"><b>100% of proceeds</b> from painting sales and donations fund the rehabilitation of Hospicio de San Jose’s Physical Therapy and Occupational Therapy Clinic.</p>
-<div class="bl-count"><b id="bl-avail">${avail}</b> of ${art.length} paintings still available</div></div>
+<p class="bl-lede">Paintings by the Angels of Rendu, the young artists of Hospicio de San Jose, including Angie, who paints with her feet. ${fresh} new works join the paintings still available from Beyond Limits, their fifth annual exhibit. A painting is a gift that brings “Service Above Self” into a home or office.</p>
+<p class="bl-proceeds">Your purchase helps the children of <b>Hospicio de San Jose</b>. Buy before the holidays to secure the piece you like while it is still available.</p>
+<div class="bl-count"><b id="bl-avail">${avail}</b> paintings available, ${fresh} of them new</div></div>
 <figure class="bl-hero-art"><img src="/assets/beyond-limits/07.jpg" alt="“Woman in Red” by Angie"><figcaption>“Woman in Red” by Angie, who paints with her feet</figcaption></figure>
 </div></section>
 <section class="wrap bl-sec">
-<div class="bl-bar" role="group" aria-label="Show"><button type="button" class="on" data-f="avail">Available (${avail})</button><button type="button" data-f="all">All ${art.length}</button><button type="button" data-f="guest">Guest artists</button></div>
+<div class="bl-bar" role="group" aria-label="Show"><button type="button" class="on" data-f="avail">Available (${avail})</button>${fresh ? `<button type="button" data-f="new">New works (${fresh})</button>` : ''}<button type="button" data-f="all">All ${art.length}</button>${art.some((a) => a.guest) ? '<button type="button" data-f="guest">Guest artists</button>' : ''}</div>
 <div class="bl-grid" id="bl-grid">${art.map(card).join('')}</div>
 <p class="muted-p" style="margin-top:18px">Sizes are in inches, width by height. Tap a painting to see it larger and ask for it.</p>
 </section>
 <section class="bl-how"><div class="wrap bl-how-in">
 <div><span class="kicker">How to buy a painting</span><h2>Ask for it here, and the Secretariat will reply</h2>
-<ol><li>Tap the painting you like and send your name and how to reach you.</li><li>The Secretariat confirms it is still available and sends payment details: bank transfer or QR Ph to the RC Manila Foundation, or a card at the exhibit.</li><li>Your painting is set aside for you, and the proceeds go to Hospicio de San Jose.</li></ol>
+<ol><li>Tap the painting you like and send your name and how to reach you.</li><li>The Secretariat confirms it is still available.</li><li>Pay by bank transfer to the RCManila Foundation. Your painting is set aside for you, and the proceeds go to Hospicio de San Jose.</li></ol>
+<div class="bl-bank"><small>For payment</small><b>Metrobank</b><span>Account name: RCManila Foundation Inc.</span><span>Account no.: 151-7-15151422-3</span></div>
 <p>Questions: call the Club office at <a href="${TEL}">(02) 8527-1885</a> or email <a href="mailto:${MAIL}?subject=Beyond%20Limits">${MAIL}</a>.</p></div>
 <blockquote class="bl-quote"><p>In the last seven years, our artists have risen above barriers: physical, emotional, social and financial. Their works show how boundaries became starting points.</p><footer>Celestino Palma III, Curator</footer></blockquote>
 </div></section>
@@ -1178,12 +1181,12 @@ async function beyondPage(origin) {
 <script>
 (function(){var A=${data},cur=null,g=document.getElementById('bl-grid'),d=document.getElementById('bl-dlg'),f=document.getElementById('bl-form'),msg=document.getElementById('bl-msg');
 function peso(n){return '₱'+Number(n).toLocaleString('en')}
-function filt(k){[].forEach.call(document.querySelectorAll('.bl-bar button'),function(b){b.classList.toggle('on',b.dataset.f===k)});[].forEach.call(g.children,function(c){var a=A.find(function(x){return x.c==c.dataset.code});c.hidden=k==='avail'?a.x:k==='guest'?!a.g:false})}
+function filt(k){[].forEach.call(document.querySelectorAll('.bl-bar button'),function(b){b.classList.toggle('on',b.dataset.f===k)});[].forEach.call(g.children,function(c){var a=A.find(function(x){return x.c==c.dataset.code});c.hidden=k==='avail'?a.x:k==='new'?(!a.n||a.x):k==='guest'?!a.g:false})}
 document.querySelector('.bl-bar').addEventListener('click',function(e){var b=e.target.closest('button');if(b)filt(b.dataset.f)});
 filt('avail');
 g.addEventListener('click',function(e){var c=e.target.closest('.bl-card');if(!c)return;cur=A.find(function(x){return x.c==c.dataset.code});
 document.getElementById('bl-di').src=cur.i;document.getElementById('bl-di').alt=cur.t+' by '+cur.a;
-document.getElementById('bl-dn').textContent='No. '+String(cur.c).padStart(2,'0')+(cur.g?' · Guest artist':'');document.getElementById('bl-dt').textContent='“'+cur.t+'”';
+document.getElementById('bl-dn').textContent='No. '+cur.l+(cur.n?' · New':'')+(cur.g?' · Guest artist':'');document.getElementById('bl-dt').textContent='“'+cur.t+'”';
 document.getElementById('bl-dm').textContent=[cur.a,cur.s,cur.m].filter(Boolean).join(' · ');document.getElementById('bl-dp').textContent=cur.x?'Sold':cur.p?peso(cur.p):'Price on request';
 f.hidden=!!cur.x;document.getElementById('bl-done').hidden=true;msg.textContent='';document.getElementById('bl-send').disabled=false;d.showModal()});
 d.querySelector('.x').onclick=function(){d.close()};d.addEventListener('click',function(e){if(e.target===d)d.close()});
@@ -1191,13 +1194,13 @@ f.addEventListener('submit',async function(e){e.preventDefault();var fd=new Form
 if(String(fd.get('name')||'').trim().length<2){msg.textContent='Please type your name.';return}
 if(!String(fd.get('email')||'').trim()&&!String(fd.get('phone')||'').trim()){msg.textContent='Please give an email address or a mobile number so the Secretariat can reply.';return}
 b.disabled=true;msg.textContent='Sending…';
-try{var p={action:'send',page:location.pathname,kind:'other',interest:('Beyond Limits No. '+String(cur.c).padStart(2,'0')+': '+cur.t+(cur.p?' ('+peso(cur.p)+')':'')).slice(0,160)};fd.forEach(function(v,k){p[k]=v});
+try{var p={action:'send',page:location.pathname,kind:'other',interest:('Angels of Rendu No. '+cur.l+': '+cur.t+(cur.p?' ('+peso(cur.p)+')':'')).slice(0,160)};fd.forEach(function(v,k){p[k]=v});
 var r=await fetch('${INQ}',{method:'POST',headers:{'content-type':'application/json',apikey:'${PUB}'},body:JSON.stringify(p)});var j=await r.json().catch(function(){return{error:'The server did not answer. Please try again.'}});
 if(!r.ok||j.error)throw new Error(j.error||'Please try again.');
 f.hidden=true;var dn=document.getElementById('bl-done');dn.hidden=false;dn.innerHTML='<strong>Thank you!</strong><p>The Secretariat has your request for “'+cur.t.replace(/</g,'')+'” and will get in touch to confirm.</p>'}
 catch(err){msg.textContent=err.message;b.disabled=false}});})();
 </script>`;
-  return layout({ title: 'Beyond Limits: paintings by the Angels of Rendu · Rotary Club of Manila', description: `${avail} paintings by the Angels of Rendu of Hospicio de San Jose are still available. 100% of proceeds fund the rehabilitation of Hospicio’s Physical and Occupational Therapy Clinic.`, url: `${origin}/beyond-limits`, image: '/assets/beyond-limits/07.jpg', body, nav: 'beyond' });
+  return layout({ title: 'Beyond Limits: paintings by the Angels of Rendu · Rotary Club of Manila', description: `${avail} paintings by the Angels of Rendu of Hospicio de San Jose are available, including ${fresh} new works. Your purchase helps the children of Hospicio de San Jose.`, url: `${origin}/beyond-limits`, image: '/assets/beyond-limits/07.jpg', body, nav: 'beyond' });
 }
 
 async function eventsIndex(origin) {
