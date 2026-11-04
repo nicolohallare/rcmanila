@@ -59,13 +59,37 @@ Deno.serve(async (req) => {
   const configured = !!(Deno.env.get("FB_PAGE_ID") && Deno.env.get("FB_PAGE_TOKEN"));
 
   if (b.action === "test") {
-    if (!configured) return json({ configured: false });
+    if (!configured) return json({ configured: false, has_id: !!Deno.env.get("FB_PAGE_ID"), has_token: !!Deno.env.get("FB_PAGE_TOKEN"), fb_names: Object.keys(Deno.env.toObject()).filter((k) => /fb|face|page/i.test(k)) });
     const r = await fetch(`${GRAPH}/${Deno.env.get("FB_PAGE_ID")}?fields=name,link&access_token=${encodeURIComponent(Deno.env.get("FB_PAGE_TOKEN")!)}`);
     const j = await r.json().catch(() => ({}));
     const d = await fetch(`${GRAPH}/debug_token?input_token=${encodeURIComponent(Deno.env.get("FB_PAGE_TOKEN")!)}&access_token=${encodeURIComponent(Deno.env.get("FB_PAGE_TOKEN")!)}`).then((x) => x.json()).catch(() => ({}));
     return json({ configured: true, ok: r.ok, page: j.name, link: j.link, error: j?.error?.message, token_type: d?.data?.type, expires: d?.data?.expires_at, scopes: d?.data?.scopes, autopost: await setting("fb_autopost") });
   }
 
+  // Read-only report for planning the Page: its set-up and recent posts with likes, comments and shares.
+  // (Reach and impressions need the read_insights permission, which this Page key does not have.)
+  if (b.action === "report") {
+    if (!configured) return json({ configured: false });
+    const T = encodeURIComponent(Deno.env.get("FB_PAGE_TOKEN")!), P = Deno.env.get("FB_PAGE_ID");
+    const get = (u: string) => fetch(u).then((x) => x.json()).catch((e) => ({ error: { message: String(e) } }));
+    const page = await get(`${GRAPH}/${P}?fields=name,username,link,category,category_list,about,description,mission,company_overview,general_info,founded,website,emails,phone,single_line_address,location,fan_count,followers_count,rating_count,overall_star_rating,verification_status,picture.width(400){url,width,height},cover{source,offset_y},is_published,whatsapp_number,hours&access_token=${T}`);
+    const posts: unknown[] = [];
+    let url: string | null = `${GRAPH}/${P}/posts?fields=id,created_time,message,permalink_url,status_type,full_picture,is_published,shares,attachments{media_type,type,title,unshimmed_url},reactions.summary(total_count).limit(0),comments.summary(total_count).limit(0)&limit=50&access_token=${T}`;
+    const since = Date.now() - (Number(b.days) || 365) * 864e5;
+    for (let n = 0; url && n < 12; n++) {
+      const j = await get(url);
+      if (j.error) { posts.push({ error: j.error.message }); break; }
+      for (const x of j.data || []) { if (Date.parse(x.created_time) < since) { url = null; break; } posts.push(x); }
+      if (url) url = j.paging?.next || null;
+    }
+    // Without pages_read_user_content the list above is refused; the posts the website made can still be read by id.
+    const fields = "id,created_time,message,permalink_url,status_type,full_picture,shares,reactions.summary(total_count).limit(0),comments.summary(total_count).limit(0)";
+    const { data: ours } = await db.from("rcm_fb_posts").select("kind,ref_id,fb_post_id,posted_at").not("fb_post_id", "is", null).order("posted_at");
+    const own = await Promise.all((ours || []).map(async (o) => ({ kind: o.kind, posted_at: o.posted_at, post: await get(`${GRAPH}/${o.fb_post_id}?fields=${fields}&access_token=${T}`) })));
+    const published = await get(`${GRAPH}/${P}/published_posts?fields=id,created_time&limit=5&access_token=${T}`);
+    const insights = await get(`${GRAPH}/${P}/insights?metric=page_impressions_unique,page_post_engagements,page_follows&period=days_28&access_token=${T}`);
+    return json({ page, posts, own, published_try: published.error ? published.error.message : (published.data || []).length, insights_try: insights.error ? insights.error.message : insights.data });
+  }
   if (!configured || (await setting("fb_autopost")) !== "on") return json({ skipped: true, configured });
   const start = (await setting("fb_start")) || new Date().toISOString();
   const now = new Date().toISOString();
