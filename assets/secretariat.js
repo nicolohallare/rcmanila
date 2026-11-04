@@ -127,24 +127,27 @@
     const m = state.meeting; if (!m) return '';
     const n = (state.signups || []).length;
     const L = [`⏰ Reminder: *${m.label || 'Our weekly meeting'}* is this ${longDate(m.meeting_date)}.`];
+    if (m.rsvp_open !== false) L.push(`👉 *Sign up here:* ${SITE}/meetings/${m.meeting_date}#rsvp`);
     if (m.speaker) L.push(`🎤 ${m.speaker}${m.speaker_title ? ', ' + m.speaker_title : ''}${m.topic ? ` on “${m.topic}”` : ''}`);
     const when = [m.time_text, m.venue].filter(Boolean).join(' · ');
     if (when) L.push(`🕛 ${when}`);
-    if (m.rsvp_open !== false) L.push('', n ? `${n} ${n === 1 ? 'member has' : 'members have'} signed up so far. Not yet? Sign up here:` : 'Sign up here so the Secretariat can prepare your seat:', `${SITE}/meetings/${m.meeting_date}`);
+    if (m.rsvp_open !== false) L.push('', n ? `${n} ${n === 1 ? 'member has' : 'members have'} signed up so far. Not yet? Use the link above.` : 'Sign up with the link above so the Secretariat can prepare your seat.');
     return L.join('\n');
   }
   function currentMessage() { return msMode === 'remind' ? reminderMessage() : meetingMessage(); }
   document.addEventListener('click', (e) => { const b = e.target.closest('[data-msmode]'); if (!b) return; msMode = b.getAttribute('data-msmode'); document.querySelectorAll('[data-msmode]').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); $('ms-msg').textContent = currentMessage(); });
   function meetingMessage() {
     const m = state.meeting; if (!m) return '';
+    // The sign-up link goes right under the date, so it shows without scrolling on a phone (and Viber previews it).
     const L = [`📅 *${m.label || 'Weekly meeting'}*`, longDate(m.meeting_date)];
+    if (m.rsvp_open !== false) L.push(`👉 *Sign up here:* ${SITE}/meetings/${m.meeting_date}#rsvp`);
     if (m.speaker) L.push('', `🎤 Guest speaker: *${m.speaker}*${m.speaker_title ? ', ' + m.speaker_title : ''}`);
     if (m.topic) L.push(`Topic: ${m.topic}`);
     const when = [m.time_text, m.venue].filter(Boolean).join(' · ');
     if (when) L.push('', `🕛 ${when}`);
     if (m.registration_text) L.push(m.registration_text);
     if (m.notes) L.push('', m.notes.trim());
-    if (m.rsvp_open !== false) L.push('', 'Coming? Sign up here so the Secretariat can prepare your seat:', `${SITE}/meetings/${m.meeting_date}`);
+    if (m.rsvp_open !== false) L.push('', `✅ Coming? Sign up so the Secretariat can prepare your seat: ${SITE}/meetings/${m.meeting_date}#rsvp`, `🤝 Bringing a guest? Invite them here: ${SITE}/invite/send`);
     else L.push('', 'Details:', `${SITE}/meetings/${m.meeting_date}`);
     return L.join('\n');
   }
