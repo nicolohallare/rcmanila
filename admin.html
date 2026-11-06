@@ -183,7 +183,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid #9cc0ef;outline-offset
 details.arch-tools>summary{list-style:none;cursor:pointer}details.arch-tools>summary::-webkit-details-marker{display:none}details.arch-tools>summary h2::after{content:" ▸";color:#8aa0bd;font-size:18px}details.arch-tools[open]>summary h2::after{content:" ▾"}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 </style>
-<link rel="stylesheet" href="/assets/workspace.css?v=1006b">
+<link rel="stylesheet" href="/assets/workspace.css?v=1007a">
 <style>.staff .ed-only{display:none!important}</style>
 </head>
 <body>
@@ -212,6 +212,8 @@ details.arch-tools>summary{list-style:none;cursor:pointer}details.arch-tools>sum
 <div class="home-grid">
 <div class="col">
 <section class="card ed-only"><h2 style="font-family:var(--serif);font-size:21px;margin:0;color:#0f2f66">This week</h2><div id="ed-todo"><p class="skeleton">Checking…</p></div></section>
+<section class="card ed-only" id="fbq"><div class="fbq-top"><div><h2 style="font-family:var(--serif);font-size:21px;margin:0;color:#0f2f66">Facebook this week</h2><p class="muted small" id="fbq-sum" style="margin:4px 0 0">Loading…</p></div><button class="btn btn-blue fbq-btn hidden" id="fbq-all" type="button">Approve all</button></div><ul class="fbq" id="fbq-list"><li class="skeleton">Loading…</li></ul></section>
+<dialog class="fbq-dlg" id="fbq-dlg"><div id="fbq-dlg-body"></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button class="smallbtn" data-a="close" type="button">Close</button></div></dialog>
 <label class="drop" id="drop" for="file">
 <span class="drop-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0-5 5m5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg></span>
 <span class="kick light">This week's issue</span>
@@ -376,6 +378,7 @@ details.arch-tools>summary{list-style:none;cursor:pointer}details.arch-tools>sum
 <script src="/assets/admin.js?v=1014a"></script>
 <script src="/assets/admin-cover.js?v=1005a"></script>
 <script src="/assets/dash.js?v=1006b"></script>
-<script src="/assets/editor-dash.js?v=1006b"></script>
+<script src="/assets/editor-dash.js?v=1007a"></script>
+<script src="/assets/fb-queue.js?v=1001a"></script>
 </body>
 </html>

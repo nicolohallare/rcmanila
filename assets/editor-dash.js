@@ -21,7 +21,7 @@
     }
     const toNext = D.daysUntil(d.cover.next);
     if (!d.cover.next_month) items.push({ level: toNext <= 10 ? 'todo' : 'info', icon: 'image', title: `Cover photo for ${monthName(d.cover.next)} not set`, text: `It changes on ${D.day(d.cover.next)} (in ${toNext} days). Without a new one, this month's cover stays up.`, go: 'cover', label: 'Set cover' });
-    for (const f of d.facebook.failed || []) items.push({ level: 'urgent', icon: 'alert', title: `A ${f.kind === 'event' ? 'event' : 'Balita'} post did not reach Facebook`, text: `Tried ${f.attempts} times: ${String(f.error || '').slice(0, 140)}`, href: 'https://www.facebook.com/', label: 'Open Facebook' });
+    for (const f of d.facebook.failed || []) items.push({ level: 'urgent', icon: 'alert', title: 'A Facebook post did not go out', text: `Tried ${f.attempts} times: ${String(f.error || '').slice(0, 140)}`, href: 'https://www.facebook.com/', label: 'Open Facebook' });
     items.push(...D.viberItems(d.viber, (v) => ({ go: 'issue:' + v.id, label: 'Open share panel' })));
     $('ed-todo').innerHTML = D.todo(items, 'Every issue is live and the next cover is set.');
     const s = d.stats;
@@ -31,7 +31,7 @@
       { n: s.issues, label: 'Issues online', sub: '2015 to today' },
       { n: s.stories, label: 'Stories online' },
     ]);
-    $('ed-fb').textContent = d.facebook.last_post ? `New issues post to the Club's Facebook Page by themselves. Last post ${D.ago(d.facebook.last_post)}; ${d.facebook.this_month} this month.` : 'New issues and events post to the Club’s Facebook Page by themselves within 15 minutes of going live.';
+    $('ed-fb').textContent = `Facebook: posts go to the Club’s Page only after you approve them in “Facebook this week”.${d.facebook.last_post ? ` Last post ${D.ago(d.facebook.last_post)}; ${d.facebook.this_month} this month.` : ''}`;
   }
 
   document.addEventListener('rcmed:home', draw);
