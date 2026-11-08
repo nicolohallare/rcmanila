@@ -152,11 +152,11 @@
   ],
   "headers": [
     {
-      "source": "/assets/(.*)",
+      "source": "/assets/(.*)\\.(jpg|jpeg|png|webp|avif|gif|svg|ico|woff2|woff|ttf|otf|mp4)",
       "headers": [
         {
           "key": "Cache-Control",
-          "value": "public, max-age=300"
+          "value": "public, max-age=2592000, stale-while-revalidate=86400"
         }
       ]
     },

@@ -226,7 +226,7 @@ ${ld ? `<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, '\
 <meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,400;0,600;0,700;0,800;1,700;1,800&display=swap" rel="stylesheet">
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,400;0,600;0,700;0,800;1,700;1,800&display=swap" onload="this.onload=null;this.rel='stylesheet'"><noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,400;0,600;0,700;0,800;1,700;1,800&display=swap"></noscript>
 <link rel="stylesheet" href="/assets/site.css?v=${ASSET_V}">
 <script>window.va=window.va||function(){(window.vaq=window.vaq||[]).push(arguments)};</script><script defer src="/_vercel/insights/script.js"></script>
 </head>
@@ -234,7 +234,7 @@ ${ld ? `<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, '\
 <a class="skip" href="#main">Skip to content</a>
 <div class="topbar"><div class="wrap"><span class="tb-l">The first Rotary club in Asia · Established 1919 · Charter No. 478 · Club No. 16985</span><span class="tb-r"><a href="/secretariat">Secretariat login</a><a href="/admin">Editor login</a><a href="/library-admin">Librarian login</a></span></div></div>
 <header class="site-head"><div class="wrap">
-<a class="logo lockup" href="/" aria-label="Rotary Club of Manila home"><img class="lk-club" src="/assets/club-logo.png" alt="Rotary Club of Manila" width="803" height="286"><span class="lk-rule" aria-hidden="true"></span><img class="lk-msg" src="/assets/msg-2026.png" alt="Create Lasting Impact" width="918" height="509"></a>
+<a class="logo lockup" href="/" aria-label="Rotary Club of Manila home"><img class="lk-club" src="/assets/club-logo-sm.png" alt="Rotary Club of Manila" width="600" height="214"><span class="lk-rule" aria-hidden="true"></span><img class="lk-msg" src="/assets/msg-2026-sm.png" alt="Create Lasting Impact" width="360" height="200"></a>
 <nav class="nav" aria-label="Main">
 <a href="/#club">Our Club</a><a href="/projects" class="${nav === 'projects' ? 'on' : ''}">Projects</a><a href="/meeting" class="${WHATSON.includes(nav) ? 'on' : ''}">Events</a><a href="/balita" class="${nav === 'balita' ? 'on' : ''}">Balita</a><a href="/library" class="${nav === 'library' ? 'on' : ''}">Library</a><a href="/join" class="${INVOLVED.includes(nav) ? 'on' : ''}">Get Involved</a>
 </nav>
@@ -246,7 +246,7 @@ ${ld ? `<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, '\
 ${subNav(nav)}<main id="main" tabindex="-1">${body}</main>
 ${supportersBand(ads)}
 <footer class="foot" id="contact"><div class="wrap">
-<div style="display:flex;flex-direction:column;gap:14px"><span class="foot-lockup"><img class="lk-club" src="/assets/club-logo-white.png" alt="Rotary Club of Manila" width="803" height="286"><span class="lk-rule" aria-hidden="true"></span><img class="lk-msg" src="/assets/msg-2026-white.png" alt="Create Lasting Impact" width="918" height="509"></span><span>The first Rotary club in Asia. Service above self since 1919.</span><span class="foot-ids">Charter No. 478 · Club No. 16985 · Rotary District 3810</span></div>
+<div style="display:flex;flex-direction:column;gap:14px"><span class="foot-lockup"><img class="lk-club" src="/assets/club-logo-white-sm.png" alt="Rotary Club of Manila" width="600" height="214" loading="lazy"><span class="lk-rule" aria-hidden="true"></span><img class="lk-msg" src="/assets/msg-2026-white-sm.png" alt="Create Lasting Impact" width="360" height="200" loading="lazy"></span><span>The first Rotary club in Asia. Service above self since 1919.</span><span class="foot-ids">Charter No. 478 · Club No. 16985 · Rotary District 3810</span></div>
 <address style="font-style:normal"><strong>Secretariat</strong>RCM Office, 543 Arquiza St. cor. Grey St.<br>Ermita, Manila<br><a href="${TEL}">(02) 8527-1885</a><br><a href="mailto:${MAIL}">${MAIL}</a></address>
 <div><strong>Explore</strong><a href="/projects">Service projects</a><br><a href="/youth">Rotaract, Interact and RYLA</a><br><a href="/past-presidents">Past presidents</a><br><a href="/meeting">Weekly meeting</a> · <a href="/events">Events</a> · <a href="/speakers">Guest speakers</a><br><a href="/balita">Balita archive</a><br><a href="/library">Heritage Library</a><br><a href="/join">Join</a> · <a href="/partner">Partner</a> · <a href="/donate">Donate</a><br><a href="/app">Put the Club on your phone</a><br><a href="https://www.facebook.com/RotaryClubofManila" target="_blank" rel="noopener">Facebook</a> · <a href="https://www.linkedin.com/company/rotary-club-of-manila/" target="_blank" rel="noopener">LinkedIn</a></div>
 <div><strong>Rotary family</strong>${FAMILY.map((f) => `<a href="${f.href}" target="_blank" rel="noopener">${esc(f.name)}</a>`).join('<br>')}</div>
@@ -838,7 +838,7 @@ ${(() => { const cv = cover || COVER_FALLBACK; const mon = new Date(cv.month + '
 <div class="poa-mark" role="img" aria-label="Together, we ${esc(verb)}. Rotary Club of Manila, People of Action.">
 <span class="poa-mark-kick" aria-hidden="true">Together, we</span>
 <span class="poa-mark-verb" aria-hidden="true">${esc(verb)}</span>
-<span class="poa-mark-lock" aria-hidden="true"><img src="/assets/club-logo-white.png" alt="" width="803" height="286"><i></i><b>People <small>of</small> Action</b></span>
+<span class="poa-mark-lock" aria-hidden="true"><img src="/assets/club-logo-white-sm.png" alt="" width="600" height="214"><i></i><b>People <small>of</small> Action</b></span>
 </div></div>
 <div class="poa-cover-cap"><div class="wrap poa-cover-cap-in"><span class="poa-cover-tag">People of Action · ${esc(mon)}</span>${cv.caption ? `<span class="poa-cover-txt">${esc(cv.caption)}</span>` : ''}${cv.link ? `<a class="poa-cover-go" href="${esc(cv.link)}">Read the story <span aria-hidden="true">→</span></a>` : ''}</div></div>`; })()}
 <div class="hx-week"><div class="wrap hx-week-in${wkNext || wkEvent ? ' three' : ''}"><span class="hx-week-l">This week</span>${wkMeetingFinal}${wkNext || wkEvent}${wkBalita}</div></div>
@@ -847,7 +847,7 @@ ${INVITE_DRIVE ? `<section class="inv-band" aria-labelledby="inv-band-h"><div cl
 <div class="inv-band-t"><span class="kicker">Invite one person</span><h2 id="inv-band-h">The next outstanding Manila Rotarian could be someone you already know.</h2>
 <p>Think of one person and invite them to our next meeting as your guest. A personal message is all it takes.</p>
 <div class="h-cta"><a class="btn btn-gold" href="/invite/send">Send an invitation</a><a class="btn btn-ghost" href="/invite">Coming as a guest?</a></div></div>
-<a class="inv-band-im" href="/invite/send" tabindex="-1" aria-hidden="true"><img src="${H('invite-fellowship')}" alt="" width="1368" height="760" loading="lazy"></a>
+<a class="inv-band-im" href="/invite/send" tabindex="-1" aria-hidden="true"><img src="${H('invite-fellowship')}" srcset="/assets/home/invite-fellowship-800.jpg 800w, ${H('invite-fellowship')} 1368w" sizes="(max-width: 760px) 100vw, 660px" alt="" width="1368" height="760" loading="lazy"></a>
 </div></section>` : ''}
 
 
@@ -1493,7 +1493,7 @@ ${m.speaker_bio ? `<details class="inv-bio"><summary>About the speaker</summary>
 ${meetCard}
 <section class="inv-expect" aria-labelledby="inv-ex"><h2 id="inv-ex">What to expect</h2>
 <div class="inv-ex-grid">${expect.map(([t, d]) => `<div><b>${t}</b><p>${d}</p></div>`).join('')}</div></section>
-<section class="inv-club"><img src="${H('invite-fellowship')}" alt="Members of the Rotary Club of Manila at a Club fellowship" width="1368" height="760" loading="lazy">
+<section class="inv-club"><img src="${H('invite-fellowship')}" srcset="/assets/home/invite-fellowship-800.jpg 800w, ${H('invite-fellowship')} 1368w" sizes="(max-width: 760px) 100vw, 660px" alt="Members of the Rotary Club of Manila at a Club fellowship" width="1368" height="760" loading="lazy">
 <div><span class="eyebrow">Since 1919</span><h2>Asia’s first Rotary club</h2><p>Charter No. 478. For more than a century, members have met every week and served Manila together, from flood relief and medical missions to scholarships and the fight against polio.</p>
 <p class="inv-links"><a class="link-arrow" href="/projects">Our service projects</a><a class="link-arrow" href="/library/centennial">The Centennial</a><a class="link-arrow" href="/join">How membership works</a></p></div></section>
 </div>
