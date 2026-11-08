@@ -100,6 +100,7 @@ function meetingMessage(m: Row) {
   lines.push("", [longDay(m.meeting_date, false), m.time_text].filter(Boolean).join(", "));
   if (m.venue) lines.push(String(m.venue).replace(/\s+/g, " ").replace(/\s*,\s*/g, ", "));
   lines.push("", `Members and guests are welcome. Sign up here: ${utm(link + "#rsvp", "meeting")}`);
+  lines.push(`🤝 Bringing a guest? Invite them here: ${utm(SITE + "/invite/send", "meeting-invite")}`);
   return { message: lines.join("\n"), link };
 }
 function eventMessage(e: Row, reminder: boolean) {
@@ -342,6 +343,29 @@ Deno.serve(async (req) => {
     const posts = await get(`${GRAPH}/${P}/posts?fields=id,created_time,message,permalink_url,shares,reactions.summary(total_count).limit(0),comments.summary(total_count).limit(0)&limit=25&access_token=${T}`);
     const insights = await get(`${GRAPH}/${P}/insights?metric=page_impressions_unique,page_post_engagements,page_follows&period=days_28&access_token=${T}`);
     return json({ page, posts: posts.error ? posts.error.message : posts.data, insights: insights.error ? insights.error.message : insights.data });
+  }
+
+  // Page and post figures for the President's report. Tries each metric on its own, since Facebook renames them from time to time.
+  if (b.action === "insights") {
+    if (!configured) return json({ configured: false });
+    const T = encodeURIComponent(Deno.env.get("FB_PAGE_TOKEN")!), P = Deno.env.get("FB_PAGE_ID");
+    const get = (u: string) => fetch(u).then((x) => x.json()).catch((e) => ({ error: { message: String(e) } }));
+    const metrics: string[] = Array.isArray(b.metrics) ? b.metrics : ["page_follows", "page_daily_follows_unique", "page_daily_unfollows_unique", "page_post_engagements", "page_views_total", "page_media_view", "page_total_media_view_unique", "page_impressions_unique", "page_fans"];
+    const q = b.since && b.until ? `&since=${encodeURIComponent(b.since)}&until=${encodeURIComponent(b.until)}` : "";
+    const page: Record<string, unknown> = {};
+    for (const m of metrics) { const j = await get(`${GRAPH}/${P}/insights?metric=${m}&period=${b.period || "day"}${q}&access_token=${T}`); page[m] = j.error ? "ERR " + j.error.message : (j.data || []).map((d: Row) => ({ period: d.period, values: d.values })); }
+    const posts: unknown[] = [];
+    if (b.posts !== false) {
+      const list = await get(`${GRAPH}/${P}/posts?fields=id,created_time,message,permalink_url,shares,reactions.summary(total_count).limit(0),comments.summary(total_count).limit(0)&limit=${Number(b.limit) || 40}${b.since ? `&since=${encodeURIComponent(b.since)}` : ""}&access_token=${T}`);
+      const pm: string[] = Array.isArray(b.post_metrics) ? b.post_metrics : ["post_media_view", "post_total_media_view_unique", "post_impressions_unique", "post_clicks"];
+      for (const x of list.data || []) {
+        const ins: Record<string, unknown> = {};
+        for (const m of pm) { const j = await get(`${GRAPH}/${x.id}/insights?metric=${m}&access_token=${T}`); ins[m] = j.error ? "ERR " + String(j.error.message).slice(0, 80) : j.data?.[0]?.values?.[0]?.value; }
+        posts.push({ id: x.id, at: x.created_time, text: String(x.message || "").replace(/\s+/g, " ").slice(0, 90), url: x.permalink_url, reactions: x.reactions?.summary?.total_count || 0, comments: x.comments?.summary?.total_count || 0, shares: x.shares?.count || 0, ins });
+      }
+      if (list.error) posts.push({ error: list.error.message });
+    }
+    return json({ page, posts });
   }
 
   // Preview what the planner would add, without saving (for checking).
