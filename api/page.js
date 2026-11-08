@@ -864,9 +864,9 @@ ${INVITE_DRIVE ? `<section class="inv-band" aria-labelledby="inv-band-h"><div cl
 </div></section>
 
 <section class="poa" id="action"><div class="wrap">
-<div class="section-head home-head"><div><span class="kicker">Our service · Rotary 2026–27</span><h2 class="h-theme"><img src="/assets/cli-h-blue.png" alt="Create Lasting Impact" width="1470" height="88"></h2></div><a class="link-arrow" href="/projects">All service projects</a></div>
+<div class="section-head home-head"><div><span class="kicker">Our service · Rotary 2026–27</span><h2 class="h-theme"><img src="/assets/cli-h-blue.png" alt="Create Lasting Impact" width="1470" height="88" loading="lazy"></h2></div><a class="link-arrow" href="/projects">All service projects</a></div>
 <div class="poa-lead">
-<a class="poa-img" href="/projects/${POA.slug}"><img src="${POA.hero.src}" alt="${esc(POA.hero.alt)}" width="${POA.hero.w || 1792}" height="${POA.hero.h || 1252}"></a>
+<a class="poa-img" href="/projects/${POA.slug}"><img src="${POA.hero.src}" alt="${esc(POA.hero.alt)}" width="${POA.hero.w || 1792}" height="${POA.hero.h || 1252}" loading="lazy" decoding="async"></a>
 <div class="poa-body"><span class="kicker">People of Action · ${esc(POA.kicker.split(' · ')[0])}</span>
 <h2>${esc(POA.title)}</h2>
 <dl class="poa-steps"><div><dt>The need</dt><dd>${esc(POA.need[0])}</dd></div>
@@ -958,7 +958,7 @@ async function issuePage(origin, no) {
   const pages = Array.isArray(issue.pages) ? issue.pages : [];
   const body = `
 <section class="issue-head"><div class="wrap">
-${issue.cover_path ? `<img class="cover${pgc(issue)}" src="${coverSrc(issue, 520)}" alt="Cover of Balita issue ${issue.issue_no}" ${COVFIX}>` : '<div></div>'}
+${issue.cover_path ? `<img class="cover${pgc(issue)}" src="${coverSrc(issue, 520)}" alt="Cover of Balita issue ${issue.issue_no}" loading="lazy" ${COVFIX}>` : '<div></div>'}
 <div style="display:flex;flex-direction:column;gap:14px">
 <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Home</a> / <a href="/balita">Balita</a></nav>
 <span class="eyebrow" style="color:var(--gold)">The official publication of the Rotary Club of Manila</span>
