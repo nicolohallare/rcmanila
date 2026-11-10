@@ -942,7 +942,11 @@ ${inner}
   return layout({ title: term ? `“${term}” · Balita search` : 'Balita · Rotary Club of Manila', description: 'Every issue of the Balita, the weekly publication of the Rotary Club of Manila, by Rotary year and searchable.', url: origin + '/balita', body, nav: 'balita' });
 }
 
+// Issue numbers are whole numbers. Anything else (typos, junk from bots) is a plain "not found", not a server error.
+const issueNo = (v) => (/^\d{1,6}$/.test(String(v || '')) ? Number(v) : null);
+
 async function issuePage(origin, no) {
+  if (!issueNo(no)) return null;
   const rows = await q(`rcm_issues?select=${ICOLS}&issue_no=eq.${Number(no)}`);
   const issue = rows[0];
   if (!issue) return null;
@@ -998,6 +1002,7 @@ a.onclick=function(){show(a)};l.onclick=function(){show(l)};if(location.hash==='
 // Outlook and phone mail apps show it as designed). Open /balita/<no>/email, click "Copy email", paste into Gmail.
 async function emailPage(origin, no) {
   // /balita/latest/email always gives the newest live issue (the link on the Secretariat page).
+  if (String(no) !== 'latest' && !issueNo(no)) return null;
   const rows = String(no) === 'latest' ? await liveIssues(1) : await q(`rcm_issues?select=${ICOLS}&issue_no=eq.${Number(no)}`);
   const issue = rows[0];
   if (!issue) return null;
@@ -1064,6 +1069,7 @@ document.getElementById('cs').onclick=function(){var t=document.getElementById('
 }
 
 async function articlePage(origin, no, slug) {
+  if (!issueNo(no)) return null;
   const rows = await q(`rcm_issues?select=${ICOLS}&issue_no=eq.${Number(no)}`);
   const issue = rows[0];
   if (!issue) return null;
@@ -1853,9 +1859,10 @@ module.exports = async (req, res) => {
     else if (r === 'lib') html = await LIB.route(origin, u);
     else if (r === 'partner') html = partnerPage(origin, String(u.searchParams.get('i') || '').slice(0, 80));
   } catch (e) {
+    console.error('page error', r, e && e.message);
     res.statusCode = 500;
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    return res.end(layout({ title: 'Something went wrong', description: '', body: `<div class="empty">The page could not load (${esc(e.message)}). Please try again in a minute.</div>` }));
+    return res.end(layout({ title: 'Something went wrong', description: '', body: `<div class="empty">The page could not load. Please try again in a minute.</div>` }));
   }
   if (!html) {
     res.statusCode = 404;
