@@ -1109,8 +1109,8 @@ function renderArticle(origin, issue, a, arts) {
   const leftover = auto.slice(pi);
   // Three or more remaining photos (photo pages from print) show as a gallery grid; tap one to see it full size.
   // Pages scanned from print (every photo marked nocard, no text of its own) read best one under another at full width, not as thumbnails.
-  const scans = !textCount && leftover.length && leftover.every((p) => p.nocard);
-  if (scans) html += leftover.map((p) => figure(p, p.caption || '')).join('');
+  const scans = !textCount && photos.length > 1 && photos.every((p) => p.nocard);
+  if (scans) html += photos.map((p, i) => `<a class="art-scan" href="${raw(p.path)}" target="_blank" rel="noopener" style="display:block;margin:0 0 18px"><img src="${img(p.path, 1100)}" alt="${esc(a.title)}, page ${i + 1} of ${photos.length}" width="${p.width || ''}" height="${p.height || ''}" style="width:100%;height:auto;display:block;border:1px solid #e3e1dd"${i ? ' loading="lazy"' : ''}></a>`).join('');
   else if (leftover.length >= 3) html += `<div class="art-gallery">${leftover.map((p) => `<a href="${raw(p.path)}" target="_blank" rel="noopener"${p.caption ? ` title="${esc(p.caption)}"` : ''}><img src="${img(p.path, 600)}" alt="${esc(p.caption || '')}" loading="lazy"></a>`).join('')}</div>`;
   else if (leftover.length) html += leftover.map((p) => figure(p, p.caption || '')).join('');
   const others = arts.filter((x) => x.id !== a.id).slice(0, 3);
@@ -1120,7 +1120,7 @@ function renderArticle(origin, issue, a, arts) {
 <h1>${esc(a.title)}</h1>
 ${a.dek ? `<p class="dek">${esc(a.dek)}</p>` : ''}
 ${a.byline ? `<span class="byline">${esc(a.byline)}</span>` : ''}
-${lead ? figure(lead, lead.caption || a.title, 1400, false) : ''}
+${lead && !scans ? figure(lead, lead.caption || a.title, 1400, false) : ''}
 <div class="share-row">${shareBar(url, a.title, true)}</div>
 <div class="body">${html}</div>
 <div class="from-issue">${issue.cover_path ? `<img class="${pgc(issue).trim()}" src="${coverSrc(issue, 160)}" alt="" ${COVFIX}>` : ''}<div><strong>From Balita Issue ${issue.issue_no}</strong>
