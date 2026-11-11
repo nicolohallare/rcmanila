@@ -1108,7 +1108,10 @@ function renderArticle(origin, issue, a, arts) {
   });
   const leftover = auto.slice(pi);
   // Three or more remaining photos (photo pages from print) show as a gallery grid; tap one to see it full size.
-  if (leftover.length >= 3) html += `<div class="art-gallery">${leftover.map((p) => `<a href="${raw(p.path)}" target="_blank" rel="noopener"${p.caption ? ` title="${esc(p.caption)}"` : ''}><img src="${img(p.path, 600)}" alt="${esc(p.caption || '')}" loading="lazy"></a>`).join('')}</div>`;
+  // Pages scanned from print (every photo marked nocard, no text of its own) read best one under another at full width, not as thumbnails.
+  const scans = !textCount && leftover.length && leftover.every((p) => p.nocard);
+  if (scans) html += leftover.map((p) => figure(p, p.caption || '')).join('');
+  else if (leftover.length >= 3) html += `<div class="art-gallery">${leftover.map((p) => `<a href="${raw(p.path)}" target="_blank" rel="noopener"${p.caption ? ` title="${esc(p.caption)}"` : ''}><img src="${img(p.path, 600)}" alt="${esc(p.caption || '')}" loading="lazy"></a>`).join('')}</div>`;
   else if (leftover.length) html += leftover.map((p) => figure(p, p.caption || '')).join('');
   const others = arts.filter((x) => x.id !== a.id).slice(0, 3);
   const body = `<article class="article">
