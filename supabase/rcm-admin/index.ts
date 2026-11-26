@@ -87,6 +87,7 @@ const PAPERS = /column|inquirer|philippine star|philstar|manila bulletin|manila 
 function bodyLen(t: string) {
   return scrubPageText(t).replace(/IN THE NEWS/gi, "").replace(/Rotary Club of Manila\s*\d*/gi, "").replace(/\d*\s*Balita\s*-\s*[A-Za-z]+ \d{1,2}, \d{4}/g, "").replace(/\s+/g, " ").trim().length;
 }
+const isClip = (t: string) => bodyLen(t) < 500 && PAPERS.test(t);
 // deno-lint-ignore no-explicit-any
 function splitClippings(plan: any, pages: { n: number; text: string }[]) {
   if (!plan || !Array.isArray(plan.articles)) return plan;
@@ -94,20 +95,32 @@ function splitClippings(plan: any, pages: { n: number; text: string }[]) {
   // deno-lint-ignore no-explicit-any
   const out: any[] = [];
   for (const a of plan.articles) {
-    const from = Number(a.from), to = Number(a.to);
-    const first = byN.get(from) || "";
-    if (to > from && bodyLen(first) < 500 && PAPERS.test(first)) {
+    let from = Number(a.from);
+    const to = Number(a.to);
+    const pr = String(a.printed || "").match(/(\d+)\D+(\d+)/);
+    let p1 = pr ? Number(pr[1]) : null;
+    let first = true;
+    // Peel off every clipping page at the start, not just the first: an issue can carry two clippings in a row
+    // (e.g. two Panganiban columns) before the text column (e.g. Romualdez). Every piece that is split off is titled
+    // "In the News" with no byline, so the clean-up step reads the real headline and author from that piece itself
+    // (from the clipping image, or from the text) instead of inheriting the planner's title for the merged block.
+    while (to > from) {
+      const page = byN.get(from) || "";
+      if (!isClip(page)) break;
       let rest = 0;
       for (let n = from + 1; n <= to; n++) rest += bodyLen(byN.get(n) || "");
-      if (rest > 1200) {
-        const pr = String(a.printed || "").match(/(\d+)\D+(\d+)/);
-        const p1 = pr ? Number(pr[1]) : null;
-        out.push({ ...a, to: from, printed: p1 ? `pp. ${p1}\u2013${p1 + 1}` : null, lead: false });
-        out.push({ ...a, title: "In the News", byline: null, from: from + 1, printed: p1 && pr ? `pp. ${p1 + 2}\u2013${pr[2]}` : null, lead: false });
-        continue;
-      }
+      if (rest < 1200 && !isClip(byN.get(from + 1) || "")) break;
+      out.push({ ...a, title: "In the News", byline: null, from, to: from, printed: p1 ? `pp. ${p1}\u2013${p1 + 1}` : null, lead: false });
+      from += 1; if (p1) p1 += 2; first = false;
     }
-    out.push(a);
+    // A clipping page stuck on the END of a text column is its own article too.
+    let end = to;
+    const tail: number[] = [];
+    const last = byN.get(to) || "";
+    if (to > from && /in the news/i.test(last) && isClip(last) && bodyLen(byN.get(to - 1) || "") >= 500) { tail.push(to); end = to - 1; }
+    if (first && !tail.length) { out.push(a); continue; }
+    out.push({ ...a, ...(first ? {} : { title: "In the News", byline: null, lead: false }), from, to: end, ...(first ? {} : { printed: p1 && pr ? `pp. ${p1}\u2013${pr[2]}` : null }) });
+    for (const n of tail) out.push({ ...a, title: "In the News", byline: null, from: n, to: n, printed: null, lead: false });
   }
   return { ...plan, articles: out };
 }
@@ -153,7 +166,7 @@ const PLAN_TASK = `Return exactly this JSON shape:
  "articles":[{"title":"headline as printed","kicker":"one of: Editorial, Guest speaker, Weekly meeting, Service, Feature, Club administration, In Focus, Foundation, District, Fellowship, In the news, Awards, Club news","byline":"as printed or null","from":first PDF page number,"to":last PDF page number,"printed":"printed page range like pp. 62–81, or null","lead":true only for the single strongest story to feature}],
  "skipped":[{"from":n,"to":n,"reason":"advertisement | meeting program | attendance or dues list | roster | cover | contents | blank"}]}
 Rules: articles are continuous prose stories, editorials, profiles, speaker introductions, reports and announcements with real text. Photo-only pages that belong to an article go inside that article's page range. Do not invent titles: use the printed headline. Keep articles in reading order. Every PDF page belongs to exactly one article or one skipped range. Keep the JSON compact: merge neighbouring skipped pages into one range.
-Start a new article at every new printed headline or column label, even when two stories share a section label such as "In the News". Never merge stories with different authors or headlines into one article. A page whose story is printed as a picture (for example a newspaper column reprinted as a clipping, so the page has a heading or label but little or no body text) is still its own article: use the printed heading as its title.`;
+Start a new article at every new printed headline or column label, even when two stories share a section label such as "In the News". Never merge stories with different authors or headlines into one article. A page whose story is printed as a picture (for example a newspaper column reprinted as a clipping, so the page has a heading or label but little or no body text) is still its own article: use the printed heading as its title. In the "In the News" section each column is its own article, and each clipping page is one column: two clipping pages in a row (for example two Panganiban columns) are two articles, and the text column after them (for example Romualdez) is another.`;
 
 const CLEAN_SYSTEM = `You turn one article from the weekly Balita (newsletter of the Rotary Club of Manila) into clean web text. The input is raw text pulled from PDF pages, so it contains running headers and footers, page numbers, repeated decorative titles, captions mixed into the body, words broken across lines, and drop caps split from their word (e.g. "T" on its own and "HE Rotary Club..." which is "THE Rotary Club..." → write "The Rotary Club...").
 Keep the author's wording exactly. Fix only extraction damage: rejoin hyphenated or broken words and drop caps, restore paragraph breaks, remove headers, footers, page numbers and repeated titles, and move photo captions out of the body. Never add facts, never summarize the body, never rewrite sentences. Reply with JSON only.`;
